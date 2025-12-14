@@ -11,9 +11,9 @@ export default function HelloScreen({
     <div className="flex min-h-screen w-full items-center justify-center bg-[#0A0A0A]">
       <div className="relative h-[812px] w-[375px]">
         <img
-          src="/hello_screen/settings%204.svg"
-          alt="settings 4"
-          className="absolute left-[113px] top-[204px] h-[150px] w-[150px]"
+          src="/interface/src.svg"
+          alt="src"
+          className="absolute left-[133px] top-[190px] h-[150px] w-[150px]"
         />
         <div
           className="absolute left-[113px] top-[380px] h-[26px] w-[150px] text-center text-[32px] font-bold leading-[0.8125em] text-white font-ttc-bold whitespace-nowrap"

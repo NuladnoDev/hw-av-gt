@@ -39,11 +39,43 @@ export default function Home() {
       setIsAuthed(!!session)
     })
     return () => data.subscription.unsubscribe()
-  }, [])
+  }, [envReady, isMobile])
+
+  useEffect(() => {
+    if (envReady) return
+    const onLocalAuthChanged = () => {
+      const a = window.localStorage.getItem('hw-auth')
+      setIsAuthed(!!a)
+    }
+    window.addEventListener('local-auth-changed', onLocalAuthChanged as EventListener)
+    return () => window.removeEventListener('local-auth-changed', onLocalAuthChanged as EventListener)
+  }, [envReady])
 
   async function signUpWithTagAndPassword(tag: string, password: string) {
     const client = getSupabase()
-    if (!client) return
+    if (!client) {
+      const usersRaw = window.localStorage.getItem('hw-users')
+      const users: Array<{ tag: string; uid: string; email: string; pass: string }> = usersRaw ? JSON.parse(usersRaw) : []
+      const exists = users.some((u) => u.tag === tag)
+      if (exists) {
+        setTagError('тег занят')
+        setScreen('tag')
+        return
+      }
+      const enc = new TextEncoder()
+      const data = enc.encode(password)
+      const buf = await window.crypto.subtle.digest('SHA-256', data)
+      const arr = Array.from(new Uint8Array(buf))
+      const hash = arr.map((b) => b.toString(16).padStart(2, '0')).join('')
+      const cnt = users.length + 1
+      const uid = `hw-${String(cnt).padStart(4, '0')}`
+      const email = `${tag}@hw.local`
+      const nextUsers = [...users, { tag, uid, email, pass: hash }]
+      window.localStorage.setItem('hw-users', JSON.stringify(nextUsers))
+      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid, email }))
+      window.dispatchEvent(new Event('local-auth-changed'))
+      return
+    }
     const email = `${tag}@hw.local`
     const { data, error } = await client.auth.signUp({
       email,
@@ -56,7 +88,11 @@ export default function Home() {
         setScreen('tag')
         return
       }
-      setPasswordError('не удалось зарегистрироваться')
+      if (/invalid|jwt|token/i.test(error.message)) {
+        setPasswordError('настройки Supabase неверны')
+      } else {
+        setPasswordError('не удалось зарегистрироваться')
+      }
       return
     }
     if (!data.session) {

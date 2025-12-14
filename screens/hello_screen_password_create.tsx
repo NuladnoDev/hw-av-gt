@@ -34,6 +34,8 @@ export default function HelloScreenPasswordCreate({
     return () => window.removeEventListener('resize', update)
   }, [])
 
+  const errorToShow = submitError || initialError || ''
+
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
@@ -157,9 +159,9 @@ export default function HelloScreenPasswordCreate({
               Продолжить
             </span>
           </button>
-          {submitError && (
+          {errorToShow && (
             <div className="mt-2 w-full text-center text-[14px] leading-[1.3em] text-[#D45E5E]">
-              {submitError}
+              {errorToShow}
             </div>
           )}
         </div>

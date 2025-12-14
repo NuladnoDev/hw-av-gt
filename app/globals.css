@@ -165,10 +165,56 @@ body {
   animation: bottomSheetIn 200ms ease-out both;
 }
 
+@keyframes bottomSheetOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0.95;
+    transform: translateY(100%);
+  }
+}
+.bottom-sheet-out {
+  animation: bottomSheetOut 200ms ease-in both;
+}
+
 @keyframes overlayIn {
   from { opacity: 0; }
   to { opacity: 0.5; }
 }
 .overlay-in {
   animation: overlayIn 150ms ease-out both;
+}
+@keyframes overlayOut {
+  from { opacity: 0.5; }
+  to { opacity: 0; }
+}
+.overlay-out {
+  animation: overlayOut 150ms ease-in both;
+}
+
+@keyframes editScreenIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.edit-screen-in {
+  animation: editScreenIn 200ms ease-out both;
+}
+
+@font-face {
+  font-family: SFUITextMedium;
+  src: url("/fonts/sf_ui_text_medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+.font-sf-ui-medium {
+  font-family: SFUITextMedium, Arial, Helvetica, sans-serif;
 }

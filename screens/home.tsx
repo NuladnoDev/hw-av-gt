@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Profile from './profile'
+import ProfileEdit from './profile_edit'
 import { getSupabase } from '@/lib/supabaseClient'
 import Ads from './ads'
 
 export default function HomeScreen() {
   const [scale, setScale] = useState(1)
   const [tab, setTab] = useState<'ads' | 'feed' | 'profile'>('feed')
-  const [profileTab, setProfileTab] = useState<'ads' | 'posts' | 'music' | 'friends'>('posts')
+  const [profileTab, setProfileTab] = useState<'ads' | 'posts' | 'about' | 'friends'>('posts')
+  const [profileEdit, setProfileEdit] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const [createClosing, setCreateClosing] = useState(false)
   const [createText, setCreateText] = useState('')
   const [createImages, setCreateImages] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -18,20 +21,7 @@ export default function HomeScreen() {
   const [allGalleryImages, setAllGalleryImages] = useState<string[]>([])
   const [galleryVisibleCount, setGalleryVisibleCount] = useState(15)
   const galleryAskedRef = useRef(false)
-  const [dragY, setDragY] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const dragStartYRef = useRef<number | null>(null)
-  const dragYRef = useRef(0)
   const [currentTag, setCurrentTag] = useState<string | null>(null)
-  const closeCreate = () => {
-    createImages.forEach((u) => URL.revokeObjectURL(u))
-    allGalleryImages.forEach((u) => URL.revokeObjectURL(u))
-    setCreateImages([])
-    setAllGalleryImages([])
-    setGalleryVisibleCount(15)
-    setCreateText('')
-    setCreateOpen(false)
-  }
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -50,21 +40,19 @@ export default function HomeScreen() {
     })
   }
   const openGalleryPicker = async () => {
-    type FileHandle = { getFile: () => Promise<File> }
-    type PickerWindow = Window & {
+    const apiWin = window as unknown as {
       showOpenFilePicker?: (options: {
         multiple?: boolean
-        types?: Array<{ description: string; accept: Record<string, string[]> }>
-      }) => Promise<FileHandle[]>
+        types?: { description?: string; accept: Record<string, string[]> }[]
+      }) => Promise<FileSystemFileHandle[]>
     }
-    const win = window as PickerWindow
-    if (win && typeof win.showOpenFilePicker === 'function') {
+    if (apiWin && typeof apiWin.showOpenFilePicker === 'function') {
       try {
-        const handles = await win.showOpenFilePicker({
+        const handles = await apiWin.showOpenFilePicker({
           multiple: true,
           types: [{ description: 'Images', accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif'] } }],
         })
-        const files: File[] = await Promise.all((handles as FileHandle[]).map((h) => h.getFile()))
+        const files: File[] = await Promise.all(handles.map((h) => h.getFile()))
         const urls = files.map((f) => URL.createObjectURL(f))
         setAllGalleryImages(urls)
         setGalleryVisibleCount(Math.min(15, urls.length))
@@ -81,8 +69,17 @@ export default function HomeScreen() {
   }
 
   useEffect(() => {
-    // keep existing behavior but avoid resetting state in effect
-  }, [createOpen])
+    if (!createOpen) {
+      setTimeout(() => {
+        createImages.forEach((u) => URL.revokeObjectURL(u))
+        allGalleryImages.forEach((u) => URL.revokeObjectURL(u))
+        setCreateImages([])
+        setAllGalleryImages([])
+        setGalleryVisibleCount(15)
+        setCreateText('')
+      }, 0)
+    }
+  }, [createOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const el = textAreaRef.current
@@ -92,24 +89,41 @@ export default function HomeScreen() {
   }, [createText])
 
   useEffect(() => {
-    const client = getSupabase()
-    if (!client) return
-    client.auth.getUser().then(({ data }) => {
-      const meta = data.user?.user_metadata as { tag?: string } | undefined
-      const t = typeof meta?.tag === 'string' ? meta.tag : undefined
-      setCurrentTag(t ?? null)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (createOpen && tab === 'feed' && !galleryAskedRef.current) {
-      galleryAskedRef.current = true
-      setTimeout(() => openGalleryPicker(), 0)
-    }
     if (!createOpen) {
       galleryAskedRef.current = false
     }
-  }, [createOpen, tab])
+  }, [createOpen])
+
+  useEffect(() => {
+    const client = getSupabase()
+    if (!client) return
+    ;(async () => {
+      const { data } = await client.auth.getUser()
+      const id = data.user?.id
+      if (!id) return
+      const { data: prof } = await client.from('profiles').select('tag').eq('id', id).maybeSingle()
+      const t = (prof?.tag as string | undefined) ?? undefined
+      setCurrentTag(typeof t === 'string' && t.trim().length > 0 ? t.trim() : null)
+    })()
+  }, [])
+  useEffect(() => {
+    const handleUpdated = (e: Event) => {
+      const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string }>
+      if (typeof ev.detail?.tag === 'string') {
+        setCurrentTag(ev.detail.tag)
+      }
+    }
+    window.addEventListener('profile-updated', handleUpdated as EventListener)
+    return () => window.removeEventListener('profile-updated', handleUpdated as EventListener)
+  }, [])
+  useEffect(() => {
+    const handleClosed = (e: Event) => {
+      setProfileEdit(false)
+      setProfileTab('about')
+    }
+    window.addEventListener('profile-edit-closed', handleClosed as EventListener)
+    return () => window.removeEventListener('profile-edit-closed', handleClosed as EventListener)
+  }, [])
 
   useEffect(() => {
     const baseW = 375
@@ -124,29 +138,6 @@ export default function HomeScreen() {
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
-
-  const onHandlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
-    dragStartYRef.current = e.clientY
-    setDragging(true)
-    const onMove = (ev: PointerEvent) => {
-      if (dragStartYRef.current === null) return
-      const dy = Math.max(0, ev.clientY - dragStartYRef.current)
-      dragYRef.current = dy
-      setDragY(dy)
-    }
-    const onUp = () => {
-      const threshold = 120
-      const shouldClose = dragYRef.current > threshold
-      setDragging(false)
-      setDragY(0)
-      dragStartYRef.current = null
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUp)
-      if (shouldClose) closeCreate()
-    }
-    document.addEventListener('pointermove', onMove)
-    document.addEventListener('pointerup', onUp)
-  }
 
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
@@ -191,13 +182,22 @@ export default function HomeScreen() {
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
           >
             <div className="relative h-full w-full">
-              <div className="absolute left-6 top-0 flex h-full items-center">
+              <button
+                type="button"
+                onClick={() => setProfileEdit((v) => !v)}
+                className="absolute left-6 top-0 flex h-full items-center"
+                aria-label="Редактировать профиль"
+              >
                 <img
-                  src="/navigation/settings%204.svg"
-                  alt="settings"
+                  src="/interface/pencil-03.svg"
+                  alt="edit"
                   className="h-[22px] w-[22px]"
+                  style={{
+                    filter:
+                      'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
+                  }}
                 />
-              </div>
+              </button>
               <div className="absolute right-6 top-0 flex h-full items-center">
                 <img
                   src="/navigation/plus.svg"
@@ -215,7 +215,13 @@ export default function HomeScreen() {
           </div>
         )}
 
-        {tab === 'profile' && <Profile profileTab={profileTab} setProfileTab={setProfileTab} userTag={currentTag ?? undefined} />}
+        {tab === 'profile' && (
+          <Profile
+            profileTab={profileTab}
+            setProfileTab={setProfileTab}
+            userTag={currentTag ?? undefined}
+          />
+        )}
 
         {tab !== 'profile' && (
           <div
@@ -292,12 +298,18 @@ export default function HomeScreen() {
         {createOpen && tab === 'feed' && (
           <>
             <div
-              className="absolute left-0 top-0 h-[812px] w-[375px] overlay-in"
+              className={`absolute left-0 top-0 h-[812px] w-[375px] ${createClosing ? 'overlay-out' : 'overlay-in'}`}
               style={{ background: 'rgba(0,0,0,0.5)' }}
-              onClick={closeCreate}
+              onClick={() => {
+                setCreateClosing(true)
+                setTimeout(() => {
+                  setCreateOpen(false)
+                  setCreateClosing(false)
+                }, 200)
+              }}
             />
             <div
-              className="absolute left-0 w-full bottom-0 bottom-sheet-in overflow-y-auto"
+              className={`absolute left-0 w-full bottom-0 ${createClosing ? 'bottom-sheet-out' : 'bottom-sheet-in'}`}
               style={{
                 height: '100%',
                 background: 'var(--create-sheet-bg)',
@@ -305,39 +317,36 @@ export default function HomeScreen() {
                 borderTopLeftRadius: 'var(--create-sheet-radius)',
                 borderTopRightRadius: 'var(--create-sheet-radius)',
                 padding: 'var(--create-sheet-padding)',
-                transform: `translateY(${dragY}px)`,
-                transition: dragging ? 'none' : 'transform 180ms ease-out',
               }}
             >
               <div className="flex h-full w-full flex-col">
-                <div
-                  className="mx-auto mb-3 h-[4px] w-[44px] rounded-full"
-                  style={{ background: 'rgba(255,255,255,0.18)', cursor: 'grab' }}
-                  onPointerDown={onHandlePointerDown}
-                />
-                <div className="relative mb-3" style={{ marginTop: 'var(--create-title-top-margin)' }}>
-                  <div className="text-center text-[20px] leading-[3em] text-white font-ttc-bold">
-                    Публикация поста
-                  </div>
+                <div className="mx-auto mb-3 h-[4px] w-[44px] rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                <div className="mb-3 relative flex items-center justify-center" style={{ marginTop: 'var(--create-title-top-margin)' }}>
                   <button
                     type="button"
-                    onClick={closeCreate}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 flex h-[28px] w-[28px] items-center justify-center"
+                    onClick={() => {
+                      setCreateClosing(true)
+                      setTimeout(() => {
+                        setCreateOpen(false)
+                        setCreateClosing(false)
+                      }, 200)
+                    }}
+                    className="absolute left-0 flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
+                    aria-label="Закрыть"
                   >
                     <img
                       src="/interface/x-01.svg"
                       alt="close"
-                      className="h-[24px] w-[24px]"
-                      style={{ filter: 'invert(1)' }}
+                      className="h-[22px] w-[22px]"
+                      style={{
+                        filter:
+                          'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
+                      }}
                     />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setCreateOpen(false)}
-                    className="absolute right-0 top-1/2 -translate-y-1/2"
-                  >
-                    <span className="text-[16px] leading-[1.25em] text-white font-vk-demi">Закрыть</span>
-                  </button>
+                  <span className="text-center text-[20px] leading-[3em] text-white font-ttc-bold">
+                    Публикация поста
+                  </span>
                 </div>
                 <div className="mb-3">
                   <textarea
@@ -402,7 +411,7 @@ export default function HomeScreen() {
                     </span>
                   </button>
                 </div>
-                <div className="mt-3 flex-1 overflow-hidden border-t border-[#2B2B2B] pt-3 min-h-0">
+                <div className="mt-3 flex-1 overflow-hidden border-t border-[#2B2B2B] pt-3">
                   <div className="flex w-full items-center justify-between px-[var(--create-gallery-padding)] pb-2">
                     <button
                       type="button"
@@ -431,7 +440,7 @@ export default function HomeScreen() {
                     </div>
                   </div>
                   <div
-                    className="grid w-full h-full overflow-y-auto px-[var(--create-gallery-padding)]"
+                    className="grid w-full overflow-y-auto px-[var(--create-gallery-padding)]"
                     style={{ gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'var(--create-gallery-item-size)', gap: 'var(--create-gallery-gap)' }}
                     onScroll={onGalleryScroll}
                   >
@@ -466,6 +475,12 @@ export default function HomeScreen() {
               </div>
             </div>
           </>
+        )}
+        {profileEdit && tab === 'profile' && (
+          <ProfileEdit
+            onClose={() => setProfileEdit(false)}
+            initialTag={currentTag ?? undefined}
+          />
         )}
       </div>
     </div>

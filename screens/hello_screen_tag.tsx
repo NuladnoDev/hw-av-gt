@@ -19,24 +19,22 @@ export default function HelloScreenTag({
   const [scale, setScale] = useState(1)
   const [checking, setChecking] = useState(false)
   const [available, setAvailable] = useState(false)
-  const [checked, setChecked] = useState(false)
   const timerRef = useRef<number | null>(null)
 
   const tagRegex = /^[\p{L}\p{N}.\-_]+$/u
   const trimmed = value.trim()
-  const validLength = trimmed.length >= 3 && trimmed.length <= 8
+  const validLength = trimmed.length >= 3 && trimmed.length <= 12
   const validFormat = validLength && tagRegex.test(trimmed)
   const formatError =
     trimmed.length > 0 && trimmed.length < 3
       ? 'минимум 3 символа'
-      : trimmed.length > 8
-      ? 'максимум 8 символов'
+      : trimmed.length > 12
+      ? 'максимум 12 символов'
       : trimmed.length > 0 && !tagRegex.test(trimmed)
       ? 'неверный формат тега'
       : ''
-  const occupancyError = checked && !checking && validFormat && !available ? 'тег занят' : ''
-  const fieldError = error || formatError || occupancyError
-  const showNotice = checked && validFormat && available && !checking && !fieldError
+  const fieldError = error || formatError
+  const showNotice = false
   const handleValueChange = (next: string) => {
     setValue(next)
     if (error) setError('')
@@ -44,38 +42,8 @@ export default function HelloScreenTag({
       window.clearTimeout(timerRef.current)
       timerRef.current = null
     }
-    const t = next.trim()
-    const lenOk = t.length >= 3 && t.length <= 8
-    const fmtOk = lenOk && tagRegex.test(t)
     setAvailable(false)
-    setChecked(false)
-    if (!fmtOk) {
-      setChecking(false)
-      return
-    }
-    setChecking(true)
-    timerRef.current = window.setTimeout(async () => {
-      const client = getSupabase()
-      if (!client) {
-        setChecking(false)
-        return
-      }
-      const { data, error: qErr } = await client
-        .from('profiles')
-        .select('id', { count: 'exact' })
-        .eq('tag', t)
-        .limit(1)
-      if (qErr) {
-        setChecking(false)
-        setAvailable(false)
-        setChecked(false)
-        return
-      }
-      const taken = Array.isArray(data) && data.length > 0
-      setAvailable(!taken)
-      setChecked(true)
-      setChecking(false)
-    }, 300)
+    setChecking(false)
   }
 
   useEffect(() => {
@@ -119,7 +87,7 @@ export default function HelloScreenTag({
 
         <div className="absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2 transform px-6 flex flex-col items-center">
           <img
-            src="/hello_screen/tag.svg"
+            src="/interface/tag.svg"
             alt="tag"
             className="h-[138px] w-[138px] mb-10"
           />
@@ -158,26 +126,65 @@ export default function HelloScreenTag({
             type="button"
             className="mt-2 h-[47px] w-full rounded-[10px] bg-[#111111] text-center"
             onClick={() => {
-              if (checking) return
               if (!validLength) {
-                setError(trimmed.length < 3 ? 'минимум 3 символа' : 'максимум 8 символов')
+                setError(trimmed.length < 3 ? 'минимум 3 символа' : 'максимум 12 символов')
                 return
               }
               if (!tagRegex.test(trimmed)) {
                 setError('неверный формат тега')
                 return
               }
-              if (!available) {
-                setError('тег занят')
-                return
-              }
-              if (onNext) {
-                onNext(trimmed)
-                return
-              }
-              const event = new CustomEvent('tag-next', { detail: { value } })
-              window.dispatchEvent(event)
+              ;(async () => {
+                setChecking(true)
+                const client = getSupabase()
+                if (!client) {
+                  const usersRaw = window.localStorage.getItem('hw-users')
+                  const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
+                  const takenLocal = users.some((u) => u.tag === trimmed)
+                  if (takenLocal) {
+                    setError('тег занят')
+                    setChecking(false)
+                    return
+                  }
+                  setChecking(false)
+                  if (onNext) {
+                    onNext(trimmed)
+                    return
+                  }
+                  const event = new CustomEvent('tag-next', { detail: { value } })
+                  window.dispatchEvent(event)
+                  return
+                }
+                const { count, error: qErr } = await client
+                  .from('profiles')
+                  .select('tag', { count: 'exact', head: true })
+                  .eq('tag', trimmed)
+                if (qErr) {
+                  setChecking(false)
+                  if (onNext) {
+                    onNext(trimmed)
+                    return
+                  }
+                  const event = new CustomEvent('tag-next', { detail: { value } })
+                  window.dispatchEvent(event)
+                  return
+                }
+                const taken = typeof count === 'number' ? count > 0 : false
+                if (taken) {
+                  setError('тег занят')
+                  setChecking(false)
+                  return
+                }
+                setChecking(false)
+                if (onNext) {
+                  onNext(trimmed)
+                  return
+                }
+                const event = new CustomEvent('tag-next', { detail: { value } })
+                window.dispatchEvent(event)
+              })()
             }}
+            disabled={!validFormat || checking}
           >
             <span className="inline-block text-[18px] font-semibold leading-[1.25em] tracking-[0.015em] text-white font-vk-demi">
               Продолжить

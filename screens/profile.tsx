@@ -1,14 +1,156 @@
 'use client'
+import { useEffect, useRef, useState } from 'react'
+import { getSupabase } from '@/lib/supabaseClient'
+import { avatarGradients } from '@/lib/avatarGradients'
 
 export default function Profile({
   profileTab,
   setProfileTab,
   userTag,
+  editMode,
 }: {
-  profileTab: 'posts' | 'ads' | 'music' | 'friends'
-  setProfileTab: (t: 'posts' | 'ads' | 'music' | 'friends') => void
+  profileTab: 'posts' | 'ads' | 'about' | 'friends'
+  setProfileTab: (t: 'posts' | 'ads' | 'about' | 'friends') => void
   userTag?: string
+  editMode?: boolean
 }) {
+  const [tagText, setTagText] = useState<string>(typeof userTag === 'string' ? userTag.replace(/^@/, '') : '')
+  const [tagEditing, setTagEditing] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [description, setDescription] = useState<string>('')
+  const [age, setAge] = useState<string>('')
+  const [gender, setGender] = useState<string>('')
+  const [political, setPolitical] = useState<string>('')
+  const [hobbies, setHobbies] = useState<string>('')
+
+  useEffect(() => {
+    const client = getSupabase()
+    if (!client) return
+    ;(async () => {
+      const { data } = await client.auth.getUser()
+      const id = data.user?.id ?? null
+      setUserId(id)
+      if (!id) return
+      const { data: prof } = await client.from('profiles').select('tag, avatar_url, description, age, gender, political, hobbies').eq('id', id).maybeSingle()
+      const tagFromDb = (prof?.tag as string | undefined) ?? undefined
+      const avatarFromDb = (prof?.avatar_url as string | undefined) ?? undefined
+      const descFromDb = (prof?.description as string | undefined) ?? ''
+      const ageFromDb = (prof?.age as string | number | undefined) ?? undefined
+      const genderFromDb = (prof?.gender as string | undefined) ?? undefined
+      const politicalFromDb = (prof?.political as string | undefined) ?? undefined
+      const hobbiesFromDb = (prof?.hobbies as string | undefined) ?? undefined
+      if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
+        setTagText(tagFromDb.trim())
+      } else if (typeof userTag === 'string' && userTag.trim().length > 0) {
+        setTagText(userTag.replace(/^@/, '').trim())
+      }
+      if (typeof avatarFromDb === 'string' && avatarFromDb.trim().length > 0) {
+        setAvatarUrl(avatarFromDb)
+      }
+      setDescription(descFromDb ?? '')
+      if (typeof ageFromDb === 'number') setAge(String(ageFromDb))
+      else if (typeof ageFromDb === 'string') setAge(ageFromDb)
+      setGender(typeof genderFromDb === 'string' ? genderFromDb : '')
+      setPolitical(typeof politicalFromDb === 'string' ? politicalFromDb : '')
+      setHobbies(typeof hobbiesFromDb === 'string' ? hobbiesFromDb : '')
+    })()
+  }, [userTag])
+  useEffect(() => {
+    const handleUpdated = (e: Event) => {
+      const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; political?: string; hobbies?: string }>
+      if (typeof ev.detail?.tag === 'string') setTagText(ev.detail.tag)
+      if (typeof ev.detail?.avatar_url === 'string') setAvatarUrl(ev.detail.avatar_url)
+      if (typeof ev.detail?.description === 'string') setDescription(ev.detail.description)
+      if (typeof ev.detail?.age === 'string') setAge(ev.detail.age)
+      if (typeof ev.detail?.gender === 'string') setGender(ev.detail.gender)
+      if (typeof ev.detail?.political === 'string') setPolitical(ev.detail.political)
+      if (typeof ev.detail?.hobbies === 'string') setHobbies(ev.detail.hobbies)
+    }
+    window.addEventListener('profile-updated', handleUpdated as EventListener)
+    return () => window.removeEventListener('profile-updated', handleUpdated as EventListener)
+  }, [])
+
+  const gradientIndex = (() => {
+    const base = userId ?? 'user'
+    let sum = 0
+    for (let i = 0; i < base.length; i++) sum += base.charCodeAt(i)
+    return sum % avatarGradients.length
+  })()
+  const gradient = avatarGradients[gradientIndex]
+  const initialLetter = tagText && tagText.length > 0 ? tagText.trim().charAt(0).toUpperCase() : 'U'
+
+  const handleAvatarFile = async (files: FileList | null) => {
+    const f = files && files[0]
+    if (!f || !userId) return
+    setAvatarLoading(true)
+    try {
+      const client = getSupabase()
+      let finalUrl: string | null = null
+      if (client) {
+        const path = `${userId}/${Date.now()}_${f.name}`
+        const up = await client.storage.from('avatars').upload(path, f, { upsert: true })
+        if (!up.error) {
+          const pub = client.storage.from('avatars').getPublicUrl(path)
+          finalUrl = pub.data.publicUrl
+          await client.from('profiles').upsert({ id: userId, tag: tagText, avatar_url: finalUrl })
+        }
+      }
+      if (!finalUrl) {
+        const reader = new FileReader()
+        const dataUrl = await new Promise<string | null>((res) => {
+          reader.onload = () => res(typeof reader.result === 'string' ? reader.result : null)
+          reader.readAsDataURL(f)
+        })
+        finalUrl = dataUrl
+      }
+      if (finalUrl) {
+        setAvatarUrl(finalUrl)
+        const event = new CustomEvent('profile-updated', { detail: { avatar_url: finalUrl } })
+        window.dispatchEvent(event)
+      }
+    } finally {
+      setAvatarLoading(false)
+    }
+  }
+
+  const saveTag = async (next: string) => {
+    setTagText(next)
+    const client = getSupabase()
+    if (!client || !userId) return
+    await client.from('profiles').upsert({ id: userId, tag: next })
+  }
+
+  const upsertProfile = async (patch: Partial<{ description: string; age: string; gender: string; political: string; hobbies: string }>) => {
+    const client = getSupabase()
+    if (!client || !userId) return
+    await client.from('profiles').upsert({ id: userId, ...patch })
+  }
+  const saveDescription = async (next: string) => {
+    setDescription(next)
+    await upsertProfile({ description: next })
+    const event = new CustomEvent('profile-updated', { detail: { description: next } })
+    window.dispatchEvent(event)
+  }
+  const saveAge = async (next: string) => {
+    setAge(next)
+    await upsertProfile({ age: next })
+  }
+  const saveGender = async (next: string) => {
+    setGender(next)
+    await upsertProfile({ gender: next })
+  }
+  const savePolitical = async (next: string) => {
+    setPolitical(next)
+    await upsertProfile({ political: next })
+  }
+  const saveHobbies = async (next: string) => {
+    setHobbies(next)
+    await upsertProfile({ hobbies: next })
+  }
+
   return (
     <>
       <div
@@ -24,20 +166,94 @@ export default function Profile({
           height: 'var(--profile-avatar-size)',
           top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2))',
           boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
-          background: '#423030ff',
+          background: gradient,
         }}
-      />
+      >
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-white font-vk-demi text-[36px]">
+            {initialLetter}
+          </div>
+        )}
+        {editMode && (
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            className="absolute left-0 top-0 h-full w-full flex items-center justify-center bg-black/20"
+            aria-label="Сменить аватар"
+          >
+            <img
+              src="/interface/image-add.svg"
+              alt="add"
+              className="h-[40px] w-[40px]"
+              style={{
+                filter:
+                  'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
+                opacity: 0.9,
+              }}
+            />
+          </button>
+        )}
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => handleAvatarFile(e.target.files)}
+        />
+      </div>
       <div
-        className="absolute left-0 w-full px-6"
+        className="absolute left-0 w-full px-6 overflow-y-auto pb-8"
         style={{
           top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px)',
           height: 'calc(812px - 88px - 56px - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - var(--home-header-offset) - 12px)',
         }}
       >
         <div className="flex w-full flex-col items-center">
-          <div className="leading-[2.3em] text-white font-ttc-bold" style={{ fontSize: 'var(--profile-name-size)', marginTop: 'var(--profile-name-margin-top)' }}>
-            {userTag ? `@${userTag}` : '@PaulDuRove'}
-          </div>
+          {!tagEditing ? (
+            <div className="leading-[2.3em] text-white font-ttc-bold flex items-center gap-2" style={{ fontSize: 'var(--profile-name-size)', marginTop: 'var(--profile-name-margin-top)' }}>
+              <span>{tagText && tagText.trim().length > 0 ? tagText : 'user'}</span>
+              {editMode && (
+                <button
+                  type="button"
+                  className="opacity-80"
+                  onClick={() => setTagEditing(true)}
+                  aria-label="Редактировать тег"
+                >
+                  <img
+                    src="/interface/krr.svg"
+                    alt="edit-tag"
+                    className="h-[18px] w-[18px]"
+                    style={{
+                      filter:
+                        'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
+                    }}
+                  />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="w-full flex items-center justify-center" style={{ marginTop: 'var(--profile-name-margin-top)' }}>
+              <input
+                value={tagText}
+                onChange={(e) => setTagText(e.target.value)}
+                onBlur={() => {
+                  setTagEditing(false)
+                  const next = tagText.trim()
+                  if (next.length > 0) saveTag(next)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setTagEditing(false)
+                    const next = tagText.trim()
+                    if (next.length > 0) saveTag(next)
+                  }
+                }}
+                className="h-[40px] w-[220px] rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-3 text-[16px] leading-[1.4em] text-white outline-none"
+              />
+            </div>
+          )}
           <div className="flex w-full items-center justify-center" style={{ marginTop: 'var(--profile-switch-offset)' }}>
             <div className="flex h-[45px] items-center justify-between rounded-[12px] border border-[#2B2B2B] bg-[#111111] px-2">
               <button
@@ -56,10 +272,10 @@ export default function Profile({
               </button>
               <button
                 type="button"
-                aria-disabled="true"
-                className="h-[32px] rounded-[8px] px-3 text-[14px] text-white/40 cursor-not-allowed"
+                onClick={() => setProfileTab('about')}
+                className={`h-[32px] rounded-[8px] px-3 text-[14px] ${profileTab === 'about' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
               >
-                Скоро
+                О себе
               </button>
               <button
                 type="button"
@@ -165,12 +381,92 @@ export default function Profile({
                   </span>
                 </button>
               </>
+            ) : profileTab === 'about' ? (
+              <>
+                <div className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '100%', maxWidth: '320px' }}>
+                  <div className="text-[16px] leading-[1.7em] text-white font-ttc-bold mb-2">Описание профиля</div>
+                  {editMode ? (
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      onBlur={() => saveDescription(description.trim())}
+                      className="w-full min-h-[80px] rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 py-2 text-[14px] leading-[1.6em] text-white outline-none"
+                    />
+                  ) : (
+                    <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">
+                      {description && description.trim().length > 0 ? description : 'Описание не заполнено'}
+                    </div>
+                  )}
+                </div>
+                <div className="mx-auto mt-3 rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '100%', maxWidth: '320px' }}>
+                  <div className="text-[16px] leading-[1.7em] text-white font-ttc-bold mb-2">О себе</div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-[14px] leading-[1.7em] text-white/80">Возраст</div>
+                      {editMode ? (
+                        <input
+                          value={age}
+                          onChange={(e) => setAge(e.target.value)}
+                          onBlur={() => saveAge(age.trim())}
+                          className="h-[36px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 text-[14px] leading-[1.4em] text-white outline-none"
+                        />
+                      ) : (
+                        <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">{age && age.trim().length > 0 ? age : 'Не указан'}</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[14px] leading-[1.7em] text-white/80">Пол</div>
+                      {editMode ? (
+                        <input
+                          value={gender}
+                          onChange={(e) => setGender(e.target.value)}
+                          onBlur={() => saveGender(gender.trim())}
+                          className="h-[36px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 text-[14px] leading-[1.4em] text-white outline-none"
+                        />
+                      ) : (
+                        <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">{gender && gender.trim().length > 0 ? gender : 'Не указан'}</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[14px] leading-[1.7em] text-white/80">Политические взгляды</div>
+                      {editMode ? (
+                        <input
+                          value={political}
+                          onChange={(e) => setPolitical(e.target.value)}
+                          onBlur={() => savePolitical(political.trim())}
+                          className="h-[36px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 text-[14px] leading-[1.4em] text-white outline-none"
+                        />
+                      ) : (
+                        <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">{political && political.trim().length > 0 ? political : 'Не указано'}</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[14px] leading-[1.7em] text-white/80">Хобби</div>
+                      {editMode ? (
+                        <input
+                          value={hobbies}
+                          onChange={(e) => setHobbies(e.target.value)}
+                          onBlur={() => saveHobbies(hobbies.trim())}
+                          className="h-[36px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 text-[14px] leading-[1.4em] text-white outline-none"
+                        />
+                      ) : (
+                        <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">{hobbies && hobbies.trim().length > 0 ? hobbies : 'Не указано'}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="mx-auto mt-3" style={{ width: '100%', maxWidth: '320px' }}>
+                  <div className="h-[24px] bg-[#0A0A0A]" />
+                </div>
+              </>
             ) : (
               null
             )}
           </div>
         </div>
       </div>
+
+      
     </>
   )
 }

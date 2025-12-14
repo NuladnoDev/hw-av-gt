@@ -133,7 +133,23 @@ export default function HelloScreenLogin({
                 return
               }
               const client = getSupabase()
-              if (!client) return
+              if (!client) {
+                const usersRaw = window.localStorage.getItem('hw-users')
+                const users: Array<{ tag: string; pass: string; uid: string; email: string }> = usersRaw ? JSON.parse(usersRaw) : []
+                const enc = new TextEncoder()
+                const data = enc.encode(password)
+                const buf = await window.crypto.subtle.digest('SHA-256', data)
+                const arr = Array.from(new Uint8Array(buf))
+                const hash = arr.map((b) => b.toString(16).padStart(2, '0')).join('')
+                const user = users.find((u) => u.tag === tag && u.pass === hash)
+                if (!user) {
+                  setPasswordError('неверный тег или пароль')
+                  return
+                }
+                window.localStorage.setItem('hw-auth', JSON.stringify({ tag: user.tag, uid: user.uid, email: user.email }))
+                window.dispatchEvent(new Event('local-auth-changed'))
+                return
+              }
               const email = `${tag}@hw.local`
               const { error } = await client.auth.signInWithPassword({ email, password })
               if (error) {
