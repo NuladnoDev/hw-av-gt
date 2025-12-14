@@ -27,7 +27,7 @@ export default function HelloScreenLogin({
   }, [])
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#0A0A0A]">
+    <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px] bg-[#0A0A0A]" />
 
@@ -41,7 +41,7 @@ export default function HelloScreenLogin({
             const event = new CustomEvent('login-back')
             window.dispatchEvent(event)
           }}
-          className="group absolute left-[24px] top-[44px] z-10 flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
+          className="group absolute left-[24px] top-[50px] z-10 flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
         >
           <img
             src="/interface/str.svg"

@@ -66,7 +66,14 @@ export default function Home() {
     )
   }
   if (screen === 'password_create') {
-    return <HelloScreenPasswordCreate onBack={() => setScreen('tag')} />
+    return (
+      <HelloScreenPasswordCreate
+        onBack={() => setScreen('tag')}
+        onNext={() => {
+          window.location.href = '/home'
+        }}
+      />
+    )
   }
   if (screen === 'login') {
     return <HelloScreenLogin onBack={() => setScreen('hello')} />
