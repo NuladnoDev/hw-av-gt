@@ -4,6 +4,22 @@
   --background: #ffffff;
   --foreground: #171717;
   --home-header-offset: 23px;
+  --nav-bottom-offset: 12px;
+  --profile-cover-height: 80px;
+  --profile-avatar-size: 96px;
+  --profile-name-size: 20px;
+  --profile-name-margin-top: 0px;
+  --profile-switch-offset: 12px;
+  --profile-empty-icon-size: 190px;
+  --profile-empty-icon-top: 0px;
+  --profile-empty-text-bottom: -230px;
+  --profile-empty-button-bottom: -285px;
+  --profile-empty-button-width: 100%;
+  --profile-empty-button-height: 47px;
+  --profile-empty-button-radius: 10px;
+  --profile-empty-button-bg: #111111;
+  --profile-empty-button-text-size: 18px;
+  --profile-empty-button-text-color: #ffffff;
 }
 
 @theme inline {
@@ -101,4 +117,18 @@ body {
 }
 .glow-pulse {
   animation: glowPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes slideFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.profile-switch-transition {
+  animation: slideFade 200ms ease;
 }
