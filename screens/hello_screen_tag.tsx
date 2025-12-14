@@ -32,7 +32,7 @@ export default function HelloScreenTag({
   }, [])
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#0A0A0A]">
+    <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px] bg-[#0A0A0A]" />
         <button
