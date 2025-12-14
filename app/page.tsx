@@ -1,8 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabaseClient'
-import LoginScreen from '@/screens/LoginScreen'
+import HelloScreen from '@/screens/hello_screen_hello'
 import FeedScreen from '@/screens/FeedScreen'
+import HelloScreenTag from '@/screens/hello_screen_tag'
+import HelloScreenPasswordCreate from '@/screens/hello_screen_password_create'
+import HelloScreenLogin from '@/screens/hello_screen_login'
 
 export default function Home() {
   const envReady =
@@ -12,6 +15,7 @@ export default function Home() {
   const [isAuthed, setIsAuthed] = useState<boolean | null>(
     envReady ? null : false
   )
+  const [screen, setScreen] = useState<'hello' | 'tag' | 'password_create' | 'login'>('hello')
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 768px)')
@@ -50,5 +54,27 @@ export default function Home() {
       </div>
     )
   }
-  return isAuthed ? <FeedScreen /> : <LoginScreen />
+  if (isAuthed) {
+    return <FeedScreen />
+  }
+  if (screen === 'tag') {
+    return (
+      <HelloScreenTag
+        onBack={() => setScreen('hello')}
+        onNext={() => setScreen('password_create')}
+      />
+    )
+  }
+  if (screen === 'password_create') {
+    return <HelloScreenPasswordCreate onBack={() => setScreen('tag')} />
+  }
+  if (screen === 'login') {
+    return <HelloScreenLogin onBack={() => setScreen('hello')} />
+  }
+  return (
+    <HelloScreen
+      onNext={() => setScreen('tag')}
+      onLogin={() => setScreen('login')}
+    />
+  )
 }
