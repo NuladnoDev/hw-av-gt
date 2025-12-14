@@ -16,7 +16,7 @@ export default function HelloScreen({
           className="absolute left-[113px] top-[204px] h-[150px] w-[150px]"
         />
         <div
-          className="absolute left-[113px] top-[380px] h-[26px] w-[150px] text-center text-[32px] font-bold leading-[0.8125em] text-white font-ttc-bold"
+          className="absolute left-[113px] top-[380px] h-[26px] w-[150px] text-center text-[32px] font-bold leading-[0.8125em] text-white font-ttc-bold whitespace-nowrap"
         >
           hw-project
         </div>
