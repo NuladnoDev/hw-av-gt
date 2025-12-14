@@ -62,6 +62,18 @@ export default function Home() {
     if (!data.session) {
       await client.auth.signInWithPassword({ email, password })
     }
+    const userRes = await client.auth.getUser()
+    const userId = userRes.data.user?.id
+    let uid = ''
+    const countRes = await client
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+    const cnt = (countRes.count ?? 0) + 1
+    uid = `hw-${String(cnt).padStart(4, '0')}`
+    await client
+      .from('profiles')
+      .insert({ user_id: userId, tag, uid })
+    await client.auth.updateUser({ data: { tag, uid } })
   }
 
   if (isMobile === false) {

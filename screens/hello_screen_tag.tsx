@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { getSupabase } from '@/lib/supabaseClient'
 
 export default function HelloScreenTag({
   onBack,
@@ -14,10 +15,62 @@ export default function HelloScreenTag({
   initialError?: string
 }) {
   const [value, setValue] = useState(initialValue ?? '')
-  const error = initialError ?? ''
+  const [error, setError] = useState(initialError ?? '')
   const [scale, setScale] = useState(1)
+  const [checking, setChecking] = useState(false)
+  const [available, setAvailable] = useState(false)
+  const timerRef = useRef<number | null>(null)
 
-  const showNotice = value.trim().length > 0 && !error
+  const tagRegex = /^[\p{L}\p{N}.\-_]+$/u
+  const trimmed = value.trim()
+  const validLength = trimmed.length >= 2
+  const validFormat = validLength && tagRegex.test(trimmed)
+  const formatError =
+    trimmed.length > 0 && !validLength
+      ? 'минимум 2 символа'
+      : trimmed.length > 0 && !tagRegex.test(trimmed)
+      ? 'неверный формат тега'
+      : ''
+  const occupancyError = !checking && validFormat && !available ? 'тег занят' : ''
+  const fieldError = error || formatError || occupancyError
+  const showNotice = validFormat && available && !checking && !fieldError
+  const handleValueChange = (next: string) => {
+    setValue(next)
+    if (error) setError('')
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    const t = next.trim()
+    const lenOk = t.length >= 2
+    const fmtOk = lenOk && tagRegex.test(t)
+    setAvailable(false)
+    if (!fmtOk) {
+      setChecking(false)
+      return
+    }
+    setChecking(true)
+    timerRef.current = window.setTimeout(async () => {
+      const client = getSupabase()
+      if (!client) {
+        setChecking(false)
+        return
+      }
+      const { data, error: qErr } = await client
+        .from('profiles')
+        .select('id', { count: 'exact' })
+        .eq('tag', t)
+        .limit(1)
+      if (qErr) {
+        setChecking(false)
+        setAvailable(false)
+        return
+      }
+      const taken = Array.isArray(data) && data.length > 0
+      setAvailable(!taken)
+      setChecking(false)
+    }, 300)
+  }
 
   useEffect(() => {
     const baseW = 375
@@ -32,6 +85,8 @@ export default function HelloScreenTag({
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
+
+  
 
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
@@ -75,16 +130,16 @@ export default function HelloScreenTag({
           <div className="relative mb-4 w-full">
             <input
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e) => handleValueChange(e.target.value)}
               placeholder="durov"
               className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-28 text-[16px] leading-[1.4em] text-white outline-none"
             />
-            {error && (
+            {fieldError && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#D45E5E] slide-in-up">
-                {error}
+                {fieldError}
               </span>
             )}
-            {showNotice && (
+            {showNotice && available && !checking && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#86D671] slide-in-up">
                 этот тег свободен
               </span>
@@ -97,8 +152,21 @@ export default function HelloScreenTag({
             type="button"
             className="mt-2 h-[47px] w-full rounded-[10px] bg-[#111111] text-center"
             onClick={() => {
+              if (checking) return
+              if (!validLength) {
+                setError('минимум 2 символа')
+                return
+              }
+              if (!tagRegex.test(trimmed)) {
+                setError('неверный формат тега')
+                return
+              }
+              if (!available) {
+                setError('тег занят')
+                return
+              }
               if (onNext) {
-                onNext(value)
+                onNext(trimmed)
                 return
               }
               const event = new CustomEvent('tag-next', { detail: { value } })
