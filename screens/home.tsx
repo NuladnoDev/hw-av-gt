@@ -16,7 +16,7 @@ export default function HomeScreen() {
       const vw = window.innerWidth
       const vh = window.innerHeight
       const s = Math.min(vw / baseW, vh / baseH)
-      setScale(Math.max(1, s))
+      setScale(s)
     }
     update()
     window.addEventListener('resize', update)
@@ -24,7 +24,10 @@ export default function HomeScreen() {
   }, [])
 
   return (
-    <div className="fixed inset-0 flex w-full items-center justify-center bg-[#171717] overflow-hidden">
+    <div
+      className="fixed inset-0 flex w-full items-center justify-center overflow-hidden"
+      style={{ backgroundColor: tab === 'profile' ? '#0A0A0A' : '#171717' }}
+    >
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
         <div
           className="absolute left-0 top-0 h-[812px] w-[375px]"
@@ -153,8 +156,8 @@ export default function HomeScreen() {
           </div>
         </div>
         <div
-          className="absolute left-0 w-full bg-[#171717]"
-          style={{ bottom: 0, height: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))' }}
+          className="absolute left-0 w-full"
+          style={{ bottom: 0, height: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))', backgroundColor: tab === 'profile' ? '#0A0A0A' : '#171717' }}
         />
       </div>
     </div>
