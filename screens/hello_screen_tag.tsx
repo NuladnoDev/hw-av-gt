@@ -19,21 +19,24 @@ export default function HelloScreenTag({
   const [scale, setScale] = useState(1)
   const [checking, setChecking] = useState(false)
   const [available, setAvailable] = useState(false)
+  const [checked, setChecked] = useState(false)
   const timerRef = useRef<number | null>(null)
 
   const tagRegex = /^[\p{L}\p{N}.\-_]+$/u
   const trimmed = value.trim()
-  const validLength = trimmed.length >= 2
+  const validLength = trimmed.length >= 3 && trimmed.length <= 8
   const validFormat = validLength && tagRegex.test(trimmed)
   const formatError =
-    trimmed.length > 0 && !validLength
-      ? 'минимум 2 символа'
+    trimmed.length > 0 && trimmed.length < 3
+      ? 'минимум 3 символа'
+      : trimmed.length > 8
+      ? 'максимум 8 символов'
       : trimmed.length > 0 && !tagRegex.test(trimmed)
       ? 'неверный формат тега'
       : ''
-  const occupancyError = !checking && validFormat && !available ? 'тег занят' : ''
+  const occupancyError = checked && !checking && validFormat && !available ? 'тег занят' : ''
   const fieldError = error || formatError || occupancyError
-  const showNotice = validFormat && available && !checking && !fieldError
+  const showNotice = checked && validFormat && available && !checking && !fieldError
   const handleValueChange = (next: string) => {
     setValue(next)
     if (error) setError('')
@@ -42,9 +45,10 @@ export default function HelloScreenTag({
       timerRef.current = null
     }
     const t = next.trim()
-    const lenOk = t.length >= 2
+    const lenOk = t.length >= 3 && t.length <= 8
     const fmtOk = lenOk && tagRegex.test(t)
     setAvailable(false)
+    setChecked(false)
     if (!fmtOk) {
       setChecking(false)
       return
@@ -64,10 +68,12 @@ export default function HelloScreenTag({
       if (qErr) {
         setChecking(false)
         setAvailable(false)
+        setChecked(false)
         return
       }
       const taken = Array.isArray(data) && data.length > 0
       setAvailable(!taken)
+      setChecked(true)
       setChecking(false)
     }, 300)
   }
@@ -154,7 +160,7 @@ export default function HelloScreenTag({
             onClick={() => {
               if (checking) return
               if (!validLength) {
-                setError('минимум 2 символа')
+                setError(trimmed.length < 3 ? 'минимум 3 символа' : 'максимум 8 символов')
                 return
               }
               if (!tagRegex.test(trimmed)) {
