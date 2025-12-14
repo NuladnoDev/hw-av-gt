@@ -45,7 +45,7 @@ export default function HelloScreenTag({
             const event = new CustomEvent('tag-back')
             window.dispatchEvent(event)
           }}
-          className="group absolute left-[24px] top-[44px] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
+          className="group absolute left-[24px] top-[50px] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
         >
           <img
             src="/interface/str.svg"

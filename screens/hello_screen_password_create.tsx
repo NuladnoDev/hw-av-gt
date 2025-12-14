@@ -44,7 +44,7 @@ export default function HelloScreenPasswordCreate({
             const event = new CustomEvent('password-back')
             window.dispatchEvent(event)
           }}
-          className="group absolute left-[24px] top-[44px] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
+          className="group absolute left-[24px] top-[50px] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
         >
           <img
             src="/interface/str.svg"
