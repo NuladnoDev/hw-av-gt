@@ -44,20 +44,6 @@ export default function HelloScreen({
             Далее
           </span>
         </button>
-        <button
-          type="button"
-          className="absolute left-[71px] top-[754px] h-[26px] w-[241px] text-center text-[20px] font-light leading-[1.3em] text-white text-glow glow-pulse"
-          onClick={() => {
-            if (onLogin) {
-              onLogin()
-              return
-            }
-            const event = new CustomEvent('hello-login')
-            window.dispatchEvent(event)
-          }}
-        >
-          У меня уже есть аккаунт
-        </button>
       </div>
     </div>
   )
