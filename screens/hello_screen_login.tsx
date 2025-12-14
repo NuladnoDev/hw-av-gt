@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { getSupabase } from '@/lib/supabaseClient'
 
 export default function HelloScreenLogin({
   onBack,
@@ -11,6 +12,8 @@ export default function HelloScreenLogin({
   const [tag, setTag] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
+  const [tagError, setTagError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     const baseW = 375
@@ -77,6 +80,11 @@ export default function HelloScreenLogin({
               placeholder="durov"
               className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-28 text-[16px] leading-[1.4em] text-white outline-none"
             />
+            {tagError && (
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#D45E5E] slide-in-up">
+                {tagError}
+              </span>
+            )}
             {tag.trim().length > 0 && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#86D671] slide-in-up">
                 тег найден
@@ -95,6 +103,11 @@ export default function HelloScreenLogin({
               placeholder="пароль"
               className={`h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-24 text-[16px] leading-[1.4em] text-white outline-none ${show ? 'reveal-text' : ''}`}
             />
+            {passwordError && (
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#D45E5E]">
+                {passwordError}
+              </span>
+            )}
             {password.length > 0 && (
               <span
                 onClick={() => setShow((s) => !s)}
@@ -108,6 +121,25 @@ export default function HelloScreenLogin({
           <button
             type="button"
             className="mt-2 h-[47px] w-full rounded-[10px] bg-[#111111] text-center"
+            onClick={async () => {
+              setTagError('')
+              setPasswordError('')
+              if (!tag.trim()) {
+                setTagError('введите тег')
+                return
+              }
+              if (!password) {
+                setPasswordError('введите пароль')
+                return
+              }
+              const client = getSupabase()
+              if (!client) return
+              const email = `${tag}@hw.local`
+              const { error } = await client.auth.signInWithPassword({ email, password })
+              if (error) {
+                setPasswordError('неверный тег или пароль')
+              }
+            }}
           >
             <span className="inline-block text-[18px] font-semibold leading-[1.25em] tracking-[0.015em] text-white font-vk-demi">
               Войти

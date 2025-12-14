@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabaseClient'
 import HelloScreen from '@/screens/hello_screen_hello'
-import FeedScreen from '@/screens/FeedScreen'
+import HomeScreen from '@/screens/home'
 import HelloScreenTag from '@/screens/hello_screen_tag'
 import HelloScreenPasswordCreate from '@/screens/hello_screen_password_create'
 import HelloScreenLogin from '@/screens/hello_screen_login'
@@ -16,6 +16,9 @@ export default function Home() {
     envReady ? null : false
   )
   const [screen, setScreen] = useState<'hello' | 'tag' | 'password_create' | 'login'>('hello')
+  const [regTag, setRegTag] = useState<string>('')
+  const [tagError, setTagError] = useState<string>('')
+  const [passwordError, setPasswordError] = useState<string>('')
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 768px)')
@@ -38,6 +41,29 @@ export default function Home() {
     return () => data.subscription.unsubscribe()
   }, [])
 
+  async function signUpWithTagAndPassword(tag: string, password: string) {
+    const client = getSupabase()
+    if (!client) return
+    const email = `${tag}@hw.local`
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: { data: { tag } },
+    })
+    if (error) {
+      if (/registered|exists/i.test(error.message)) {
+        setTagError('тег занят')
+        setScreen('tag')
+        return
+      }
+      setPasswordError('не удалось зарегистрироваться')
+      return
+    }
+    if (!data.session) {
+      await client.auth.signInWithPassword({ email, password })
+    }
+  }
+
   if (isMobile === false) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
@@ -55,13 +81,19 @@ export default function Home() {
     )
   }
   if (isAuthed) {
-    return <FeedScreen />
+    return <HomeScreen />
   }
   if (screen === 'tag') {
     return (
       <HelloScreenTag
         onBack={() => setScreen('hello')}
-        onNext={() => setScreen('password_create')}
+        onNext={(tag) => {
+          setRegTag(tag)
+          setTagError('')
+          setScreen('password_create')
+        }}
+        initialValue={regTag}
+        initialError={tagError}
       />
     )
   }
@@ -69,9 +101,11 @@ export default function Home() {
     return (
       <HelloScreenPasswordCreate
         onBack={() => setScreen('tag')}
-        onNext={() => {
-          window.location.href = '/home'
+        onNext={async (password) => {
+          setPasswordError('')
+          await signUpWithTagAndPassword(regTag, password)
         }}
+        initialError={passwordError}
       />
     )
   }

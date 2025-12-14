@@ -5,17 +5,19 @@ import { useEffect, useState } from 'react'
 export default function HelloScreenTag({
   onBack,
   onNext,
+  initialValue,
+  initialError,
 }: {
   onBack?: () => void
-  onNext?: () => void
+  onNext?: (tag: string) => void
+  initialValue?: string
+  initialError?: string
 }) {
-  const [value, setValue] = useState('')
-  const [showNotice, setShowNotice] = useState(false)
+  const [value, setValue] = useState(initialValue ?? '')
+  const error = initialError ?? ''
   const [scale, setScale] = useState(1)
 
-  useEffect(() => {
-    setShowNotice(value.trim().length > 0)
-  }, [value])
+  const showNotice = value.trim().length > 0 && !error
 
   useEffect(() => {
     const baseW = 375
@@ -77,6 +79,11 @@ export default function HelloScreenTag({
               placeholder="durov"
               className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-28 text-[16px] leading-[1.4em] text-white outline-none"
             />
+            {error && (
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#D45E5E] slide-in-up">
+                {error}
+              </span>
+            )}
             {showNotice && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#86D671] slide-in-up">
                 этот тег свободен
@@ -91,7 +98,7 @@ export default function HelloScreenTag({
             className="mt-2 h-[47px] w-full rounded-[10px] bg-[#111111] text-center"
             onClick={() => {
               if (onNext) {
-                onNext()
+                onNext(value)
                 return
               }
               const event = new CustomEvent('tag-next', { detail: { value } })

@@ -3,9 +3,11 @@
 export default function Profile({
   profileTab,
   setProfileTab,
+  userTag,
 }: {
   profileTab: 'posts' | 'ads' | 'music' | 'friends'
   setProfileTab: (t: 'posts' | 'ads' | 'music' | 'friends') => void
+  userTag?: string
 }) {
   return (
     <>
@@ -34,7 +36,7 @@ export default function Profile({
       >
         <div className="flex w-full flex-col items-center">
           <div className="leading-[2.3em] text-white font-ttc-bold" style={{ fontSize: 'var(--profile-name-size)', marginTop: 'var(--profile-name-margin-top)' }}>
-            @PaulDuRove
+            {userTag ? `@${userTag}` : '@PaulDuRove'}
           </div>
           <div className="flex w-full items-center justify-center" style={{ marginTop: 'var(--profile-switch-offset)' }}>
             <div className="flex h-[45px] items-center justify-between rounded-[12px] border border-[#2B2B2B] bg-[#111111] px-2">
