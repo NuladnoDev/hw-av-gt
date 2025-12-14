@@ -59,7 +59,7 @@ body {
 
 @font-face {
   font-family: TTCommonsBold;
-  src: url("../../fonts/TTCOMMONS-BOLD.TTF") format("truetype");
+  src: url("/fonts/TTCOMMONS-BOLD.TTF") format("truetype");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -67,7 +67,7 @@ body {
 
 @font-face {
   font-family: VKSansDisplayDemiBold;
-  src: url("../../fonts/vk_sans_display_demi_bold.ttf") format("truetype");
+  src: url("/fonts/vk_sans_display_demi_bold.ttf") format("truetype");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
