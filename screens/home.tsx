@@ -25,14 +25,17 @@ export default function HomeScreen() {
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px] bg-[#171717]" />
 
-        <div className="absolute left-0 top-0 w-full px-6 pt-14">
+        <div
+          className="absolute left-0 w-full px-6 flex items-center justify-between"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
+        >
           <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
             {tab === 'ads' ? 'Объявления' : tab === 'feed' ? 'Лента' : 'Профиль'}
           </div>
-          <div className="absolute right-6 top-14 flex items-center gap-4">
+          <div className="flex items-center gap-4">
             <img
               src="/navigation/filers.svg"
-              alt="search"
+              alt="filters"
               className="h-[22px] w-[22px]"
             />
             <img
@@ -43,7 +46,10 @@ export default function HomeScreen() {
           </div>
         </div>
 
-        <div className="absolute left-0 top-[88px] h-[636px] w-full px-6">
+        <div
+          className="absolute left-0 w-full px-6"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)', height: 'calc(812px - 88px - 56px - var(--home-header-offset))' }}
+        >
           {tab === 'feed' && (
             <div className="flex h-full w-full items-center justify-center">
               <div className="text-center text-[16px] leading-[1.4em] text-[#A1A1A1]">
@@ -67,7 +73,10 @@ export default function HomeScreen() {
           )}
         </div>
 
-        <div className="absolute bottom-0 left-0 h-[88px] w-full bg-[#171717]">
+        <div
+          className="absolute left-0 w-full bg-[#171717]"
+          style={{ height: '88px', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+        >
           <div className="absolute -top-[0.5px] left-0 w-full" style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }} />
           <div className="grid h-full w-full grid-cols-3">
             <button

@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --home-header-offset: 23px;
 }
 
 @theme inline {
