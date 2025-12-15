@@ -89,6 +89,33 @@ async function initRecovery(c: SupabaseClient) {
   } catch {}
 }
 
+export async function loadLocalAuth(): Promise<{ tag?: string; uid?: string; email?: string } | null> {
+  try {
+    const rawLs = window.localStorage.getItem('hw-auth')
+    if (rawLs) return JSON.parse(rawLs) as { tag?: string; uid?: string; email?: string }
+    const raw = await idbGet('hw-auth')
+    return raw ? (JSON.parse(raw) as { tag?: string; uid?: string; email?: string }) : null
+  } catch {
+    return null
+  }
+}
+export async function saveLocalAuth(obj: { tag: string; uid: string; email: string }) {
+  try {
+    window.localStorage.setItem('hw-auth', JSON.stringify(obj))
+  } catch {}
+  try {
+    await idbSet('hw-auth', JSON.stringify(obj))
+  } catch {}
+}
+export async function clearLocalAuth() {
+  try {
+    window.localStorage.removeItem('hw-auth')
+  } catch {}
+  try {
+    await idbRemove('hw-auth')
+  } catch {}
+}
+
 export function getSupabase(): SupabaseClient | null {
   if (client) return client
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

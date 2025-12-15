@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getSupabase } from '@/lib/supabaseClient'
+import { getSupabase, saveLocalAuth } from '@/lib/supabaseClient'
 
 export default function HelloScreenLogin({
   onBack,
@@ -146,7 +146,7 @@ export default function HelloScreenLogin({
                   setPasswordError('неверный тег или пароль')
                   return
                 }
-                window.localStorage.setItem('hw-auth', JSON.stringify({ tag: user.tag, uid: user.uid, email: user.email }))
+                await saveLocalAuth({ tag: user.tag, uid: user.uid, email: user.email })
                 window.dispatchEvent(new Event('local-auth-changed'))
                 return
               }
@@ -156,13 +156,20 @@ export default function HelloScreenLogin({
                 setPasswordError('неверный тег или пароль')
               } else {
                 const { data: userData } = await client.auth.getUser()
-                const uid = userData.user?.id ?? null
-                const tagFromEmail = email.split('@')[0]
-                if (uid) {
-                  await client.from('profiles').upsert({ id: uid, tag: tagFromEmail })
-                  window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail, uid, email }))
-                  window.dispatchEvent(new Event('local-auth-changed'))
+                const userId = userData.user?.id ?? ''
+                let uid = userId
+                if (userId) {
+                  const { data: prof } = await client
+                    .from('profiles')
+                    .select('uid')
+                    .eq('id', userId)
+                    .maybeSingle()
+                  if (typeof (prof?.uid as string | undefined) === 'string' && (prof?.uid as string).trim().length > 0) {
+                    uid = (prof?.uid as string).trim()
+                  }
                 }
+                await saveLocalAuth({ tag, uid, email })
+                window.dispatchEvent(new Event('local-auth-changed'))
               }
             }}
           >
