@@ -383,80 +383,87 @@ export default function Profile({
               </>
             ) : profileTab === 'about' ? (
                 <>
-                <div className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '100%', maxWidth: '320px' }}>
-                  <div className="text-[16px] leading-[1.7em] text-white font-ttc-bold mb-2">Описание профиля</div>
-                  {editMode ? (
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      onBlur={() => saveDescription(description.trim())}
-                      className="w-full min-h-[80px] rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 py-2 text-[14px] leading-[1.6em] text-white outline-none"
-                    />
-                  ) : (
-                    <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">
-                      {description && description.trim().length > 0 ? description : 'Описание не заполнено'}
-                    </div>
-                  )}
-                </div>
-                <div className="mx-auto mt-3 rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '100%', maxWidth: '320px' }}>
-                  <div className="text-[16px] leading-[1.7em] text-white font-ttc-bold mb-2">О себе</div>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-[14px] leading-[1.7em] text-white/80">Возраст</div>
-                      {editMode ? (
-                        <input
-                          value={age}
-                          onChange={(e) => setAge(e.target.value)}
-                          onBlur={() => saveAge(age.trim())}
-                          className="h-[36px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 text-[14px] leading-[1.4em] text-white outline-none"
-                        />
-                      ) : (
-                        <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">{age && age.trim().length > 0 ? age : 'Не указан'}</div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[14px] leading-[1.7em] text-white/80">Пол</div>
-                      {editMode ? (
-                        <input
-                          value={gender}
-                          onChange={(e) => setGender(e.target.value)}
-                          onBlur={() => saveGender(gender.trim())}
-                          className="h-[36px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 text-[14px] leading-[1.4em] text-white outline-none"
-                        />
-                      ) : (
-                        <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">{gender && gender.trim().length > 0 ? gender : 'Не указан'}</div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[14px] leading-[1.7em] text-white/80">Политические взгляды</div>
-                      {editMode ? (
-                        <input
-                          value={political}
-                          onChange={(e) => setPolitical(e.target.value)}
-                          onBlur={() => savePolitical(political.trim())}
-                          className="h-[36px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 text-[14px] leading-[1.4em] text-white outline-none"
-                        />
-                      ) : (
-                        <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">{political && political.trim().length > 0 ? political : 'Не указано'}</div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[14px] leading-[1.7em] text-white/80">Хобби</div>
-                      {editMode ? (
-                        <input
-                          value={hobbies}
-                          onChange={(e) => setHobbies(e.target.value)}
-                          onBlur={() => saveHobbies(hobbies.trim())}
-                          className="h-[36px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 text-[14px] leading-[1.4em] text-white outline-none"
-                        />
-                      ) : (
-                        <div className="text-[14px] leading-[1.7em] text-[#A1A1A1]">{hobbies && hobbies.trim().length > 0 ? hobbies : 'Не указано'}</div>
-                      )}
+                <div style={{ marginLeft: '-24px', marginRight: '-24px' }}>
+                  <div className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '92%' }}>
+                    <div style={{ fontSize: 'var(--profile-public-title-size)' }} className="leading-[1.7em] text-white font-ttc-bold mb-2">Описание профиля</div>
+                    {editMode ? (
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        onBlur={() => saveDescription(description.trim())}
+                        className="w-full min-h-[80px] rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 py-2 leading-[1.6em] text-white outline-none"
+                        style={{ fontSize: 'var(--profile-public-text-size)' }}
+                      />
+                    ) : (
+                      <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>
+                        {description && description.trim().length > 0 ? description : 'Описание не заполнено'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mx-auto mt-3 rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '92%' }}>
+                    <div style={{ fontSize: 'var(--profile-public-title-size)' }} className="leading-[1.7em] text-white font-ttc-bold mb-2">О себе</div>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Возраст</div>
+                        {editMode ? (
+                          <input
+                            value={age}
+                            onChange={(e) => setAge(e.target.value)}
+                            onBlur={() => saveAge(age.trim())}
+                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
+                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                          />
+                        ) : (
+                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{age && age.trim().length > 0 ? age : 'Не указан'}</div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Пол</div>
+                        {editMode ? (
+                          <input
+                            value={gender}
+                            onChange={(e) => setGender(e.target.value)}
+                            onBlur={() => saveGender(gender.trim())}
+                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
+                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                          />
+                        ) : (
+                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{gender && gender.trim().length > 0 ? gender : 'Не указан'}</div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Политические взгляды</div>
+                        {editMode ? (
+                          <input
+                            value={political}
+                            onChange={(e) => setPolitical(e.target.value)}
+                            onBlur={() => savePolitical(political.trim())}
+                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
+                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                          />
+                        ) : (
+                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{political && political.trim().length > 0 ? political : 'Не указано'}</div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Хобби</div>
+                        {editMode ? (
+                          <input
+                            value={hobbies}
+                            onChange={(e) => setHobbies(e.target.value)}
+                            onBlur={() => saveHobbies(hobbies.trim())}
+                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
+                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                          />
+                        ) : (
+                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{hobbies && hobbies.trim().length > 0 ? hobbies : 'Не указано'}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mx-auto mt-3" style={{ width: '100%', maxWidth: '320px' }}>
-                  <div className="h-[24px] bg-[#0A0A0A]" />
+                  <div className="mx-auto mt-3" style={{ width: '100%' }}>
+                    <div className="h-[24px] bg-[#0A0A0A]" />
+                  </div>
                 </div>
               </>
             ) : (

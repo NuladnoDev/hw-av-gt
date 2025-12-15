@@ -38,6 +38,15 @@
   --create-gallery-item-size: 112px;
   --create-gallery-gap: 6px;
   --create-gallery-padding: 6px;
+  --profile-public-scale: 1;
+  --profile-public-title-size: calc(18px * var(--profile-public-scale));
+  --profile-public-text-size: calc(16px * var(--profile-public-scale));
+  --profile-public-input-height: calc(36px * var(--profile-public-scale));
+  --profile-edit-scale: 1;
+  --profile-edit-title-size: calc(18px * var(--profile-edit-scale));
+  --profile-edit-label-size: calc(16px * var(--profile-edit-scale));
+  --profile-edit-text-size: calc(16px * var(--profile-edit-scale));
+  --profile-edit-input-height: calc(40px * var(--profile-edit-scale));
 }
 
 @theme inline {

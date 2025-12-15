@@ -408,9 +408,12 @@ export default function ProfileEdit({
               </div>
             )}
 
-            <div className="mt-8 w-full max-w-[320px]">
-              <div className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4">
-                <div className="text-[16px] leading-[1.7em] text-white font-ttc-bold mb-2">Описание профиля</div>
+            <div className="mt-8 w-full" style={{ marginLeft: '-24px', marginRight: '-24px' }}>
+              <div
+                className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4"
+                style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}
+              >
+                <div className="leading-[1.7em] text-white font-ttc-bold mb-2" style={{ fontSize: 'var(--profile-edit-title-size)' }}>Описание профиля</div>
                 <textarea
                   value={description}
                   onChange={(e) => {
@@ -418,54 +421,62 @@ export default function ProfileEdit({
                   }}
                   rows={3}
                   placeholder=""
-                  className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] p-3 text-[16px] leading-[1.4em] text-white outline-none"
+                  className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 py-2 leading-[1.4em] text-white outline-none"
+                  style={{ fontSize: 'var(--profile-edit-text-size)' }}
                 />
               </div>
-              <div className="mt-3 mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4">
-                <div className="text-[16px] leading-[1.7em] text-white font-ttc-bold mb-2">О себе</div>
+              <div
+                className="mt-3 mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4"
+                style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}
+              >
+                <div className="leading-[1.7em] text-white font-ttc-bold mb-2" style={{ fontSize: 'var(--profile-edit-title-size)' }}>О себе</div>
                 <div className="space-y-3">
                   <div>
-                    <div className="text-[14px] leading-[1.7em] text-white/80">Возраст</div>
+                    <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-edit-label-size)' }}>Возраст</div>
                     <input
                       value={age}
                       onChange={(e) => {
                         setAge(e.target.value)
                       }}
                       placeholder="Возраст"
-                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 py-2 text-[16px] leading-[1.4em] text-white outline-none"
+                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none"
+                      style={{ height: 'var(--profile-edit-input-height)', fontSize: 'var(--profile-edit-text-size)' }}
                     />
                   </div>
                   <div>
-                    <div className="text-[14px] leading-[1.7em] text-white/80">Пол</div>
+                    <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-edit-label-size)' }}>Пол</div>
                     <input
                       value={gender}
                       onChange={(e) => {
                         setGender(e.target.value)
                       }}
                       placeholder="Пол"
-                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 py-2 text-[16px] leading-[1.4em] text-white outline-none"
+                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none"
+                      style={{ height: 'var(--profile-edit-input-height)', fontSize: 'var(--profile-edit-text-size)' }}
                     />
                   </div>
                   <div>
-                    <div className="text-[14px] leading-[1.7em] text-white/80">Политические взгляды</div>
+                    <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-edit-label-size)' }}>Политические взгляды</div>
                     <input
                       value={political}
                       onChange={(e) => {
                         setPolitical(e.target.value)
                       }}
                       placeholder="Политические взгляды"
-                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 py-2 text-[16px] leading-[1.4em] text-white outline-none"
+                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none"
+                      style={{ height: 'var(--profile-edit-input-height)', fontSize: 'var(--profile-edit-text-size)' }}
                     />
                   </div>
                   <div>
-                    <div className="text-[14px] leading-[1.7em] text-white/80">Хобби</div>
+                    <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-edit-label-size)' }}>Хобби</div>
                     <input
                       value={hobbies}
                       onChange={(e) => {
                         setHobbies(e.target.value)
                       }}
                       placeholder="Хобби"
-                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 py-2 text-[16px] leading-[1.4em] text-white outline-none"
+                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none"
+                      style={{ height: 'var(--profile-edit-input-height)', fontSize: 'var(--profile-edit-text-size)' }}
                     />
                   </div>
                 </div>
