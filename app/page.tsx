@@ -108,8 +108,12 @@ export default function Home() {
     uid = `hw-${String(cnt).padStart(4, '0')}`
     await client
       .from('profiles')
-      .insert({ user_id: userId, tag, uid })
+      .insert({ id: userId, tag, uid })
     await client.auth.updateUser({ data: { tag, uid } })
+    if (userId) {
+      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid: userId, email }))
+      window.dispatchEvent(new Event('local-auth-changed'))
+    }
   }
 
   if (isMobile === false) {

@@ -154,6 +154,15 @@ export default function HelloScreenLogin({
               const { error } = await client.auth.signInWithPassword({ email, password })
               if (error) {
                 setPasswordError('неверный тег или пароль')
+              } else {
+                const { data: userData } = await client.auth.getUser()
+                const uid = userData.user?.id ?? null
+                const tagFromEmail = email.split('@')[0]
+                if (uid) {
+                  await client.from('profiles').upsert({ id: uid, tag: tagFromEmail })
+                  window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail, uid, email }))
+                  window.dispatchEvent(new Event('local-auth-changed'))
+                }
               }
             }}
           >

@@ -382,7 +382,7 @@ export default function Profile({
                 </button>
               </>
             ) : profileTab === 'about' ? (
-              <>
+                <>
                 <div className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '100%', maxWidth: '320px' }}>
                   <div className="text-[16px] leading-[1.7em] text-white font-ttc-bold mb-2">Описание профиля</div>
                   {editMode ? (

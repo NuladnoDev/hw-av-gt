@@ -36,7 +36,7 @@ export default function ProfileEdit({
       const vw = window.innerWidth
       const vh = window.innerHeight
       const s = Math.min(vw / baseW, vh / baseH)
-      setScale(Math.max(1, s))
+      setScale(Math.min(1, s))
     }
     update()
     window.addEventListener('resize', update)

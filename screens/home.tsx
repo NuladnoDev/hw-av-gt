@@ -21,7 +21,16 @@ export default function HomeScreen() {
   const [allGalleryImages, setAllGalleryImages] = useState<string[]>([])
   const [galleryVisibleCount, setGalleryVisibleCount] = useState(15)
   const galleryAskedRef = useRef(false)
-  const [currentTag, setCurrentTag] = useState<string | null>(null)
+  const [currentTag, setCurrentTag] = useState<string | null>(() => {
+    try {
+      const authRaw = typeof window !== 'undefined' ? window.localStorage.getItem('hw-auth') : null
+      const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string | null }) : null
+      const t = auth?.tag ?? null
+      return typeof t === 'string' && t.trim().length > 0 ? t.trim() : null
+    } catch {
+      return null
+    }
+  })
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -99,12 +108,51 @@ export default function HomeScreen() {
     if (!client) return
     ;(async () => {
       const { data } = await client.auth.getUser()
-      const id = data.user?.id
-      if (!id) return
+      const id = data.user?.id ?? null
+      const email = data.user?.email ?? null
+      if (!id) {
+        const authRaw = window.localStorage.getItem('hw-auth')
+        const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string | null }) : null
+        const t = auth?.tag ?? null
+        setCurrentTag(typeof t === 'string' && t?.trim().length > 0 ? t!.trim() : null)
+        return
+      }
       const { data: prof } = await client.from('profiles').select('tag').eq('id', id).maybeSingle()
-      const t = (prof?.tag as string | undefined) ?? undefined
-      setCurrentTag(typeof t === 'string' && t.trim().length > 0 ? t.trim() : null)
+      const existingTag = (prof?.tag as string | undefined) ?? undefined
+      if (typeof existingTag === 'string' && existingTag.trim().length > 0) {
+        setCurrentTag(existingTag.trim())
+      } else {
+        const tagFromEmail = typeof email === 'string' ? email.split('@')[0] : null
+        if (tagFromEmail && tagFromEmail.trim().length > 0) {
+          await client.from('profiles').upsert({ id, tag: tagFromEmail.trim() })
+          setCurrentTag(tagFromEmail.trim())
+          window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail.trim(), uid: id, email }))
+          window.dispatchEvent(new Event('local-auth-changed'))
+        } else {
+          setCurrentTag(null)
+        }
+      }
     })()
+  }, [])
+  useEffect(() => {
+    const client = getSupabase()
+    if (!client) return
+    const { data: sub } = client.auth.onAuthStateChange(async (event, session) => {
+      const uid = session?.user?.id ?? null
+      const email = session?.user?.email ?? null
+      const tagFromEmail = typeof email === 'string' ? email.split('@')[0] : null
+      if (uid && tagFromEmail && tagFromEmail.trim().length > 0) {
+        window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail.trim(), uid, email }))
+        setCurrentTag(tagFromEmail.trim())
+      }
+      if (event === 'SIGNED_OUT') {
+        window.localStorage.removeItem('hw-auth')
+        setCurrentTag(null)
+      }
+    })
+    return () => {
+      sub?.subscription?.unsubscribe()
+    }
   }, [])
   useEffect(() => {
     const handleUpdated = (e: Event) => {
