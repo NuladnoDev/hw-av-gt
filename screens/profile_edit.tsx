@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { getSupabase } from '@/lib/supabaseClient'
+import { getSupabase, clearLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 
 export default function ProfileEdit({
@@ -30,8 +30,6 @@ export default function ProfileEdit({
   const [originalCity, setOriginalCity] = useState<string>('')
   const [originalPolitical, setOriginalPolitical] = useState<string>('')
   const [originalHobbies, setOriginalHobbies] = useState<string>('')
-  const [extraOpen, setExtraOpen] = useState(false)
-  const [extraClosing, setExtraClosing] = useState(false)
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [selectorClosing, setSelectorClosing] = useState(false)
   const [selectorType, setSelectorType] = useState<'gender' | 'city' | null>(null)
@@ -611,23 +609,28 @@ export default function ProfileEdit({
                 type="button"
                 className="mt-3 mx-auto block w-full rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4 text-center"
                 style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}
-                onClick={() => setExtraOpen(true)}
+                onClick={() => {
+                  onClose()
+                  const ev = new Event('open-settings')
+                  window.dispatchEvent(ev)
+                }}
               >
-                <div className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>Дополнительно</div>
+                <div className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>Настройки</div>
               </button>
               <button
                 type="button"
                 className="mt-3 mx-auto block w-full rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4 text-center"
                 style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--profile-logout-bg)' }}
+                onClick={async () => {
+                  const client = getSupabase()
+                  if (client) {
+                    await client.auth.signOut()
+                  }
+                  await clearLocalAuth()
+                  window.dispatchEvent(new Event('local-auth-changed'))
+                }}
               >
                 <div className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)', color: 'var(--profile-action-text-color)' }}>Выйти</div>
-              </button>
-              <button
-                type="button"
-                className="mt-3 mx-auto block w-full rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4 text-center"
-                style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--profile-delete-bg)' }}
-              >
-                <div className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)', color: 'var(--profile-action-text-color)' }}>Удалить аккаунт</div>
               </button>
             </div>
 
@@ -653,376 +656,7 @@ export default function ProfileEdit({
           </div>
         </div>
 
-        {extraOpen && (
-          <>
-            <div
-              className={`absolute left-0 top-0 h-[812px] w-[375px] ${extraClosing ? 'overlay-out' : 'overlay-in'}`}
-              style={{ background: 'rgba(0,0,0,0.5)' }}
-              onClick={() => {
-                setExtraClosing(true)
-                setTimeout(() => {
-                  setExtraOpen(false)
-                  setExtraClosing(false)
-                }, 150)
-              }}
-            />
-            <div
-              className={`absolute left-0 w-full bottom-0 ${extraClosing ? 'bottom-sheet-out' : 'bottom-sheet-in'}`}
-              style={{
-                height: `calc(812px - var(--profile-extra-sheet-gap))`,
-                background: '#111111',
-                borderTop: '1px solid #2B2B2B',
-                borderTopLeftRadius: '18px',
-                borderTopRightRadius: '18px',
-                padding: 'var(--profile-extra-padding)',
-                overflowY: 'auto',
-              }}
-            >
-              <div className="flex w-full items-center justify-between">
-                <button
-                  type="button"
-                  className={`text-[var(--profile-extra-title-size)] leading-[1.7em] ${extraAllEmpty ? 'text-white/60' : 'text-white'} font-sf-ui-medium`}
-                  disabled={extraAllEmpty}
-                  onClick={() => {
-                    setDescription('')
-                    setAge('')
-                    setGender('')
-                    setCity('')
-                    setPolitical('')
-                    setHobbies('')
-                  }}
-                >
-                  Очистить
-                </button>
-                <button
-                  type="button"
-                  className="flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
-                  onClick={() => {
-                    setExtraClosing(true)
-                    setTimeout(() => {
-                      setExtraOpen(false)
-                      setExtraClosing(false)
-                    }, 150)
-                  }}
-                >
-                  <img src="/interface/x-01.svg" alt="close" className="h-[20px] w-[20px]" style={{ filter: 'invert(1)' }} />
-                </button>
-              </div>
-              <div className="mt-[var(--profile-extra-item-gap)] space-y-0" style={{ rowGap: 'var(--profile-extra-item-gap)' }}>
-                <div className="relative">
-                  <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-extra-label-size)', marginTop: 'var(--profile-field-label-offset)' }}>Возраст</div>
-                  <div className="relative" style={{ marginTop: 'var(--profile-extra-label-gap)' }}>
-                    <input
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      placeholder="Возраст"
-                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none"
-                      style={{ height: 'var(--profile-extra-input-height)', fontSize: 'var(--profile-extra-text-size)' }}
-                    />
-                    <button
-                      type="button"
-                      aria-label="Очистить возраст"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                      onClick={() => setAge('')}
-                      style={{ width: 'var(--field-clear-size)', height: 'var(--field-clear-size)' }}
-                    >
-                      <span
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: 'var(--field-clear-color)',
-                          WebkitMaskImage: 'url(/interface/x-01.svg)',
-                          maskImage: 'url(/interface/x-01.svg)',
-                          WebkitMaskSize: 'contain',
-                          maskSize: 'contain',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskPosition: 'center',
-                          maskPosition: 'center',
-                        }}
-                      />
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-extra-label-size)', marginTop: 'var(--profile-field-label-offset)' }}>Пол</div>
-                  <div className="relative" style={{ marginTop: 'var(--profile-extra-label-gap)' }}>
-                    <button
-                      type="button"
-                      onClick={() => { setSelectorType('gender'); setSelectorOpen(true) }}
-                      className="w-full flex items-center justify-between rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white font-sf-ui-light"
-                      style={{ height: 'var(--profile-extra-input-height)', fontSize: 'var(--profile-extra-text-size)' }}
-                    >
-                      <span className={`${gender ? 'text-white' : 'text-white/60'}`}>{gender || 'Выбрать'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Очистить пол"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                      onClick={() => setGender('')}
-                      style={{ width: 'var(--field-clear-size)', height: 'var(--field-clear-size)' }}
-                    >
-                      <span
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: 'var(--field-clear-color)',
-                          WebkitMaskImage: 'url(/interface/x-01.svg)',
-                          maskImage: 'url(/interface/x-01.svg)',
-                          WebkitMaskSize: 'contain',
-                          maskSize: 'contain',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskPosition: 'center',
-                          maskPosition: 'center',
-                        }}
-                      />
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-extra-label-size)', marginTop: 'var(--profile-field-label-offset)' }}>Место жительства</div>
-                  <div className="relative" style={{ marginTop: 'var(--profile-extra-label-gap)' }}>
-                    <button
-                      type="button"
-                      onClick={() => { setSelectorType('city'); setSelectorOpen(true) }}
-                      className="w-full flex items-center justify-between rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white font-sf-ui-light"
-                      style={{ height: 'var(--profile-extra-input-height)', fontSize: 'var(--profile-extra-text-size)' }}
-                    >
-                      <span className={`${city ? 'text-white' : 'text-white/60'} font-sf-ui-light`}>{city || 'Выбрать'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Очистить место жительства"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                      onClick={() => setCity('')}
-                      style={{ width: 'var(--field-clear-size)', height: 'var(--field-clear-size)' }}
-                    >
-                      <span
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: 'var(--field-clear-color)',
-                          WebkitMaskImage: 'url(/interface/x-01.svg)',
-                          maskImage: 'url(/interface/x-01.svg)',
-                          WebkitMaskSize: 'contain',
-                          maskSize: 'contain',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskPosition: 'center',
-                          maskPosition: 'center',
-                        }}
-                      />
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-extra-label-size)', marginTop: 'var(--profile-field-label-offset)' }}>Политические взгляды</div>
-                  <div className="relative" style={{ marginTop: 'var(--profile-extra-label-gap)' }}>
-                    <input
-                      value={political}
-                      onChange={(e) => setPolitical(e.target.value)}
-                      placeholder="Политические взгляды"
-                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none"
-                      style={{ height: 'var(--profile-extra-input-height)', fontSize: 'var(--profile-extra-text-size)' }}
-                    />
-                    <button
-                      type="button"
-                      aria-label="Очистить взгляды"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                      onClick={() => setPolitical('')}
-                      style={{ width: 'var(--field-clear-size)', height: 'var(--field-clear-size)' }}
-                    >
-                      <span
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: 'var(--field-clear-color)',
-                          WebkitMaskImage: 'url(/interface/x-01.svg)',
-                          maskImage: 'url(/interface/x-01.svg)',
-                          WebkitMaskSize: 'contain',
-                          maskSize: 'contain',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskPosition: 'center',
-                          maskPosition: 'center',
-                        }}
-                      />
-                    </button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-extra-label-size)', marginTop: 'var(--profile-field-label-offset)' }}>Хобби</div>
-                  <div className="relative" style={{ marginTop: 'var(--profile-extra-label-gap)' }}>
-                    <input
-                      value={hobbies}
-                      onChange={(e) => setHobbies(e.target.value)}
-                      placeholder="Хобби"
-                      className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none"
-                      style={{ height: 'var(--profile-extra-input-height)', fontSize: 'var(--profile-extra-text-size)' }}
-                    />
-                    <button
-                      type="button"
-                      aria-label="Очистить хобби"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                      onClick={() => setHobbies('')}
-                      style={{ width: 'var(--field-clear-size)', height: 'var(--field-clear-size)' }}
-                    >
-                      <span
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: 'var(--field-clear-color)',
-                          WebkitMaskImage: 'url(/interface/x-01.svg)',
-                          maskImage: 'url(/interface/x-01.svg)',
-                          WebkitMaskSize: 'contain',
-                          maskSize: 'contain',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskPosition: 'center',
-                          maskPosition: 'center',
-                        }}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-6 flex w-full items-center justify-end">
-                <button
-                  type="button"
-                  className="h-[44px] rounded-[10px] bg-[#222222] px-3 text-center"
-                  disabled={!extraDirty}
-                  onClick={async () => {
-                    await saveAbout()
-                    setOriginalDescription(description ?? '')
-                    setOriginalAge(age ?? '')
-                    setOriginalGender(gender ?? '')
-                    setOriginalCity(city ?? '')
-                    setOriginalPolitical(political ?? '')
-                    setOriginalHobbies(hobbies ?? '')
-                    const ev = new CustomEvent('profile-updated', { detail: { description, age, gender, city, political, hobbies } })
-                    window.dispatchEvent(ev)
-                    setExtraClosing(true)
-                    setTimeout(() => {
-                      setExtraOpen(false)
-                      setExtraClosing(false)
-                    }, 150)
-                  }}
-                >
-                  <span className={`inline-block text-[var(--profile-extra-text-size)] leading-[1.25em] ${extraDirty ? 'text-white' : 'text-white/60'} font-sf-ui-medium`}>Сохранить</span>
-                </button>
-              </div>
-            </div>
-            {selectorOpen && (
-              <>
-                <div
-                  className={`absolute left-0 top-0 h-[812px] w-[375px] ${selectorClosing ? 'overlay-out' : 'overlay-in'}`}
-                  style={{ background: 'rgba(0,0,0,0.5)' }}
-                  onClick={() => {
-                    setSelectorClosing(true)
-                    setTimeout(() => {
-                      setSelectorOpen(false)
-                      setSelectorClosing(false)
-                      setSelectorType(null)
-                    }, 150)
-                  }}
-                />
-                <div
-                  ref={selectorSheetRef}
-                  className={`absolute left-0 w-full bottom-0 ${selectorClosing ? 'bottom-sheet-out' : 'bottom-sheet-in'}`}
-                  style={{
-                    height:
-                      selectorType === 'city'
-                        ? 'min(var(--city_height), calc(812px - var(--profile-extra-sheet-gap)))'
-                        : 'min(var(--gender_height), calc(812px - var(--profile-extra-sheet-gap)))',
-                    background: '#111111',
-                    borderTop: '1px solid #2B2B2B',
-                    borderTopLeftRadius: '18px',
-                    borderTopRightRadius: '18px',
-                    padding: 'var(--profile-extra-padding)',
-                    overflowY: 'hidden',
-                  }}
-                >
-                  <div className="flex w-full items-center justify-between" style={{ height: 'var(--selector-header-height)' }}>
-                    <div className="text-[var(--profile-extra-title-size)] leading-[1.7em] text-white font-sf-ui-medium">
-                      {selectorType === 'gender' ? 'Выберите пол' : 'Выберите место жительства'}
-                    </div>
-                    <button
-                      type="button"
-                      className="flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
-                      onClick={() => {
-                        setSelectorClosing(true)
-                        setTimeout(() => {
-                          setSelectorOpen(false)
-                          setSelectorClosing(false)
-                          setSelectorType(null)
-                        }, 150)
-                      }}
-                    >
-                      <img src="/interface/x-01.svg" alt="close" className="h-[20px] w-[20px]" style={{ filter: 'invert(1)' }} />
-                    </button>
-                  </div>
-                  {selectorType === 'city' && (
-                    <div className="mt-[var(--profile-extra-item-gap)]">
-                      <input
-                        value={cityQuery}
-                        onChange={(e) => {
-                          const next = e.target.value
-                          setCityQuery(next)
-                          const lc = next.trim().toLowerCase()
-                          if (lc.length > 0) {
-                            const local = defaultCities.filter((n) => n.toLowerCase().includes(lc)).slice(0, 20)
-                            setCityResults(local)
-                          } else {
-                            setCityResults([])
-                          }
-                        }}
-                        placeholder="Поиск места жительства"
-                        className="w-full rounded-[var(--selector-search-radius)] border border-[var(--selector-search-border)] bg-[var(--selector-search-bg)] px-3 leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        style={{ height: 'var(--selector-search-height)', fontSize: 'var(--selector-search-text-size)' }}
-                      />
-                    </div>
-                  )}
-                  <div
-                    className="mt-[var(--profile-extra-item-gap)] space-y-2 overflow-y-auto"
-                    style={{
-                      height:
-                        selectorType === 'city'
-                          ? 'calc(100% - var(--selector-header-height) - var(--selector-search-height) - var(--profile-extra-item-gap) - var(--profile-extra-item-gap))'
-                          : 'calc(100% - var(--selector-header-height) - var(--profile-extra-item-gap))',
-                    }}
-                  >
-                    {(selectorType === 'gender'
-                      ? ['Мужской', 'Женский', 'Другое']
-                      : (cityQuery.trim().length === 0
-                        ? defaultCities
-                        : (cityLoading ? ['Загрузка...'] : (cityResults.length > 0 ? cityResults : ['Ничего не найдено']))))
-                    .map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        className="w-full px-1 text-left leading-[1.5em] text-white font-sf-ui-light"
-                        style={{ height: 'var(--selector-item-height)', fontSize: 'var(--selector-item-text-size)' }}
-                        onClick={() => {
-                          if (selectorType === 'gender') setGender(opt)
-                          if (selectorType === 'city' && opt !== 'Загрузка...' && opt !== 'Ничего не найдено') setCity(opt)
-                          setSelectorClosing(true)
-                          setTimeout(() => {
-                            setSelectorOpen(false)
-                            setSelectorClosing(false)
-                            setSelectorType(null)
-                          }, 150)
-                        }}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        )}
+        
  
       </div>
     </div>

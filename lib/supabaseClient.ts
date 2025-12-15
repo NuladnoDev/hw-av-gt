@@ -74,9 +74,7 @@ async function initRecovery(c: SupabaseClient) {
       }
     }
     c.auth.onAuthStateChange(async (evt, session) => {
-      if (evt === 'SIGNED_OUT') {
-        await idbRemove('sb-session')
-      } else if (session?.access_token && session?.refresh_token) {
+      if (session?.access_token && session?.refresh_token) {
         await idbSet(
           'sb-session',
           JSON.stringify({
@@ -129,4 +127,10 @@ export function getSupabase(): SupabaseClient | null {
   })
   initRecovery(client)
   return client
+}
+
+export async function clearSessionBackup() {
+  try {
+    await idbRemove('sb-session')
+  } catch {}
 }

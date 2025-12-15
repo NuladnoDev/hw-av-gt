@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Profile from './profile'
 import ProfileEdit from './profile_edit'
+import Setting from './Setting'
+import InfoMe from './info_me'
 import { getSupabase } from '@/lib/supabaseClient'
 import Ads from './ads'
 
@@ -11,6 +13,10 @@ export default function HomeScreen() {
   const [tab, setTab] = useState<'ads' | 'feed' | 'profile'>('feed')
   const [profileTab, setProfileTab] = useState<'ads' | 'posts' | 'about' | 'friends'>('posts')
   const [profileEdit, setProfileEdit] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsOrigin, setSettingsOrigin] = useState<'profile' | 'edit' | null>(null)
+  const [returnToSettingsAfterEdit, setReturnToSettingsAfterEdit] = useState(false)
+  const [infoMeOpen, setInfoMeOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [createClosing, setCreateClosing] = useState(false)
   const [createText, setCreateText] = useState('')
@@ -172,6 +178,34 @@ export default function HomeScreen() {
     window.addEventListener('profile-edit-closed', handleClosed as EventListener)
     return () => window.removeEventListener('profile-edit-closed', handleClosed as EventListener)
   }, [])
+  useEffect(() => {
+    const openSettings = () => {
+      setSettingsOrigin('edit')
+      setSettingsOpen(true)
+    }
+    const closeSettings = () => setSettingsOpen(false)
+    const openProfileEdit = () => setProfileEdit(true)
+    const openInfoMe = () => {
+      setSettingsOpen(false)
+      setInfoMeOpen(true)
+    }
+    const closeInfoMe = () => {
+      setInfoMeOpen(false)
+      setSettingsOpen(true)
+    }
+    window.addEventListener('open-settings', openSettings)
+    window.addEventListener('close-settings', closeSettings)
+    window.addEventListener('open-profile-edit', openProfileEdit)
+    window.addEventListener('open-info-me', openInfoMe)
+    window.addEventListener('close-info-me', closeInfoMe)
+    return () => {
+      window.removeEventListener('open-settings', openSettings)
+      window.removeEventListener('close-settings', closeSettings)
+      window.removeEventListener('open-profile-edit', openProfileEdit)
+      window.removeEventListener('open-info-me', openInfoMe)
+      window.removeEventListener('close-info-me', closeInfoMe)
+    }
+  }, [])
 
   useEffect(() => {
     const baseW = 375
@@ -247,11 +281,25 @@ export default function HomeScreen() {
                 />
               </button>
               <div className="absolute right-6 top-0 flex h-full items-center">
-                <img
-                  src="/navigation/plus.svg"
-                  alt="add"
-                  className="h-[20px] w-[20px]"
-                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsOrigin('profile')
+                    setSettingsOpen(true)
+                  }}
+                  className="flex h-full items-center"
+                  aria-label="Открыть настройки"
+                >
+                  <img
+                    src="/setting/settings.svg"
+                    alt="settings"
+                    className="h-[22px] w-[22px]"
+                    style={{
+                      filter:
+                        'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
+                    }}
+                  />
+                </button>
               </div>
               <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
                 <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
@@ -526,8 +574,38 @@ export default function HomeScreen() {
         )}
         {profileEdit && tab === 'profile' && (
           <ProfileEdit
-            onClose={() => setProfileEdit(false)}
+            onClose={() => {
+              setProfileEdit(false)
+              if (returnToSettingsAfterEdit) {
+                setSettingsOrigin('edit')
+                setSettingsOpen(true)
+                setReturnToSettingsAfterEdit(false)
+              }
+            }}
             initialTag={currentTag ?? undefined}
+          />
+        )}
+        {settingsOpen && (
+          <Setting
+            onClose={() => {
+              setSettingsOpen(false)
+              if (settingsOrigin === 'edit') {
+                setProfileEdit(true)
+              }
+              setSettingsOrigin(null)
+            }}
+            onOpenAbout={() => {
+              setSettingsOpen(false)
+              setInfoMeOpen(true)
+            }}
+          />
+        )}
+        {infoMeOpen && (
+          <InfoMe
+            onClose={() => {
+              setInfoMeOpen(false)
+              setSettingsOpen(true)
+            }}
           />
         )}
       </div>

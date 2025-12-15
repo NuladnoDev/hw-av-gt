@@ -83,6 +83,19 @@
   --profile-tag-error-border-color: #D45E5E;
   --profile-avatar-glow-color: rgba(255,255,255,0.35);
   --profile-avatar-glow-size: 8px;
+  --settings-scale: 1;
+  --settings-list-top-margin: 12px;
+  --settings-user-block-height: 72px;
+  --settings-user-avatar-size: 40px;
+  --settings-user-title-size: 12px;
+  --settings-user-subtitle-size: 7px;
+  --settings-item-height: 54px;
+  --settings-item-icon-size: 22px;
+  --settings-icon-gap: 10px;
+  --settings-icon-filter: none;
+  --settings-chevron-filter: brightness(0.78);
+  --settings-categories-top-margin: 20px;
+  --settings-app-bottom-offset: -195px;
 }
 
 @theme inline {
