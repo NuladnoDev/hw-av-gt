@@ -111,7 +111,7 @@ export default function Home() {
       .insert({ id: userId, tag, uid })
     await client.auth.updateUser({ data: { tag, uid } })
     if (userId) {
-      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid: userId, email }))
+      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid, email }))
       window.dispatchEvent(new Event('local-auth-changed'))
     }
   }

@@ -23,10 +23,27 @@ export default function Profile({
   const [description, setDescription] = useState<string>('')
   const [age, setAge] = useState<string>('')
   const [gender, setGender] = useState<string>('')
+  const [city, setCity] = useState<string>('')
   const [political, setPolitical] = useState<string>('')
   const [hobbies, setHobbies] = useState<string>('')
 
   useEffect(() => {
+    const authRaw = window.localStorage.getItem('hw-auth')
+    const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
+    const idLocal = auth?.uid ?? null
+    setUserId(idLocal)
+    const profRaw = window.localStorage.getItem('hw-profiles')
+    const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>) : {}
+    const p = idLocal ? profMap[idLocal] : undefined
+    const tagLocal = p?.tag ?? (typeof userTag === 'string' ? userTag.replace(/^@/, '') : '')
+    if (tagLocal) setTagText(tagLocal)
+    if (p?.avatar_url) setAvatarUrl(p.avatar_url)
+    if (p?.description) setDescription(p.description)
+    if (p?.age) setAge(p.age)
+    if (p?.gender) setGender(p.gender)
+    if (p?.city) setCity(p.city ?? '')
+    if (p?.political) setPolitical(p.political)
+    if (p?.hobbies) setHobbies(p.hobbies)
     const client = getSupabase()
     if (!client) return
     ;(async () => {
@@ -34,14 +51,21 @@ export default function Profile({
       const id = data.user?.id ?? null
       setUserId(id)
       if (!id) return
-      const { data: prof } = await client.from('profiles').select('tag, avatar_url, description, age, gender, political, hobbies').eq('id', id).maybeSingle()
-      const tagFromDb = (prof?.tag as string | undefined) ?? undefined
-      const avatarFromDb = (prof?.avatar_url as string | undefined) ?? undefined
-      const descFromDb = (prof?.description as string | undefined) ?? ''
-      const ageFromDb = (prof?.age as string | number | undefined) ?? undefined
-      const genderFromDb = (prof?.gender as string | undefined) ?? undefined
-      const politicalFromDb = (prof?.political as string | undefined) ?? undefined
-      const hobbiesFromDb = (prof?.hobbies as string | undefined) ?? undefined
+      const { data: prof, error: err } = await client
+        .from('profiles')
+        .select('tag, avatar_url, description, age, gender, city, political, hobbies')
+        .eq('id', id)
+        .maybeSingle()
+      if (err || !prof) {
+        return
+      }
+      const tagFromDb = (prof.tag as string | undefined) ?? undefined
+      const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
+      const descFromDb = (prof.description as string | undefined) ?? ''
+      const ageFromDb = (prof.age as string | number | undefined) ?? undefined
+      const genderFromDb = (prof.gender as string | undefined) ?? undefined
+      const politicalFromDb = (prof.political as string | undefined) ?? undefined
+      const hobbiesFromDb = (prof.hobbies as string | undefined) ?? undefined
       if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
         setTagText(tagFromDb.trim())
       } else if (typeof userTag === 'string' && userTag.trim().length > 0) {
@@ -54,18 +78,20 @@ export default function Profile({
       if (typeof ageFromDb === 'number') setAge(String(ageFromDb))
       else if (typeof ageFromDb === 'string') setAge(ageFromDb)
       setGender(typeof genderFromDb === 'string' ? genderFromDb : '')
+      setCity(typeof (prof.city as string | undefined) === 'string' ? (prof.city as string) : '')
       setPolitical(typeof politicalFromDb === 'string' ? politicalFromDb : '')
       setHobbies(typeof hobbiesFromDb === 'string' ? hobbiesFromDb : '')
     })()
   }, [userTag])
   useEffect(() => {
     const handleUpdated = (e: Event) => {
-      const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; political?: string; hobbies?: string }>
+      const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>
       if (typeof ev.detail?.tag === 'string') setTagText(ev.detail.tag)
       if (typeof ev.detail?.avatar_url === 'string') setAvatarUrl(ev.detail.avatar_url)
       if (typeof ev.detail?.description === 'string') setDescription(ev.detail.description)
       if (typeof ev.detail?.age === 'string') setAge(ev.detail.age)
       if (typeof ev.detail?.gender === 'string') setGender(ev.detail.gender)
+      if (typeof ev.detail?.city === 'string') setCity(ev.detail.city)
       if (typeof ev.detail?.political === 'string') setPolitical(ev.detail.political)
       if (typeof ev.detail?.hobbies === 'string') setHobbies(ev.detail.hobbies)
     }
@@ -123,7 +149,7 @@ export default function Profile({
     await client.from('profiles').upsert({ id: userId, tag: next })
   }
 
-  const upsertProfile = async (patch: Partial<{ description: string; age: string; gender: string; political: string; hobbies: string }>) => {
+  const upsertProfile = async (patch: Partial<{ description: string; age: string; gender: string; city: string; political: string; hobbies: string }>) => {
     const client = getSupabase()
     if (!client || !userId) return
     await client.from('profiles').upsert({ id: userId, ...patch })
@@ -141,6 +167,10 @@ export default function Profile({
   const saveGender = async (next: string) => {
     setGender(next)
     await upsertProfile({ gender: next })
+  }
+  const saveCity = async (next: string) => {
+    setCity(next)
+    await upsertProfile({ city: next })
   }
   const savePolitical = async (next: string) => {
     setPolitical(next)
@@ -160,13 +190,13 @@ export default function Profile({
         <div className="h-full w-full" style={{ background: '#0A0A0A' }} />
       </div>
       <div
-        className="absolute left-1/2 -translate-x-1/2 rounded-full overflow-hidden border border-[rgba(255,255,255,0.2)]"
+        className="absolute left-1/2 -translate-x-1/2 rounded-full overflow-hidden"
         style={{
           width: 'var(--profile-avatar-size)',
           height: 'var(--profile-avatar-size)',
           top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2))',
-          boxShadow: '0 4px 18px rgba(0,0,0,0.35)',
-          background: gradient,
+          boxShadow: `0 0 var(--profile-avatar-glow-size) var(--profile-avatar-glow-color), 0 4px 18px rgba(0,0,0,0.35)`,
+          background: avatarUrl ? '#0A0A0A' : gradient,
         }}
       >
         {avatarUrl ? (
@@ -229,6 +259,42 @@ export default function Profile({
                       filter:
                         'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
                     }}
+                  />
+                </button>
+              )}
+              {editMode && (
+                <button
+                  type="button"
+                  className="opacity-80"
+                  onClick={async () => {
+                    if (!userId) {
+                      setAvatarUrl(null)
+                      const ev = new CustomEvent('profile-updated', { detail: { avatar_url: null } })
+                      window.dispatchEvent(ev)
+                      return
+                    }
+                    const client = getSupabase()
+                    if (client) {
+                      await client.from('profiles').upsert({ id: userId, avatar_url: null })
+                    }
+                    const profRaw = window.localStorage.getItem('hw-profiles')
+                    const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string }>) : {}
+                    const prev = profMap[userId] ?? {}
+                    const next = { ...prev }
+                    delete next.avatar_url
+                    profMap[userId] = next
+                    window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+                    setAvatarUrl(null)
+                    const ev = new CustomEvent('profile-updated', { detail: { avatar_url: null } })
+                    window.dispatchEvent(ev)
+                  }}
+                  aria-label="Удалить фото"
+                >
+                  <img
+                    src="/interface/trash-03.svg"
+                    alt="trash"
+                    className="h-[18px] w-[18px]"
+                    style={{ filter: 'invert(1) brightness(0.7)' }}
                   />
                 </button>
               )}
@@ -415,6 +481,20 @@ export default function Profile({
                           />
                         ) : (
                           <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{age && age.trim().length > 0 ? age : 'Не указан'}</div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Место жительства</div>
+                        {editMode ? (
+                          <input
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            onBlur={() => saveCity(city.trim())}
+                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
+                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                          />
+                        ) : (
+                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{city && city.trim().length > 0 ? city : 'Не указано'}</div>
                         )}
                       </div>
                       <div>

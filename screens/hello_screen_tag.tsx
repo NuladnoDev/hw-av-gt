@@ -21,17 +21,13 @@ export default function HelloScreenTag({
   const [available, setAvailable] = useState(false)
   const timerRef = useRef<number | null>(null)
 
-  const tagRegex = /^[\p{L}\p{N}.\-_]+$/u
   const trimmed = value.trim()
   const validLength = trimmed.length >= 3 && trimmed.length <= 12
-  const validFormat = validLength && tagRegex.test(trimmed)
   const formatError =
     trimmed.length > 0 && trimmed.length < 3
       ? 'минимум 3 символа'
       : trimmed.length > 12
       ? 'максимум 12 символов'
-      : trimmed.length > 0 && !tagRegex.test(trimmed)
-      ? 'неверный формат тега'
       : ''
   const fieldError = error || formatError
   const showNotice = false
@@ -130,61 +126,14 @@ export default function HelloScreenTag({
                 setError(trimmed.length < 3 ? 'минимум 3 символа' : 'максимум 12 символов')
                 return
               }
-              if (!tagRegex.test(trimmed)) {
-                setError('неверный формат тега')
+              if (onNext) {
+                onNext(trimmed)
                 return
               }
-              ;(async () => {
-                setChecking(true)
-                const client = getSupabase()
-                if (!client) {
-                  const usersRaw = window.localStorage.getItem('hw-users')
-                  const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
-                  const takenLocal = users.some((u) => u.tag === trimmed)
-                  if (takenLocal) {
-                    setError('тег занят')
-                    setChecking(false)
-                    return
-                  }
-                  setChecking(false)
-                  if (onNext) {
-                    onNext(trimmed)
-                    return
-                  }
-                  const event = new CustomEvent('tag-next', { detail: { value } })
-                  window.dispatchEvent(event)
-                  return
-                }
-                const { count, error: qErr } = await client
-                  .from('profiles')
-                  .select('tag', { count: 'exact', head: true })
-                  .eq('tag', trimmed)
-                if (qErr) {
-                  setChecking(false)
-                  if (onNext) {
-                    onNext(trimmed)
-                    return
-                  }
-                  const event = new CustomEvent('tag-next', { detail: { value } })
-                  window.dispatchEvent(event)
-                  return
-                }
-                const taken = typeof count === 'number' ? count > 0 : false
-                if (taken) {
-                  setError('тег занят')
-                  setChecking(false)
-                  return
-                }
-                setChecking(false)
-                if (onNext) {
-                  onNext(trimmed)
-                  return
-                }
-                const event = new CustomEvent('tag-next', { detail: { value } })
-                window.dispatchEvent(event)
-              })()
+              const event = new CustomEvent('tag-next', { detail: { value } })
+              window.dispatchEvent(event)
             }}
-            disabled={!validFormat || checking}
+            disabled={!validLength || checking}
           >
             <span className="inline-block text-[18px] font-semibold leading-[1.25em] tracking-[0.015em] text-white font-vk-demi">
               Продолжить

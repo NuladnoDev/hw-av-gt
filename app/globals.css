@@ -44,9 +44,45 @@
   --profile-public-input-height: calc(36px * var(--profile-public-scale));
   --profile-edit-scale: 1;
   --profile-edit-title-size: calc(18px * var(--profile-edit-scale));
-  --profile-edit-label-size: calc(16px * var(--profile-edit-scale));
+  --profile-edit-label-size: calc(14px * var(--profile-edit-scale));
   --profile-edit-text-size: calc(16px * var(--profile-edit-scale));
   --profile-edit-input-height: calc(40px * var(--profile-edit-scale));
+  --profile-edit-bottom-height: 44px;
+  --profile-edit-label-gap: 8px;
+  --profile-edit-input-bg: #111111;
+  --profile-edit-input-border: 1px solid transparent;
+  --profile-extra-sheet-gap: 32px;
+  --bottom-sheet-height: 468px;
+  --profile-edit-extra-title-size: calc(18px * var(--profile-edit-scale));
+  --profile-extra-scale: 1;
+  --profile-extra-title-size: calc(18px * var(--profile-extra-scale));
+  --profile-extra-label-size: calc(16px * var(--profile-extra-scale));
+  --profile-extra-text-size: calc(16px * var(--profile-extra-scale));
+  --profile-extra-input-height: calc(48px * var(--profile-extra-scale));
+  --profile-extra-padding: 14px;
+  --profile-extra-item-gap: 16px;
+  --profile-extra-label-gap: 10px;
+  --field-clear-size: 20px;
+  --field-clear-color: #bdbdbd1a;
+  --selector-search-height: 40px;
+  --selector-search-radius: 10px;
+  --selector-search-bg: #0F0F0F;
+  --selector-search-border: #2B2B2B;
+  --selector-search-text-size: 18px;
+  --selector-item-height: 42px;
+  --selector-item-text-size: 18px;
+  --city_height: 580px;
+  --gender_height: 250px;
+  --selector-header-height: 48px;
+  --profile-extra-label-below-gap: 6px;
+  --profile-field-label-offset: 7px;
+  --profile-logout-bg: #f532328a;
+  --profile-delete-bg: #d8292975;
+  --profile-action-text-color: #ffffff;
+  --profile-tag-error-color: #D45E5E;
+  --profile-tag-error-border-color: #D45E5E;
+  --profile-avatar-glow-color: rgba(255,255,255,0.35);
+  --profile-avatar-glow-size: 8px;
 }
 
 @theme inline {
@@ -226,4 +262,15 @@ body {
 }
 .font-sf-ui-medium {
   font-family: SFUITextMedium, Arial, Helvetica, sans-serif;
+}
+
+@font-face {
+  font-family: SFUITextLight;
+  src: url("/fonts/SF-UI-TEXT-LIGHT.TTF") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+.font-sf-ui-light {
+  font-family: SFUITextLight, Arial, Helvetica, sans-serif;
 }

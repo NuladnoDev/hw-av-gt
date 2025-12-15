@@ -98,9 +98,6 @@ export function getSupabase(): SupabaseClient | null {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false,
-      storage: window.localStorage,
-      storageKey: 'hw-auth-token',
     },
   })
   initRecovery(client)
