@@ -16,6 +16,41 @@ export default function PostCreate({
   const galleryInputRef = useRef<HTMLInputElement | null>(null)
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null)
 
+  const readFilesAsDataUrls = (files: File[]) =>
+    Promise.all(
+      files.map(
+        (file) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(String(reader.result))
+            reader.onerror = () => reject(new Error('read_failed'))
+            reader.readAsDataURL(file)
+          }),
+      ),
+    )
+
+  const addPickedImages = (urls: string[]) => {
+    if (urls.length === 0) return
+    setCreateImages((prev) => {
+      const next = [...prev]
+      for (const u of urls) {
+        if (!next.includes(u)) next.push(u)
+      }
+      return next
+    })
+    setAllGalleryImages((prev) => {
+      const next = [...prev]
+      for (const u of urls) {
+        if (!next.includes(u)) next.push(u)
+      }
+      try {
+        window.localStorage.setItem('hw-gallery', JSON.stringify(next))
+      } catch {}
+      setGalleryVisibleCount((c) => Math.min(next.length, Math.max(c, 15)))
+      return next
+    })
+  }
+
   const openGalleryPicker = async () => {
     const apiWin = window as unknown as {
       showOpenFilePicker?: (options: {
@@ -30,54 +65,20 @@ export default function PostCreate({
           types: [{ description: 'Images', accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif'] } }],
         })
         const files: File[] = await Promise.all(handles.map((h) => h.getFile()))
-        const toDataUrl = (file: File) =>
-          new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve(String(reader.result))
-            reader.onerror = () => reject(new Error('read_failed'))
-            reader.readAsDataURL(file)
-          })
-        const urls = await Promise.all(files.map((f) => toDataUrl(f)))
-        setAllGalleryImages((prev) => {
-          const next = [...prev, ...urls]
-          try {
-            window.localStorage.setItem('hw-gallery', JSON.stringify(next))
-          } catch {}
-          return next
-        })
-        setGalleryVisibleCount((c) => {
-          const nextLen = (Array.isArray(allGalleryImages) ? allGalleryImages.length : 0) + urls.length
-          return Math.min(nextLen, Math.max(c, 15))
-        })
+        const urls = await readFilesAsDataUrls(files)
+        addPickedImages(urls)
       } catch {}
     } else {
-      galleryInputRef.current?.click()
+      fileInputRef.current?.click()
     }
   }
 
-  const handleFiles = (files: FileList | null) => {
+  const handlePickedFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
-    const urls = Array.from(files).map((f) => URL.createObjectURL(f))
-    setCreateImages((prev) => [...prev, ...urls])
-  }
-
-  const handleFilesToGallery = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-    const toDataUrl = (file: File) =>
-      new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(String(reader.result))
-        reader.onerror = () => reject(new Error('read_failed'))
-        reader.readAsDataURL(file)
-      })
-    const urls = await Promise.all(Array.from(files).map((f) => toDataUrl(f)))
-    setAllGalleryImages((prev) => {
-      const next = [...prev, ...urls]
-      try {
-        window.localStorage.setItem('hw-gallery', JSON.stringify(next))
-      } catch {}
-      return next
-    })
+    try {
+      const urls = await readFilesAsDataUrls(Array.from(files))
+      addPickedImages(urls)
+    } catch {}
   }
 
   const toggleImageSelect = (src: string) => {
@@ -93,7 +94,7 @@ export default function PostCreate({
 
   const onGalleryScroll: React.UIEventHandler<HTMLDivElement> = (e) => {
     const el = e.currentTarget
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) {
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 240) {
       setGalleryVisibleCount((c) => Math.min(c + 15, allGalleryImages.length))
     }
   }
@@ -109,12 +110,15 @@ export default function PostCreate({
     } catch {}
   }, [])
 
-  useEffect(() => {
-    const el = textAreaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [createText])
+  const getCssPxVar = (name: string, fallback: number) => {
+    try {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+      const n = Number.parseFloat(raw.replace('px', ''))
+      return Number.isFinite(n) ? n : fallback
+    } catch {
+      return fallback
+    }
+  }
 
   useEffect(() => {
     const body = document.body
@@ -147,10 +151,14 @@ export default function PostCreate({
   }, [])
 
   useEffect(() => {
-    return () => {
-      createImages.forEach((u) => URL.revokeObjectURL(u))
-    }
-  }, [createImages])
+    const el = textAreaRef.current
+    if (!el) return
+    const minHNoMedia = getCssPxVar('--create-editor-min-height', 250)
+    const minHWithMedia = getCssPxVar('--create-editor-min-height-with-media', 72)
+    const minH = createImages.length > 0 ? minHWithMedia : minHNoMedia
+    el.style.height = 'auto'
+    el.style.height = `${Math.max(el.scrollHeight, minH)}px`
+  }, [createText, createImages.length])
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-[#0A0A0A]" style={{ height: '100dvh' }}>
@@ -183,51 +191,105 @@ export default function PostCreate({
 
         <div className="w-full" style={{ height: '0.3px', background: 'rgba(255,255,255,0.06)', marginTop: 'var(--create-header-divider-gap)' }} />
 
-        <div className="w-full" style={{ paddingLeft: 'var(--create-editor-padding-left)', paddingRight: 'var(--create-editor-padding-right)', marginTop: 'var(--create-editor-top-gap)' }}>
-          <textarea
-            ref={textAreaRef}
-            autoFocus
-            inputMode="text"
-            rows={1}
-            placeholder="Напиши что-нибудь..."
-            className="create-textarea w-full resize-none bg-transparent leading-[1.4em] text-white outline-none font-sf-ui-light"
-            value={createText}
-            onChange={(e) => setCreateText(e.target.value)}
-            style={{
-              minHeight: createImages.length > 0 ? 'var(--create-editor-min-height-with-media)' : 'var(--create-editor-min-height)',
-              paddingBottom: '8px',
-              fontSize: 'var(--create-editor-text-size)',
-            }}
-          />
-        </div>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="w-full" style={{ paddingLeft: 'var(--create-editor-padding-left)', paddingRight: 'var(--create-editor-padding-right)', marginTop: 'var(--create-editor-top-gap)' }}>
+            <textarea
+              ref={textAreaRef}
+              autoFocus
+              inputMode="text"
+              rows={1}
+              placeholder="Напиши что-нибудь..."
+              className="create-textarea w-full resize-none bg-transparent leading-[1.4em] text-white outline-none font-sf-ui-light"
+              value={createText}
+              onChange={(e) => setCreateText(e.target.value)}
+              style={{
+                minHeight: createImages.length > 0 ? 'var(--create-editor-min-height-with-media)' : 'var(--create-editor-min-height)',
+                paddingBottom: '8px',
+                fontSize: 'var(--create-editor-text-size)',
+                overflowY: 'hidden',
+              }}
+            />
+          </div>
 
-        <div className="px-6 pt-3">
-          {createImages.length > 0 && (
-            <>
-              <div className="grid w-full gap-2" style={{ gridTemplateColumns: createImages.length === 1 ? '1fr' : '1fr 1fr' }}>
-                {createImages.slice(0, Math.min(2, createImages.length)).map((src, idx) => (
-                  <div
-                    key={`${src}-big-${idx}`}
-                    className="relative overflow-hidden rounded-[12px] border border-[#2B2B2B]"
-                    style={createImages.length === 1 ? { height: 'var(--create-attachments-single-height)' } : { aspectRatio: 'var(--create-attachments-pair-aspect)' }}
-                  >
-                    <img src={src} alt="preview" className="h-full w-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => removeCreateImage(src)}
-                      className="absolute right-2 top-2 flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#111111]/80"
-                      aria-label="Удалить"
+          <div className="px-6 pt-3">
+            {createImages.length > 0 && (
+              <>
+                <div className="w-full grid gap-2" style={{ gridTemplateColumns: createImages.length === 1 ? '1fr' : '1fr 1fr' }}>
+                  {createImages.slice(0, Math.min(2, createImages.length)).map((src, idx) => (
+                    <div
+                      key={`${src}-big-${idx}`}
+                      className="relative overflow-hidden rounded-[12px] border border-[#2B2B2B]"
+                      style={createImages.length === 1 ? { height: 'var(--create-attachments-single-height)' } : { aspectRatio: 'var(--create-attachments-pair-aspect)' }}
                     >
-                      <img src="/interface/x-01.svg" alt="remove" className="h-[18px] w-[18px]" style={{ filter: 'invert(1) brightness(1.6)' }} />
-                    </button>
+                      <img src={src} alt="preview" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeCreateImage(src)}
+                        className="absolute right-2 top-2 flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#111111]/80"
+                        aria-label="Удалить"
+                      >
+                        <img src="/interface/x-01.svg" alt="remove" className="h-[18px] w-[18px]" style={{ filter: 'invert(1) brightness(1.6)' }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {createImages.length > 2 && (
+                  <div className="mt-2 flex w-full items-center gap-2 overflow-x-auto">
+                    {createImages.slice(2).map((src, idx) => (
+                      <div
+                        key={`${src}-thumb-${idx}`}
+                        className="relative overflow-hidden rounded-[10px] border border-[#2B2B2B]"
+                        style={{ height: 'var(--create-thumb-height)', aspectRatio: 'var(--create-thumb-aspect)', flex: '0 0 auto' }}
+                      >
+                        <img src={src} alt="thumb" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeCreateImage(src)}
+                          className="absolute right-1.5 top-1.5 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-[#111111]/80"
+                          aria-label="Удалить"
+                        >
+                          <img src="/interface/x-01.svg" alt="remove" className="h-[14px] w-[14px]" style={{ filter: 'invert(1) brightness(1.6)' }} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {createImages.length > 2 && (
-                <div className="mt-2 flex w-full items-center gap-2 overflow-x-auto">
-                  {createImages.slice(2).map((src, idx) => (
-                    <div key={`${src}-thumb-${idx}`} className="relative overflow-hidden rounded-[10px] border border-[#2B2B2B]" style={{ height: 'var(--create-thumb-height)', aspectRatio: 'var(--create-thumb-aspect)', flex: '0 0 auto' }}>
-                      <img src={src} alt="thumb" className="h-full w-full object-cover" />
+                )}
+              </>
+            )}
+
+            <div className="mt-3 flex w-full items-center justify-between" style={{ gap: 'var(--create-actions-row-gap)' }}>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handlePickedFiles(e.target.files)} />
+              <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handlePickedFiles(e.target.files)} />
+
+              <button
+                type="button"
+                onClick={openGalleryPicker}
+                className="flex items-center gap-2 rounded-[var(--create-actions-button-radius)] border border-[#2B2B2B] bg-[#111111] px-3"
+                style={{ marginLeft: 'var(--create-actions-left-offset)', height: 'var(--create-actions-button-height)', minWidth: 'var(--create-time-button-min-width)' }}
+              >
+                <img src="/interface/add image.svg" alt="restricted" className="h-[var(--create-action-icon-size)] w-[var(--create-action-icon-size)]" />
+                <span className="text-[14px] leading-[1.3em] text-[#A1A1A1]">Фото/Видео</span>
+              </button>
+            </div>
+
+            {createImages.length > 0 && (
+              <div
+                className="mt-3 w-full overflow-y-scroll"
+                style={{
+                  maxHeight: 'var(--create-preview-row-height)',
+                  WebkitOverflowScrolling: 'touch',
+                  overscrollBehavior: 'contain',
+                  touchAction: 'pan-y',
+                }}
+              >
+                <div className="grid w-full gap-2" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  {createImages.map((src, idx) => (
+                    <div
+                      key={`${src}-added-${idx}`}
+                      className="relative overflow-hidden rounded-[10px] border border-[#2B2B2B]"
+                      style={{ height: 'var(--create-thumb-height)' }}
+                    >
+                      <img src={src} alt="added" className="h-full w-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removeCreateImage(src)}
@@ -239,49 +301,45 @@ export default function PostCreate({
                     </div>
                   ))}
                 </div>
-              )}
-            </>
-          )}
-
-          <div className="mt-3 flex w-full items-center justify-between" style={{ gap: 'var(--create-actions-row-gap)' }}>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
-            <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFilesToGallery(e.target.files)} />
-
-            <button
-              type="button"
-              onClick={openGalleryPicker}
-              className="flex items-center gap-2 rounded-[var(--create-actions-button-radius)] border border-[#2B2B2B] bg-[#111111] px-3"
-              style={{ marginLeft: 'var(--create-actions-left-offset)', height: 'var(--create-actions-button-height)', minWidth: 'var(--create-time-button-min-width)' }}
-            >
-              <img src="/interface/add image.svg" alt="restricted" className="h-[var(--create-action-icon-size)] w-[var(--create-action-icon-size)]" />
-              <span className="text-[14px] leading-[1.3em] text-[#A1A1A1]">Фото/Видео</span>
-            </button>
+              </div>
+            )}
           </div>
-        </div>
 
-        <div className="mt-3 flex-1 overflow-hidden pt-3" style={{ borderTop: '0.3px solid rgba(255, 255, 255, 0.06)' }}>
           <div
-            className="grid w-full overflow-y-auto px-[var(--create-gallery-padding)]"
-            style={{ gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'var(--create-gallery-item-size)', gap: 'var(--create-gallery-gap)' }}
-            onScroll={onGalleryScroll}
+            className="mt-3 flex flex-1 min-h-0 flex-col overflow-hidden pt-3"
+            style={{ borderTop: '0.3px solid rgba(255, 255, 255, 0.06)' }}
           >
-            <button type="button" className="flex items-center justify-center rounded-[12px] border border-[#2B2B2B] bg-[#111111]" onClick={openGalleryPicker}>
-              <img src="/interface/paperclip.svg" alt="camera" className="h-[22px] w-[22px]" style={{ filter: 'invert(1) brightness(2)' }} />
-            </button>
-            {allGalleryImages.slice(0, galleryVisibleCount).map((src, idx) => {
-              const selected = createImages.includes(src)
-              return (
-                <button
-                  key={`${src}-grid-${idx}`}
-                  type="button"
-                  onClick={() => toggleImageSelect(src)}
-                  className="relative overflow-hidden rounded-[12px]"
-                  style={{ border: selected ? `2px solid rgba(var(--create-selection-color-rgb), var(--create-selection-opacity))` : '1px solid #2B2B2B' }}
-                >
-                  <img src={src} alt="gallery" className="h-full w-full object-cover" />
-                </button>
-              )
-            })}
+            <div
+              className="grid w-full flex-1 overflow-y-auto px-[var(--create-gallery-padding)]"
+              style={{
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gridAutoRows: 'var(--create-gallery-item-size)',
+                gap: 'var(--create-gallery-gap)',
+                height: '100%',
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+                touchAction: 'pan-y',
+              }}
+              onScroll={onGalleryScroll}
+            >
+              <button type="button" className="flex items-center justify-center rounded-[12px] border border-[#2B2B2B] bg-[#111111]" onClick={openGalleryPicker}>
+                <img src="/interface/paperclip.svg" alt="camera" className="h-[22px] w-[22px]" style={{ filter: 'invert(1) brightness(2)' }} />
+              </button>
+              {allGalleryImages.slice(0, galleryVisibleCount).map((src, idx) => {
+                const selected = createImages.includes(src)
+                return (
+                  <button
+                    key={`${src}-grid-${idx}`}
+                    type="button"
+                    onClick={() => toggleImageSelect(src)}
+                    className="relative overflow-hidden rounded-[12px]"
+                    style={{ border: selected ? `2px solid rgba(var(--create-selection-color-rgb), var(--create-selection-opacity))` : '1px solid #2B2B2B' }}
+                  >
+                    <img src={src} alt="gallery" className="h-full w-full object-cover" />
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>
