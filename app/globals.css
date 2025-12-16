@@ -64,11 +64,11 @@
   --create-action-icon-size: 18px;
   --create-actions-button-radius: 10px;
   --create-actions-left-offset: -16px;
-  --create-editor-top-gap: 12px;
+  --create-editor-top-gap: 23px;
   --create-editor-text-size: 18px;
   --create-editor-min-height: 120px;
   --create-editor-min-height-with-media: 72px;
-  --create-editor-padding-left: 15px;
+  --create-editor-padding-left: 18px;
   --create-editor-padding-right: 22px;
   --profile-public-scale: 1;
   --profile-public-title-size: calc(18px * var(--profile-public-scale));

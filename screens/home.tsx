@@ -141,7 +141,11 @@ export default function HomeScreen() {
   useEffect(() => {
     if (createOpen && tab === 'feed') {
       setTimeout(() => {
-        textAreaRef.current?.focus()
+        try {
+          textAreaRef.current?.focus({ preventScroll: true } as any)
+        } catch {
+          textAreaRef.current?.focus()
+        }
       }, 50)
     }
   }, [createOpen, tab])
@@ -149,6 +153,9 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!createOpen) {
       galleryAskedRef.current = false
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      } catch {}
     }
   }, [createOpen])
 
@@ -254,6 +261,7 @@ export default function HomeScreen() {
     const baseW = 375
     const baseH = 812
     const update = () => {
+      if (createOpen && tab === 'feed') return
       const vw = window.innerWidth
       const vh = window.innerHeight
       const s = Math.min(vw / baseW, vh / baseH)
@@ -262,7 +270,7 @@ export default function HomeScreen() {
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
-  }, [])
+  }, [createOpen, tab])
 
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
@@ -292,7 +300,11 @@ export default function HomeScreen() {
                   if (tab === 'feed') {
                     setCreateOpen(true)
                     setTimeout(() => {
-                      textAreaRef.current?.focus()
+                      try {
+                        textAreaRef.current?.focus({ preventScroll: true } as any)
+                      } catch {
+                        textAreaRef.current?.focus()
+                      }
                     }, 0)
                   }
                 }}
