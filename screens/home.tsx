@@ -27,6 +27,8 @@ export default function HomeScreen() {
   const [allGalleryImages, setAllGalleryImages] = useState<string[]>([])
   const [galleryVisibleCount, setGalleryVisibleCount] = useState(15)
   const galleryAskedRef = useRef(false)
+
+  const isCreateActive = createOpen && tab === 'feed'
   const [currentTag, setCurrentTag] = useState<string | null>(() => {
     try {
       const authRaw = typeof window !== 'undefined' ? window.localStorage.getItem('hw-auth') : null
@@ -157,6 +159,27 @@ export default function HomeScreen() {
   }, [createOpen, tab])
 
   useEffect(() => {
+    if (!isCreateActive) return
+    const body = document.body
+    const scrollY = window.scrollY
+    const prevOverflow = body.style.overflow
+    const prevPosition = body.style.position
+    const prevTop = body.style.top
+    const prevWidth = body.style.width
+    body.style.overflow = 'hidden'
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.width = '100%'
+    return () => {
+      body.style.overflow = prevOverflow
+      body.style.position = prevPosition
+      body.style.top = prevTop
+      body.style.width = prevWidth
+      window.scrollTo(0, scrollY)
+    }
+  }, [isCreateActive])
+
+  useEffect(() => {
     if (!createOpen) {
       galleryAskedRef.current = false
       try {
@@ -267,7 +290,7 @@ export default function HomeScreen() {
     const baseW = 375
     const baseH = 812
     const update = () => {
-      if (createOpen && tab === 'feed') return
+      if (isCreateActive) return
       const vw = window.innerWidth
       const vh = window.innerHeight
       const s = Math.min(vw / baseW, vh / baseH)
@@ -295,8 +318,18 @@ export default function HomeScreen() {
   }, [])
 
   return (
-    <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `translateY(var(--vv-offset-top, 0px)) scale(${scale})` }}>
+    <div
+      className={`fixed inset-0 flex w-full justify-center bg-[#0A0A0A] overflow-hidden ${
+        isCreateActive ? 'items-start' : 'items-center'
+      }`}
+    >
+      <div
+        className="relative h-[812px] w-[375px]"
+        style={{
+          transform: `${isCreateActive ? '' : 'translateY(var(--vv-offset-top, 0px)) '}scale(${scale})`,
+          transformOrigin: 'top center',
+        }}
+      >
         <div
           className="absolute left-0 top-0 h-[812px] w-[375px]"
           style={{ backgroundColor: '#0A0A0A' }}

@@ -120,13 +120,27 @@ export default function HelloScreen({
                     transform: 'translate(var(--hello-tip-union-offset-x), var(--hello-tip-union-offset-y))',
                   }}
                 />
-                <div className="mx-auto text-white" style={{ fontSize: 'var(--hello-tip-title-size)', width: 'var(--hello-tip-text-block-width)', fontFamily: 'var(--font-sf-ui-text-light)' }}>
+                <div
+                  className="mx-auto text-white"
+                  style={{
+                    fontSize: 'var(--hello-tip-title-size)',
+                    width: 'var(--hello-tip-text-block-width)',
+                    fontFamily: 'var(--font-sf-ui-text-light)',
+                    lineHeight: 'calc(1.25em + var(--hello-tip-text-indent))',
+                  }}
+                >
                   <span>Ой, похоже у вас </span>
                   <span style={{ color: 'white', fontFamily: 'var(--font-sf-ui-text-medium)' }}>Iphone</span>
                 </div>
                 <div
                   className="mx-auto text-white"
-                  style={{ fontSize: 'var(--hello-tip-text-size)', marginTop: 'var(--hello-tip-line-gap)', width: 'var(--hello-tip-text-block-width)', fontFamily: 'var(--font-sf-ui-text-light)' }}
+                  style={{
+                    fontSize: 'var(--hello-tip-text-size)',
+                    marginTop: 'var(--hello-tip-line-gap)',
+                    width: 'var(--hello-tip-text-block-width)',
+                    fontFamily: 'var(--font-sf-ui-text-light)',
+                    lineHeight: 'calc(1.4em + var(--hello-tip-text-indent))',
+                  }}
                 >
                   <span>В таком случае </span>
                   <span style={{ color: 'var(--hello-tip-iphone-color)' }}>крайне рекомендуется</span>
