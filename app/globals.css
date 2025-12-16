@@ -44,6 +44,7 @@
   --create-header-title-size: 26px;
   --create-header-title-margin-top: 4.5px;
   --create-header-title-margin-left: -7px;
+  --create-header-icons-margin-top: 6px;
   --create-header-title-font: TTCommonsDemiBold;
   --create-header-divider-gap: 8px;
   --create-attachments-big-height: 198px;
@@ -65,7 +66,8 @@
   --create-actions-left-offset: -16px;
   --create-editor-top-gap: 12px;
   --create-editor-text-size: 18px;
-  --create-editor-min-height: 250px;
+  --create-editor-min-height: 120px;
+  --create-editor-min-height-with-media: 72px;
   --create-editor-padding-left: 15px;
   --create-editor-padding-right: 22px;
   --profile-public-scale: 1;
@@ -331,5 +333,5 @@ body {
 
 /* create sheet specific */
 .create-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
 }

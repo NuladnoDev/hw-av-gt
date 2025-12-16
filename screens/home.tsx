@@ -43,10 +43,23 @@ export default function HomeScreen() {
     const urls = Array.from(files).map((f) => URL.createObjectURL(f))
     setCreateImages((prev) => [...prev, ...urls])
   }
-  const handleFilesToGallery = (files: FileList | null) => {
+  const handleFilesToGallery = async (files: FileList | null) => {
     if (!files || files.length === 0) return
-    const urls = Array.from(files).map((f) => URL.createObjectURL(f))
-    setAllGalleryImages((prev) => [...prev, ...urls])
+    const toDataUrl = (file: File) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(new Error('read_failed'))
+        reader.readAsDataURL(file)
+      })
+    const urls = await Promise.all(Array.from(files).map((f) => toDataUrl(f)))
+    setAllGalleryImages((prev) => {
+      const next = [...prev, ...urls]
+      try {
+        window.localStorage.setItem('hw-gallery', JSON.stringify(next))
+      } catch {}
+      return next
+    })
   }
   const toggleImageSelect = (src: string) => {
     setCreateImages((prev) => {
@@ -71,9 +84,19 @@ export default function HomeScreen() {
           types: [{ description: 'Images', accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif'] } }],
         })
         const files: File[] = await Promise.all(handles.map((h) => h.getFile()))
-        const urls = files.map((f) => URL.createObjectURL(f))
+        const toDataUrl = (file: File) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(String(reader.result))
+            reader.onerror = () => reject(new Error('read_failed'))
+            reader.readAsDataURL(file)
+          })
+        const urls = await Promise.all(files.map((f) => toDataUrl(f)))
         setAllGalleryImages(urls)
         setGalleryVisibleCount(Math.min(15, urls.length))
+        try {
+          window.localStorage.setItem('hw-gallery', JSON.stringify(urls))
+        } catch {}
       } catch {}
     } else {
       galleryInputRef.current?.click()
@@ -90,14 +113,24 @@ export default function HomeScreen() {
     if (!createOpen) {
       setTimeout(() => {
         createImages.forEach((u) => URL.revokeObjectURL(u))
-        allGalleryImages.forEach((u) => URL.revokeObjectURL(u))
         setCreateImages([])
-        setAllGalleryImages([])
         setGalleryVisibleCount(15)
         setCreateText('')
       }, 0)
     }
   }, [createOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (createOpen && tab === 'feed') {
+      try {
+        const raw = window.localStorage.getItem('hw-gallery')
+        const arr = raw ? (JSON.parse(raw) as string[]) : []
+        if (Array.isArray(arr) && arr.length > 0) {
+          setAllGalleryImages(arr)
+          setGalleryVisibleCount(Math.min(15, arr.length))
+        }
+      } catch {}
+    }
+  }, [createOpen, tab])
 
   useEffect(() => {
     const el = textAreaRef.current
@@ -256,7 +289,12 @@ export default function HomeScreen() {
               <button
                 type="button"
                 onClick={() => {
-                  if (tab === 'feed') setCreateOpen(true)
+                  if (tab === 'feed') {
+                    setCreateOpen(true)
+                    setTimeout(() => {
+                      textAreaRef.current?.focus()
+                    }, 0)
+                  }
                 }}
                 className="flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
               >
@@ -433,6 +471,7 @@ export default function HomeScreen() {
                       }, 200)
                     }}
                     className="flex h-full items-center"
+                    style={{ marginTop: 'var(--create-header-left-icon-margin-top, var(--create-header-icons-margin-top))' }}
                     aria-label="Закрыть"
                   >
                     <img
@@ -447,7 +486,12 @@ export default function HomeScreen() {
                       Новый пост
                     </span>
                   </div>
-                  <button type="button" className="flex h-full items-center" aria-label="Загрузка">
+                  <button
+                    type="button"
+                    className="flex h-full items-center"
+                    style={{ marginTop: 'var(--create-header-right-icon-margin-top, var(--create-header-icons-margin-top))' }}
+                    aria-label="Загрузка"
+                  >
                     <img
                       src="/interface/upload.svg"
                       alt="upload"
@@ -459,12 +503,21 @@ export default function HomeScreen() {
                 <div className="w-full" style={{ paddingLeft: 'var(--create-editor-padding-left)', paddingRight: 'var(--create-editor-padding-right)', marginTop: 'var(--create-editor-top-gap)' }}>
                   <textarea
                     ref={textAreaRef}
+                    autoFocus
+                    inputMode="text"
                     rows={1}
                     placeholder="Напишите что-нибудь..."
                     className="create-textarea w-full bg-transparent leading-[1.4em] text-white outline-none resize-none font-sf-ui-light"
                     value={createText}
                     onChange={(e) => setCreateText(e.target.value)}
-                    style={{ minHeight: 'var(--create-editor-min-height)', paddingBottom: '8px', fontSize: 'var(--create-editor-text-size)' }}
+                    style={{
+                      minHeight:
+                        createImages.length > 0
+                          ? 'var(--create-editor-min-height-with-media)'
+                          : 'var(--create-editor-min-height)',
+                      paddingBottom: '8px',
+                      fontSize: 'var(--create-editor-text-size)',
+                    }}
                   />
                 </div>
                 <div className="px-6 pt-3">
