@@ -26,18 +26,48 @@
   --create-sheet-border-color: #2B2B2B;
   --create-sheet-radius: 18px;
   --create-sheet-padding: 16px;
-  --create-photo-button-height: 47px;
-  --create-photo-button-radius: 10px;
+  --create-photo-button-height: 37px;
+  --create-photo-button-radius: 7px;
   --create-photo-button-bg: #111111;
-  --create-photo-button-text-size: 18px;
+  --create-photo-button-text-size: 20px;
   --create-photo-button-text-color: #ffffff;
-  --create-title-top-margin: 35px;
+  --create-title-top-margin: 75px;
   --create-editor-min-height: 100px;
   --create-preview-row-height: 98px;
   --create-actions-margin-top: 24px;
-  --create-gallery-item-size: 112px;
+  --create-gallery-item-size: 120px;
   --create-gallery-gap: 6px;
   --create-gallery-padding: 6px;
+  --create-header-icon-size: 22px;
+  --create-header-left-icon-size: 25px;
+  --create-header-right-icon-size: 32px;
+  --create-header-title-size: 26px;
+  --create-header-title-margin-top: 4.5px;
+  --create-header-title-margin-left: -7px;
+  --create-header-title-font: TTCommonsDemiBold;
+  --create-header-divider-gap: 8px;
+  --create-attachments-big-height: 198px;
+  --create-attachments-big-height: 160px;
+  --create-attachments-single-height: 300px;
+  --create-attachments-pair-aspect: 1 / 1;
+  --create-thumb-height: 58px;
+  --create-thumb-width: 84px;
+  --create-thumb-aspect: 4 / 4;
+  --create-selection-color: #6EBC3D;
+  --create-selection-color-rgb: 110, 188, 61;
+  --create-selection-opacity: 0.6;
+  --create-actions-row-gap: 8px;
+  --create-actions-button-height: 38px;
+  --create-actions-button-radius: 10px;
+  --create-time-button-min-width: 112px;
+  --create-action-icon-size: 18px;
+  --create-actions-button-radius: 10px;
+  --create-actions-left-offset: -16px;
+  --create-editor-top-gap: 12px;
+  --create-editor-text-size: 18px;
+  --create-editor-min-height: 250px;
+  --create-editor-padding-left: 15px;
+  --create-editor-padding-right: 22px;
   --profile-public-scale: 1;
   --profile-public-title-size: calc(18px * var(--profile-public-scale));
   --profile-public-text-size: calc(16px * var(--profile-public-scale));
@@ -173,6 +203,17 @@ body {
   font-family: TTCommonsBold, Arial, Helvetica, sans-serif;
 }
 
+@font-face {
+  font-family: TTCommonsDemiBold;
+  src: url("/fonts/TTCommons-DemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+.font-ttc-demibold {
+  font-family: TTCommonsDemiBold, Arial, Helvetica, sans-serif;
+}
+
 .font-vk-demi {
   font-family: VKSansDisplayDemiBold, Arial, Helvetica, sans-serif;
 }
@@ -286,4 +327,9 @@ body {
 }
 .font-sf-ui-light {
   font-family: SFUITextLight, Arial, Helvetica, sans-serif;
+}
+
+/* create sheet specific */
+.create-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
 }

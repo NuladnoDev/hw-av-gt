@@ -54,6 +54,9 @@ export default function HomeScreen() {
       return [...prev, src]
     })
   }
+  const removeCreateImage = (src: string) => {
+    setCreateImages((prev) => prev.filter((p) => p !== src))
+  }
   const openGalleryPicker = async () => {
     const apiWin = window as unknown as {
       showOpenFilePicker?: (options: {
@@ -102,6 +105,13 @@ export default function HomeScreen() {
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
   }, [createText])
+  useEffect(() => {
+    if (createOpen && tab === 'feed') {
+      setTimeout(() => {
+        textAreaRef.current?.focus()
+      }, 50)
+    }
+  }, [createOpen, tab])
 
   useEffect(() => {
     if (!createOpen) {
@@ -239,10 +249,10 @@ export default function HomeScreen() {
             </div>
             <div className="flex items-center gap-4">
               <img
-                src="/navigation/filers.svg"
-                alt="filters"
-                className="h-[22px] w-[22px]"
-              />
+                  src="/navigation/filers.svg"
+                  alt="filters"
+                  className="h-[22px] w-[22px]"
+                />
               <button
                 type="button"
                 onClick={() => {
@@ -276,7 +286,7 @@ export default function HomeScreen() {
                   className="h-[22px] w-[22px]"
                   style={{
                     filter:
-                      'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
+                      'invert(56%) sepia(30%) saturate(1409%) hue-rotate(85deg) brightness(97%) contrast(89%)',
                   }}
                 />
               </button>
@@ -294,11 +304,7 @@ export default function HomeScreen() {
                     src="/setting/settings.svg"
                     alt="settings"
                     className="h-[22px] w-[22px]"
-                    style={{
-                      filter:
-                        'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
-                    }}
-                  />
+                    />
                 </button>
               </div>
               <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
@@ -409,15 +415,14 @@ export default function HomeScreen() {
               style={{
                 height: '100%',
                 background: 'var(--create-sheet-bg)',
-                borderTop: '1px solid var(--create-sheet-border-color)',
-                borderTopLeftRadius: 'var(--create-sheet-radius)',
-                borderTopRightRadius: 'var(--create-sheet-radius)',
-                padding: 'var(--create-sheet-padding)',
+                borderTop: 'none',
+                borderTopLeftRadius: '0px',
+                borderTopRightRadius: '0px',
+                padding: '0px',
               }}
             >
               <div className="flex h-full w-full flex-col">
-                <div className="mx-auto mb-3 h-[4px] w-[44px] rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
-                <div className="mb-3 relative flex items-center justify-center" style={{ marginTop: 'var(--create-title-top-margin)' }}>
+                <div className="relative flex items-center justify-between h-[56px] px-6">
                   <button
                     type="button"
                     onClick={() => {
@@ -427,114 +432,115 @@ export default function HomeScreen() {
                         setCreateClosing(false)
                       }, 200)
                     }}
-                    className="absolute left-0 flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
+                    className="flex h-full items-center"
                     aria-label="Закрыть"
                   >
                     <img
                       src="/interface/x-01.svg"
                       alt="close"
-                      className="h-[22px] w-[22px]"
-                      style={{
-                        filter:
-                          'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
-                      }}
+                      className="h-[var(--create-header-left-icon-size)] w-[var(--create-header-left-icon-size)]"
+                      style={{ filter: 'invert(1) brightness(1.6)' }}
                     />
                   </button>
-                  <span className="text-center text-[20px] leading-[3em] text-white font-ttc-bold">
-                    Публикация поста
-                  </span>
+                  <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center gap-2" style={{ marginTop: 'var(--create-header-title-margin-top)', marginLeft: 'var(--create-header-title-margin-left)' }}>
+                    <span className="leading-[1em] text-white font-ttc-demibold" style={{ fontFamily: 'var(--create-header-title-font)', fontSize: 'var(--create-header-title-size)' }}>
+                      Новый пост
+                    </span>
+                  </div>
+                  <button type="button" className="flex h-full items-center" aria-label="Загрузка">
+                    <img
+                      src="/interface/upload.svg"
+                      alt="upload"
+                      className="h-[var(--create-header-right-icon-size)] w-[var(--create-header-right-icon-size)]"
+                    />
+                  </button>
                 </div>
-                <div className="mb-3">
+                <div className="w-full" style={{ height: '0.3px', background: 'rgba(255,255,255,0.06)', marginTop: 'var(--create-header-divider-gap)' }} />
+                <div className="w-full" style={{ paddingLeft: 'var(--create-editor-padding-left)', paddingRight: 'var(--create-editor-padding-right)', marginTop: 'var(--create-editor-top-gap)' }}>
                   <textarea
                     ref={textAreaRef}
                     rows={1}
-                    placeholder="Напишите текст..."
-                    className="w-full rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4 text-[16px] leading-[1.4em] text-white outline-none resize-none"
+                    placeholder="Напишите что-нибудь..."
+                    className="create-textarea w-full bg-transparent leading-[1.4em] text-white outline-none resize-none font-sf-ui-light"
                     value={createText}
                     onChange={(e) => setCreateText(e.target.value)}
-                    style={{ minHeight: 'var(--create-editor-min-height)' }}
+                    style={{ minHeight: 'var(--create-editor-min-height)', paddingBottom: '8px', fontSize: 'var(--create-editor-text-size)' }}
                   />
+                </div>
+                <div className="px-6 pt-3">
                   {createImages.length > 0 && (
-                    <div className="mt-2 flex w-full items-center gap-[var(--create-gallery-gap)] overflow-x-auto" style={{ height: 'var(--create-preview-row-height)' }}>
-                      {createImages.map((src, idx) => (
-                        <img
-                          key={`${src}-preview-${idx}`}
-                          src={src}
-                          alt="preview"
-                          className="rounded-[12px] object-cover"
-                          style={{ height: 'var(--create-preview-row-height)', width: 'calc(var(--create-preview-row-height) * 1.2)' }}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      <div className="w-full grid gap-2" style={{ gridTemplateColumns: createImages.length === 1 ? '1fr' : '1fr 1fr' }}>
+                        {createImages.slice(0, Math.min(2, createImages.length)).map((src, idx) => (
+                          <div
+                            key={`${src}-big-${idx}`}
+                            className="relative overflow-hidden rounded-[12px] border border-[#2B2B2B]"
+                            style={createImages.length === 1 ? { height: 'var(--create-attachments-single-height)' } : { aspectRatio: 'var(--create-attachments-pair-aspect)' }}
+                          >
+                            <img src={src} alt="preview" className="h-full w-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeCreateImage(src)}
+                              className="absolute right-2 top-2 flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#111111]/80"
+                              aria-label="Удалить"
+                            >
+                              <img src="/interface/x-01.svg" alt="remove" className="h-[18px] w-[18px]" style={{ filter: 'invert(1) brightness(1.6)' }} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      {createImages.length > 2 && (
+                        <div className="mt-2 flex w-full items-center gap-2 overflow-x-auto">
+                          {createImages.slice(2).map((src, idx) => (
+                            <div key={`${src}-thumb-${idx}`} className="relative overflow-hidden rounded-[10px] border border-[#2B2B2B]" style={{ height: 'var(--create-thumb-height)', aspectRatio: 'var(--create-thumb-aspect)', flex: '0 0 auto' }}>
+                              <img src={src} alt="thumb" className="h-full w-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => removeCreateImage(src)}
+                                className="absolute right-1.5 top-1.5 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-[#111111]/80"
+                                aria-label="Удалить"
+                              >
+                                <img src="/interface/x-01.svg" alt="remove" className="h-[14px] w-[14px]" style={{ filter: 'invert(1) brightness(1.6)' }} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
-                </div>
-                <div className="flex w-full items-center justify-between" style={{ marginTop: 'var(--create-actions-margin-top)' }}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleFiles(e.target.files)}
-                  />
-                  <input
-                    ref={galleryInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleFilesToGallery(e.target.files)}
-                  />
-                  <button
-                    type="button"
-                    className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-[#2B2B2B] bg-[#111111]"
-                    aria-label="Профиль"
-                    disabled
-                  >
-                    <img
-                      src="/interface/user-profile-check.svg"
-                      alt="user"
-                      className="h-[20px] w-[20px] opacity-60"
-                      style={{ filter: 'invert(1)' }}
+                  <div className="mt-3 flex w-full items-center justify-between" style={{ gap: 'var(--create-actions-row-gap)' }}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleFiles(e.target.files)}
                     />
-                  </button>
-                  <button
-                    type="button"
-                    className="h-[44px] grow rounded-[12px] bg-[#222222] text-center ml-3"
-                  >
-                    <span className="inline-block text-[16px] leading-[1.25em] text-white font-vk-demi">
-                      Опубликовать
-                    </span>
-                  </button>
-                </div>
-                <div className="mt-3 flex-1 overflow-hidden border-t border-[#2B2B2B] pt-3">
-                  <div className="flex w-full items-center justify-between px-[var(--create-gallery-padding)] pb-2">
+                    <input
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleFilesToGallery(e.target.files)}
+                    />
                     <button
                       type="button"
-                      className="flex h-[34px] items-center gap-2 rounded-[10px] border border-[#3A3A3A] bg-[#1A1A1A] px-3"
-                      disabled
+                      onClick={openGalleryPicker}
+                      className="flex items-center gap-2 rounded-[var(--create-actions-button-radius)] border border-[#2B2B2B] bg-[#111111] px-3"
+                      style={{ marginLeft: 'var(--create-actions-left-offset)', height: 'var(--create-actions-button-height)', minWidth: 'var(--create-time-button-min-width)' }}
                     >
                       <img
-                        src="/interface/paperclip.svg"
-                        alt="pick"
-                        className="h-[18px] w-[18px]"
-                        style={{ filter: 'invert(0.5) brightness(0.8)' }}
+                        src="/interface/add image.svg"
+                        alt="restricted"
+                        className="h-[var(--create-action-icon-size)] w-[var(--create-action-icon-size)]"
                       />
-                      <span className="text-[14px] leading-[1.3em] text-white/60">Настроить</span>
+                      <span className="text-[14px] leading-[1.3em] text-[#A1A1A1]">Фото/Видео</span>
                     </button>
-                    <div
-                      className="flex h-[34px] items-center gap-2 rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-3"
-                      aria-disabled="true"
-                    >
-                      <img
-                        src="/interface/image-question.svg"
-                        alt="question"
-                        className="h-[18px] w-[18px]"
-                        style={{ filter: 'invert(1) brightness(1.4)' }}
-                      />
-                      <span className="text-[14px] leading-[1.3em] text-white/60">Сохранение фото в БД</span>
-                    </div>
                   </div>
+                </div>
+                <div className="mt-3 flex-1 overflow-hidden pt-3" style={{ borderTop: '0.3px solid rgba(255, 255, 255, 0.06)' }}>
                   <div
                     className="grid w-full overflow-y-auto px-[var(--create-gallery-padding)]"
                     style={{ gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'var(--create-gallery-item-size)', gap: 'var(--create-gallery-gap)' }}
@@ -560,7 +566,7 @@ export default function HomeScreen() {
                           type="button"
                           onClick={() => toggleImageSelect(src)}
                           className="relative overflow-hidden rounded-[12px]"
-                          style={{ border: selected ? '2px solid #FFD900' : '1px solid #2B2B2B' }}
+                          style={{ border: selected ? `2px solid rgba(var(--create-selection-color-rgb), var(--create-selection-opacity))` : '1px solid #2B2B2B' }}
                         >
                           <img src={src} alt="gallery" className="h-full w-full object-cover" />
                         </button>
