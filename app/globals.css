@@ -66,9 +66,9 @@
   --create-actions-left-offset: -16px;
   --create-editor-top-gap: 23px;
   --create-editor-text-size: 18px;
-  --create-editor-min-height: 120px;
+  --create-editor-min-height: 250px;
   --create-editor-min-height-with-media: 72px;
-  --create-editor-padding-left: 18px;
+  --create-editor-padding-left: 15px;
   --create-editor-padding-right: 22px;
   --profile-public-scale: 1;
   --profile-public-title-size: calc(18px * var(--profile-public-scale));
@@ -128,6 +128,60 @@
   --settings-chevron-filter: brightness(0.78);
   --settings-categories-top-margin: 20px;
   --settings-app-bottom-offset: -195px;
+  /* hello screen variables */
+  --hello-login-browser-bottom: 76px;
+  --hello-login-standalone-bottom: 36px;
+  --hello-close-bottom: -140px;
+  --hello-close-width: 157px;
+  --hello-close-height: 47px;
+  --hello-close-radius: 10px;
+  --hello-close-bg: #111111;
+  --hello-close-text-size: 20px;
+  --hello-close-text-color: #ffffff;
+  --hello-tip-overlay-offset-y: -70px;
+  --hello-tip-modal-width: 280px;
+  --hello-tip-modal-height: 381px;
+  --hello-tip-modal-padding: 18px;
+  --hello-tip-union-size: 150px;
+  --hello-tip-union-margin-bottom: 54px;
+  --hello-tip-text-size: 19px;
+  --hello-tip-title-size: 19px;
+  --hello-tip-line-gap: 10px;
+  --hello-tip-gap: 40px;
+  --hello-tip-flow-gap: 10px;
+  --hello-tip-flow-margin-top: 35px;
+  --hello-tip-icon-size: 20px;
+  --hello-tip-iphone-color: #A6F3A6;
+  --hello-tip-warning-color: #D45E5E;
+  --hello-tip-card-radius: 10px;
+  --hello-tip-card-bg: linear-gradient(to bottom, #111111, #1D1F1C);
+  --hello-tip-card-border: rgba(255,255,255,0.12);
+  --hello-tip-card-shadow: none;
+  --hello-tip-pill-radius: 14px;
+  --hello-tip-pill-bg: rgba(255,255,255,0.06);
+  --hello-tip-pill-border: rgba(255,255,255,0.14);
+  --hello-tip-pill-padding: 10px 12px;
+  --hello-tip-text-block-width: 236px;
+  --hello-tip-instruction-width: 236px;
+  --hello-tip-union-offset-x: 0px;
+  --hello-tip-union-offset-y: 18px;
+  --hello-tip-text-indent: 0px;
+  --font-sf-ui-text-light: 'SF-UI-Text-Light';
+  --font-sf-ui-text-medium: 'SF-UI-Text-Medium';
+}
+
+@font-face {
+  font-family: 'SF-UI-Text-Light';
+  src: url('../public/fonts/SF-UI-TEXT-LIGHT.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF-UI-Text-Medium';
+  src: url('../public/fonts/sf_ui_text_medium.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
 }
 
 @theme inline {
@@ -148,7 +202,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  height: 100vh;
+  height: 100svh;
   overflow: hidden;
   overscroll-behavior: none;
 }
