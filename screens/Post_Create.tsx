@@ -9,8 +9,20 @@ export default function PostCreate({
 }) {
   const [createText, setCreateText] = useState('')
   const [createImages, setCreateImages] = useState<string[]>([])
-  const [allGalleryImages, setAllGalleryImages] = useState<string[]>([])
-  const [galleryVisibleCount, setGalleryVisibleCount] = useState(15)
+  const loadStoredGallery = (): string[] => {
+    if (typeof window === 'undefined') return []
+    try {
+      const raw = window.localStorage.getItem('hw-gallery')
+      const arr = raw ? (JSON.parse(raw) as unknown) : []
+      return Array.isArray(arr) ? (arr.filter((x): x is string => typeof x === 'string') as string[]) : []
+    } catch {
+      return []
+    }
+  }
+
+  const initialGallery = loadStoredGallery()
+  const [allGalleryImages, setAllGalleryImages] = useState<string[]>(initialGallery)
+  const [galleryVisibleCount, setGalleryVisibleCount] = useState(() => (initialGallery.length > 0 ? Math.min(15, initialGallery.length) : 15))
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const galleryInputRef = useRef<HTMLInputElement | null>(null)
@@ -99,17 +111,6 @@ export default function PostCreate({
     }
   }
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem('hw-gallery')
-      const arr = raw ? (JSON.parse(raw) as string[]) : []
-      if (Array.isArray(arr) && arr.length > 0) {
-        setAllGalleryImages(arr)
-        setGalleryVisibleCount(Math.min(15, arr.length))
-      }
-    } catch {}
-  }, [])
-
   const getCssPxVar = (name: string, fallback: number) => {
     try {
       const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -143,7 +144,7 @@ export default function PostCreate({
   useEffect(() => {
     setTimeout(() => {
       try {
-        textAreaRef.current?.focus({ preventScroll: true } as any)
+        textAreaRef.current?.focus({ preventScroll: true })
       } catch {
         textAreaRef.current?.focus()
       }
@@ -191,7 +192,7 @@ export default function PostCreate({
 
         <div className="w-full" style={{ height: '0.3px', background: 'rgba(255,255,255,0.06)', marginTop: 'var(--create-header-divider-gap)' }} />
 
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
           <div className="w-full" style={{ paddingLeft: 'var(--create-editor-padding-left)', paddingRight: 'var(--create-editor-padding-right)', marginTop: 'var(--create-editor-top-gap)' }}>
             <textarea
               ref={textAreaRef}
@@ -211,7 +212,7 @@ export default function PostCreate({
             />
           </div>
 
-          <div className="px-6 pt-3">
+          <div className="px-6 pt-3 shrink-0">
             {createImages.length > 0 && (
               <>
                 <div className="w-full grid gap-2" style={{ gridTemplateColumns: createImages.length === 1 ? '1fr' : '1fr 1fr' }}>
@@ -272,37 +273,6 @@ export default function PostCreate({
               </button>
             </div>
 
-            {createImages.length > 0 && (
-              <div
-                className="mt-3 w-full overflow-y-scroll"
-                style={{
-                  maxHeight: 'var(--create-preview-row-height)',
-                  WebkitOverflowScrolling: 'touch',
-                  overscrollBehavior: 'contain',
-                  touchAction: 'pan-y',
-                }}
-              >
-                <div className="grid w-full gap-2" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                  {createImages.map((src, idx) => (
-                    <div
-                      key={`${src}-added-${idx}`}
-                      className="relative overflow-hidden rounded-[10px] border border-[#2B2B2B]"
-                      style={{ height: 'var(--create-thumb-height)' }}
-                    >
-                      <img src={src} alt="added" className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeCreateImage(src)}
-                        className="absolute right-1.5 top-1.5 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-[#111111]/80"
-                        aria-label="Удалить"
-                      >
-                        <img src="/interface/x-01.svg" alt="remove" className="h-[14px] w-[14px]" style={{ filter: 'invert(1) brightness(1.6)' }} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           <div
@@ -310,7 +280,7 @@ export default function PostCreate({
             style={{ borderTop: '0.3px solid rgba(255, 255, 255, 0.06)' }}
           >
             <div
-              className="grid w-full flex-1 overflow-y-auto px-[var(--create-gallery-padding)]"
+              className="grid w-full flex-1 min-h-0 overflow-y-auto px-[var(--create-gallery-padding)]"
               style={{
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gridAutoRows: 'var(--create-gallery-item-size)',
