@@ -526,7 +526,7 @@ export default function Profile({
                         )}
                       </div>
                       <div>
-                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Хобби</div>
+                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Увлечения</div>
                         {editMode ? (
                           <input
                             value={hobbies}
