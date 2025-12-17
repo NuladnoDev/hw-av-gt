@@ -94,7 +94,7 @@ export default function PostCreate({
 
   const onGalleryScroll: React.UIEventHandler<HTMLDivElement> = (e) => {
     const el = e.currentTarget
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 240) {
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) {
       setGalleryVisibleCount((c) => Math.min(c + 15, allGalleryImages.length))
     }
   }
@@ -140,6 +140,13 @@ export default function PostCreate({
     }, 50)
   }, [])
 
+  useEffect(() => {
+    const el = textAreaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [createText, createImages.length])
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-[#0A0A0A]" style={{ height: '100dvh' }}>
       <div
@@ -175,11 +182,9 @@ export default function PostCreate({
           <div
             className="w-full"
             style={{
-              height: 'var(--create-editor-min-height)',
               paddingLeft: 'var(--create-editor-padding-left)',
               paddingRight: 'var(--create-editor-padding-right)',
               marginTop: 'var(--create-editor-top-gap)',
-              overflow: 'hidden',
             }}
           >
             <textarea
@@ -192,23 +197,29 @@ export default function PostCreate({
               value={createText}
               onChange={(e) => setCreateText(e.target.value)}
               style={{
-                height: createImages.length > 0 ? 'var(--create-editor-min-height-with-media)' : 'var(--create-editor-min-height)',
+                minHeight:
+                  createImages.length > 0
+                    ? 'var(--create-editor-min-height-with-media)'
+                    : 'var(--create-editor-min-height)',
                 paddingBottom: '8px',
                 fontSize: 'var(--create-editor-text-size)',
-                overflowY: 'auto',
               }}
             />
             {createImages.length > 0 && (
-              <div
-                className="mt-3 w-full overflow-y-auto"
-                style={{ height: 'calc(var(--create-editor-min-height) - var(--create-editor-min-height-with-media))' }}
-              >
-                <div className="grid w-full gap-2" style={{ gridTemplateColumns: createImages.length === 1 ? '1fr' : '1fr 1fr' }}>
-                  {createImages.map((src, idx) => (
+              <div className="mt-3 w-full">
+                <div
+                  className="w-full grid gap-2"
+                  style={{ gridTemplateColumns: createImages.length === 1 ? '1fr' : '1fr 1fr' }}
+                >
+                  {createImages.slice(0, Math.min(2, createImages.length)).map((src, idx) => (
                     <div
-                      key={`${src}-preview-${idx}`}
+                      key={`${src}-big-${idx}`}
                       className="relative overflow-hidden rounded-[12px] border border-[#2B2B2B]"
-                      style={createImages.length === 1 ? { height: 'var(--create-attachments-single-height)' } : { aspectRatio: 'var(--create-attachments-pair-aspect)' }}
+                      style={
+                        createImages.length === 1
+                          ? { height: 'var(--create-attachments-single-height)' }
+                          : { aspectRatio: 'var(--create-attachments-pair-aspect)' }
+                      }
                     >
                       <img src={src} alt="preview" className="h-full w-full object-cover" />
                       <button
@@ -217,11 +228,46 @@ export default function PostCreate({
                         className="absolute right-2 top-2 flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#111111]/80"
                         aria-label="Удалить"
                       >
-                        <img src="/interface/x-01.svg" alt="remove" className="h-[18px] w-[18px]" style={{ filter: 'invert(1) brightness(1.6)' }} />
+                        <img
+                          src="/interface/x-01.svg"
+                          alt="remove"
+                          className="h-[18px] w-[18px]"
+                          style={{ filter: 'invert(1) brightness(1.6)' }}
+                        />
                       </button>
                     </div>
                   ))}
                 </div>
+                {createImages.length > 2 && (
+                  <div className="mt-2 flex w-full items-center gap-2 overflow-x-auto">
+                    {createImages.slice(2).map((src, idx) => (
+                      <div
+                        key={`${src}-thumb-${idx}`}
+                        className="relative overflow-hidden rounded-[10px] border border-[#2B2B2B]"
+                        style={{
+                          height: 'var(--create-thumb-height)',
+                          aspectRatio: 'var(--create-thumb-aspect)',
+                          flex: '0 0 auto',
+                        }}
+                      >
+                        <img src={src} alt="preview" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeCreateImage(src)}
+                          className="absolute right-1.5 top-1.5 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-[#111111]/80"
+                          aria-label="Удалить"
+                        >
+                          <img
+                            src="/interface/x-01.svg"
+                            alt="remove"
+                            className="h-[14px] w-[14px]"
+                            style={{ filter: 'invert(1) brightness(1.6)' }}
+                          />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -244,8 +290,13 @@ export default function PostCreate({
           </div>
 
           <div
-            className="mt-3 flex-1 overflow-y-auto pt-3"
-            style={{ borderTop: '0.3px solid rgba(255, 255, 255, 0.06)' }}
+            className="mt-3 w-full pt-3"
+            style={{
+              borderTop: '0.3px solid rgba(255, 255, 255, 0.06)',
+              height: 'var(--create-gallery-zone-height)',
+              overflowY: 'scroll',
+              WebkitOverflowScrolling: 'touch',
+            }}
             onScroll={onGalleryScroll}
           >
             <div
