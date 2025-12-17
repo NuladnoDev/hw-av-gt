@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function HelloScreen({
   onNext,
@@ -12,6 +12,7 @@ export default function HelloScreen({
   const [isStandalone, setIsStandalone] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [showIosTip, setShowIosTip] = useState(false)
+  const loginButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     const ua = navigator.userAgent || navigator.vendor || ''
@@ -23,6 +24,34 @@ export default function HelloScreen({
     setIsStandalone(standalone)
     setShowIosTip(ios && !standalone)
   }, [])
+
+  useEffect(() => {
+    if (showIosTip) return
+    const updateOffset = () => {
+      try {
+        const btn = loginButtonRef.current
+        if (!btn) return
+        const rect = btn.getBoundingClientRect()
+        const viewportH = window.visualViewport?.height ?? window.innerHeight
+        const margin = 12
+        const overflow = rect.bottom + margin - viewportH
+        const root = document.documentElement
+        if (overflow > 0) {
+          root.style.setProperty('--hello-login-offset-y', `${overflow}px`)
+        } else {
+          root.style.setProperty('--hello-login-offset-y', '0px')
+        }
+      } catch {}
+    }
+    updateOffset()
+    window.addEventListener('resize', updateOffset)
+    const vv = window.visualViewport as any
+    vv?.addEventListener?.('resize', updateOffset)
+    return () => {
+      window.removeEventListener('resize', updateOffset)
+      vv?.removeEventListener?.('resize', updateOffset)
+    }
+  }, [showIosTip])
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#0A0A0A]">
@@ -66,11 +95,12 @@ export default function HelloScreen({
         {!showIosTip && (
           <button
             type="button"
+            ref={loginButtonRef}
             className="absolute left-0 w-full text-center"
             style={{
               bottom: isStandalone
-                ? 'calc(env(safe-area-inset-bottom, 0px) + var(--hello-login-standalone-bottom))'
-                : 'calc(env(safe-area-inset-bottom, 0px) + var(--hello-login-browser-bottom))',
+                ? 'calc(env(safe-area-inset-bottom, 0px) + var(--hello-login-standalone-bottom) + var(--hello-login-offset-y))'
+                : 'calc(env(safe-area-inset-bottom, 0px) + var(--hello-login-browser-bottom) + var(--hello-login-offset-y))',
             }}
             onClick={() => {
               if (onLogin) {

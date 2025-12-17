@@ -108,7 +108,7 @@ export default function Setting({
   const openAbout = () => {
     if (onOpenAbout) onOpenAbout()
     else {
-      const ev = new Event('open-info-me')
+      const ev = new Event('open-profile-edit')
       window.dispatchEvent(ev)
     }
     close()
@@ -241,7 +241,7 @@ export default function Setting({
               >
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
                   <img
-                    src="/setting/colors-01.svg"
+                    src="/setting/settings.svg"
                     alt="Основные"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"

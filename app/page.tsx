@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSupabase, loadLocalAuth, saveLocalAuth } from '@/lib/supabaseClient'
+import { getSupabase } from '@/lib/supabaseClient'
 import HelloScreen from '@/screens/hello_screen_hello'
 import HomeScreen from '@/screens/home'
 import HelloScreenTag from '@/screens/hello_screen_tag'
@@ -32,10 +32,6 @@ export default function Home() {
     if (!envReady || isMobile === false) return
     const client = getSupabase()
     if (!client) return
-    ;(async () => {
-      const saved = await loadLocalAuth()
-      if (saved) setIsAuthed(true)
-    })()
     client.auth.getSession().then(({ data }) => {
       setIsAuthed(!!data.session)
     })
@@ -51,6 +47,7 @@ export default function Home() {
       const a = window.localStorage.getItem('hw-auth')
       setIsAuthed(!!a)
     }
+    onLocalAuthChanged()
     window.addEventListener('local-auth-changed', onLocalAuthChanged as EventListener)
     return () => window.removeEventListener('local-auth-changed', onLocalAuthChanged as EventListener)
   }, [envReady])
@@ -76,7 +73,7 @@ export default function Home() {
       const email = `${tag}@hw.local`
       const nextUsers = [...users, { tag, uid, email, pass: hash }]
       window.localStorage.setItem('hw-users', JSON.stringify(nextUsers))
-      await saveLocalAuth({ tag, uid, email })
+      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid, email }))
       window.dispatchEvent(new Event('local-auth-changed'))
       return
     }
@@ -115,7 +112,7 @@ export default function Home() {
       .insert({ id: userId, tag, uid })
     await client.auth.updateUser({ data: { tag, uid } })
     if (userId) {
-      await saveLocalAuth({ tag, uid, email })
+      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid: userId, email }))
       window.dispatchEvent(new Event('local-auth-changed'))
     }
   }

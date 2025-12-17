@@ -13,6 +13,7 @@ export default function HelloScreenLogin({
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [tagError, setTagError] = useState('')
+  const [tagStatus, setTagStatus] = useState<'idle' | 'checking' | 'found' | 'not_found'>('idle')
   const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
@@ -28,6 +29,51 @@ export default function HelloScreenLogin({
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
+
+  useEffect(() => {
+    const trimmed = tag.trim()
+    if (!trimmed) {
+      setTagStatus('idle')
+      return
+    }
+    let cancelled = false
+    const timeout = setTimeout(() => {
+      ;(async () => {
+        setTagStatus('checking')
+        const client = getSupabase()
+        if (!client) {
+          try {
+            const usersRaw = window.localStorage.getItem('hw-users')
+            const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
+            const exists = users.some((u) => u.tag === trimmed)
+            if (!cancelled) setTagStatus(exists ? 'found' : 'not_found')
+          } catch {
+            if (!cancelled) setTagStatus('idle')
+          }
+          return
+        }
+        try {
+          const { count, error } = await client
+            .from('profiles')
+            .select('tag', { count: 'exact', head: true })
+            .eq('tag', trimmed)
+          if (cancelled) return
+          if (error) {
+            setTagStatus('idle')
+          } else {
+            const exists = typeof count === 'number' ? count > 0 : false
+            setTagStatus(exists ? 'found' : 'not_found')
+          }
+        } catch {
+          if (!cancelled) setTagStatus('idle')
+        }
+      })()
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
+  }, [tag])
 
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
@@ -85,9 +131,14 @@ export default function HelloScreenLogin({
                 {tagError}
               </span>
             )}
-            {tag.trim().length > 0 && (
+            {tagStatus === 'found' && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#86D671] slide-in-up">
                 тег найден
+              </span>
+            )}
+            {tagStatus === 'not_found' && (
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#D45E5E] slide-in-up">
+                тег не найден
               </span>
             )}
           </div>

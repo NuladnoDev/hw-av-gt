@@ -9,20 +9,8 @@ export default function PostCreate({
 }) {
   const [createText, setCreateText] = useState('')
   const [createImages, setCreateImages] = useState<string[]>([])
-  const loadStoredGallery = (): string[] => {
-    if (typeof window === 'undefined') return []
-    try {
-      const raw = window.localStorage.getItem('hw-gallery')
-      const arr = raw ? (JSON.parse(raw) as unknown) : []
-      return Array.isArray(arr) ? (arr.filter((x): x is string => typeof x === 'string') as string[]) : []
-    } catch {
-      return []
-    }
-  }
-
-  const initialGallery = loadStoredGallery()
-  const [allGalleryImages, setAllGalleryImages] = useState<string[]>(initialGallery)
-  const [galleryVisibleCount, setGalleryVisibleCount] = useState(() => (initialGallery.length > 0 ? Math.min(15, initialGallery.length) : 15))
+  const [allGalleryImages, setAllGalleryImages] = useState<string[]>([])
+  const [galleryVisibleCount, setGalleryVisibleCount] = useState(15)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const galleryInputRef = useRef<HTMLInputElement | null>(null)
@@ -111,15 +99,16 @@ export default function PostCreate({
     }
   }
 
-  const getCssPxVar = (name: string, fallback: number) => {
+  useEffect(() => {
     try {
-      const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-      const n = Number.parseFloat(raw.replace('px', ''))
-      return Number.isFinite(n) ? n : fallback
-    } catch {
-      return fallback
-    }
-  }
+      const raw = window.localStorage.getItem('hw-gallery')
+      const arr = raw ? (JSON.parse(raw) as string[]) : []
+      if (Array.isArray(arr) && arr.length > 0) {
+        setAllGalleryImages(arr)
+        setGalleryVisibleCount(Math.min(15, arr.length))
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const body = document.body
@@ -144,22 +133,12 @@ export default function PostCreate({
   useEffect(() => {
     setTimeout(() => {
       try {
-        textAreaRef.current?.focus({ preventScroll: true })
+        textAreaRef.current?.focus({ preventScroll: true } as any)
       } catch {
         textAreaRef.current?.focus()
       }
     }, 50)
   }, [])
-
-  useEffect(() => {
-    const el = textAreaRef.current
-    if (!el) return
-    const minHNoMedia = getCssPxVar('--create-editor-min-height', 250)
-    const minHWithMedia = getCssPxVar('--create-editor-min-height-with-media', 72)
-    const minH = createImages.length > 0 ? minHWithMedia : minHNoMedia
-    el.style.height = 'auto'
-    el.style.height = `${Math.max(el.scrollHeight, minH)}px`
-  }, [createText, createImages.length])
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-[#0A0A0A]" style={{ height: '100dvh' }}>
@@ -192,8 +171,17 @@ export default function PostCreate({
 
         <div className="w-full" style={{ height: '0.3px', background: 'rgba(255,255,255,0.06)', marginTop: 'var(--create-header-divider-gap)' }} />
 
-        <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
-          <div className="w-full" style={{ paddingLeft: 'var(--create-editor-padding-left)', paddingRight: 'var(--create-editor-padding-right)', marginTop: 'var(--create-editor-top-gap)' }}>
+        <div className="flex-1 overflow-hidden">
+          <div
+            className="w-full"
+            style={{
+              height: 'var(--create-editor-min-height)',
+              paddingLeft: 'var(--create-editor-padding-left)',
+              paddingRight: 'var(--create-editor-padding-right)',
+              marginTop: 'var(--create-editor-top-gap)',
+              overflow: 'hidden',
+            }}
+          >
             <textarea
               ref={textAreaRef}
               autoFocus
@@ -204,21 +192,21 @@ export default function PostCreate({
               value={createText}
               onChange={(e) => setCreateText(e.target.value)}
               style={{
-                minHeight: createImages.length > 0 ? 'var(--create-editor-min-height-with-media)' : 'var(--create-editor-min-height)',
+                height: createImages.length > 0 ? 'var(--create-editor-min-height-with-media)' : 'var(--create-editor-min-height)',
                 paddingBottom: '8px',
                 fontSize: 'var(--create-editor-text-size)',
-                overflowY: 'hidden',
+                overflowY: 'auto',
               }}
             />
-          </div>
-
-          <div className="px-6 pt-3 shrink-0">
             {createImages.length > 0 && (
-              <>
-                <div className="w-full grid gap-2" style={{ gridTemplateColumns: createImages.length === 1 ? '1fr' : '1fr 1fr' }}>
-                  {createImages.slice(0, Math.min(2, createImages.length)).map((src, idx) => (
+              <div
+                className="mt-3 w-full overflow-y-auto"
+                style={{ height: 'calc(var(--create-editor-min-height) - var(--create-editor-min-height-with-media))' }}
+              >
+                <div className="grid w-full gap-2" style={{ gridTemplateColumns: createImages.length === 1 ? '1fr' : '1fr 1fr' }}>
+                  {createImages.map((src, idx) => (
                     <div
-                      key={`${src}-big-${idx}`}
+                      key={`${src}-preview-${idx}`}
                       className="relative overflow-hidden rounded-[12px] border border-[#2B2B2B]"
                       style={createImages.length === 1 ? { height: 'var(--create-attachments-single-height)' } : { aspectRatio: 'var(--create-attachments-pair-aspect)' }}
                     >
@@ -234,30 +222,11 @@ export default function PostCreate({
                     </div>
                   ))}
                 </div>
-                {createImages.length > 2 && (
-                  <div className="mt-2 flex w-full items-center gap-2 overflow-x-auto">
-                    {createImages.slice(2).map((src, idx) => (
-                      <div
-                        key={`${src}-thumb-${idx}`}
-                        className="relative overflow-hidden rounded-[10px] border border-[#2B2B2B]"
-                        style={{ height: 'var(--create-thumb-height)', aspectRatio: 'var(--create-thumb-aspect)', flex: '0 0 auto' }}
-                      >
-                        <img src={src} alt="thumb" className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeCreateImage(src)}
-                          className="absolute right-1.5 top-1.5 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-[#111111]/80"
-                          aria-label="Удалить"
-                        >
-                          <img src="/interface/x-01.svg" alt="remove" className="h-[14px] w-[14px]" style={{ filter: 'invert(1) brightness(1.6)' }} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
+              </div>
             )}
+          </div>
 
+          <div className="px-6 pt-3">
             <div className="mt-3 flex w-full items-center justify-between" style={{ gap: 'var(--create-actions-row-gap)' }}>
               <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handlePickedFiles(e.target.files)} />
               <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handlePickedFiles(e.target.files)} />
@@ -272,25 +241,16 @@ export default function PostCreate({
                 <span className="text-[14px] leading-[1.3em] text-[#A1A1A1]">Фото/Видео</span>
               </button>
             </div>
-
           </div>
 
           <div
-            className="mt-3 flex flex-1 min-h-0 flex-col overflow-hidden pt-3"
+            className="mt-3 flex-1 overflow-y-auto pt-3"
             style={{ borderTop: '0.3px solid rgba(255, 255, 255, 0.06)' }}
+            onScroll={onGalleryScroll}
           >
             <div
-              className="grid w-full flex-1 min-h-0 overflow-y-auto px-[var(--create-gallery-padding)]"
-              style={{
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gridAutoRows: 'var(--create-gallery-item-size)',
-                gap: 'var(--create-gallery-gap)',
-                height: '100%',
-                WebkitOverflowScrolling: 'touch',
-                overscrollBehavior: 'contain',
-                touchAction: 'pan-y',
-              }}
-              onScroll={onGalleryScroll}
+              className="grid w-full px-[var(--create-gallery-padding)]"
+              style={{ gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'var(--create-gallery-item-size)', gap: 'var(--create-gallery-gap)' }}
             >
               <button type="button" className="flex items-center justify-center rounded-[12px] border border-[#2B2B2B] bg-[#111111]" onClick={openGalleryPicker}>
                 <img src="/interface/paperclip.svg" alt="camera" className="h-[22px] w-[22px]" style={{ filter: 'invert(1) brightness(2)' }} />
