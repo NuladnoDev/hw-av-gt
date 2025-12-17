@@ -33,7 +33,7 @@ export default function HelloScreen({
         if (!btn) return
         const rect = btn.getBoundingClientRect()
         const viewportH = window.visualViewport?.height ?? window.innerHeight
-        const margin = 12
+        const margin = isIOS ? 60 : 12
         const overflow = rect.bottom + margin - viewportH
         const root = document.documentElement
         if (overflow > 0) {
@@ -51,7 +51,7 @@ export default function HelloScreen({
       window.removeEventListener('resize', updateOffset)
       vv?.removeEventListener?.('resize', updateOffset)
     }
-  }, [showIosTip])
+  }, [showIosTip, isIOS])
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#0A0A0A]">
