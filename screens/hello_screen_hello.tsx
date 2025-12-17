@@ -70,7 +70,7 @@ export default function HelloScreen({
         <div className="absolute left-[48px] top-[406px] h-[26px] w-[279px] text-center text-[20px] font-light leading-[1.3em] text-white">
           Удобно. быстро. безопастно
         </div>
-        <div className="absolute left-[75px] top-[432px] h-[26px] w-[244px] text-center text-[16px] font-light leading-[1.625em] text-[#FFD900]">
+        <div className="absolute left-[75px] top-[432px] h-[26px] w-[244px] text-center text-[16px] font-light leading-[1.625em] text-[#A6F3A6]">
           Пользовательское соглашение
         </div>
         <button

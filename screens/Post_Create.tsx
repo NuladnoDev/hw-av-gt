@@ -132,16 +132,6 @@ export default function PostCreate({
   }, [])
 
   useEffect(() => {
-    setTimeout(() => {
-      try {
-        textAreaRef.current?.focus({ preventScroll: true } as any)
-      } catch {
-        textAreaRef.current?.focus()
-      }
-    }, 50)
-  }, [])
-
-  useEffect(() => {
     setSlideIn(true)
   }, [])
 
@@ -200,7 +190,6 @@ export default function PostCreate({
           >
             <textarea
               ref={textAreaRef}
-              autoFocus
               inputMode="text"
               rows={1}
               placeholder="Напиши что-нибудь..."
