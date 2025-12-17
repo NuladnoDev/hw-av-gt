@@ -11,6 +11,7 @@ export default function PostCreate({
   const [createImages, setCreateImages] = useState<string[]>([])
   const [allGalleryImages, setAllGalleryImages] = useState<string[]>([])
   const [galleryVisibleCount, setGalleryVisibleCount] = useState(15)
+  const [slideIn, setSlideIn] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const galleryInputRef = useRef<HTMLInputElement | null>(null)
@@ -141,6 +142,10 @@ export default function PostCreate({
   }, [])
 
   useEffect(() => {
+    setSlideIn(true)
+  }, [])
+
+  useEffect(() => {
     const el = textAreaRef.current
     if (!el) return
     el.style.height = 'auto'
@@ -148,10 +153,16 @@ export default function PostCreate({
   }, [createText, createImages.length])
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-[#0A0A0A]" style={{ height: '100dvh' }}>
+    <div className="fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
       <div
         className="flex h-full w-full flex-col"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{
+          backgroundColor: '#0A0A0A',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          transform: slideIn ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 260ms ease-out',
+        }}
       >
         <div className="relative flex h-[56px] items-center justify-between px-6">
           <button type="button" onClick={onClose} className="flex h-full items-center" style={{ marginTop: 'var(--create-header-left-icon-margin-top, var(--create-header-icons-margin-top))' }} aria-label="Закрыть">
