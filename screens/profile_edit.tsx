@@ -55,15 +55,10 @@ export default function ProfileEdit({
   useEffect(() => {
     const baseW = 375
     const baseH = 812
-    const update = () => {
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      const s = Math.min(vw / baseW, vh / baseH)
-      setScale(Math.min(1, s))
-    }
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const s = Math.min(vw / baseW, vh / baseH)
+    setScale(Math.min(1, s))
   }, [])
 
   useEffect(() => {
