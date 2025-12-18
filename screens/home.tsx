@@ -179,10 +179,9 @@ export default function HomeScreen() {
             </div>
             <div className="flex items-center gap-4">
               <img
-                src="/navigation/filers.svg"
-                alt="filters"
-                className="h-[22px] w-[22px]"
-                style={{ filter: 'brightness(0) saturate(100%) invert(49%) sepia(79%) saturate(400%) hue-rotate(85deg) brightness(97%) contrast(89%)' }}
+                src="/interface/info-square-01-contained.svg"
+                alt="info"
+                className="h-[24px] w-[24px]"
               />
               <button
                 type="button"
@@ -194,9 +193,9 @@ export default function HomeScreen() {
                 className="flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
               >
                 <img
-                  src="/navigation/plus.svg"
-                  alt="add"
-                  className="h-[20px] w-[20px]"
+                  src="/interface/bar-chart-03.svg"
+                  alt="stats"
+                  className="h-[24px] w-[24px]"
                 />
               </button>
             </div>

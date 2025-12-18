@@ -206,6 +206,10 @@
   --hello-tip-text-indent: 0px;
   --font-sf-ui-text-light: 'SF-UI-Text-Light';
   --font-sf-ui-text-medium: 'SF-UI-Text-Medium';
+  --ads-buttons-top: -70px;
+  --ads-buttons-gap: 10px;
+  --ads-main-button-height: 58px;
+  --ads-secondary-button-height: 58px;
 }
 
 @font-face {
