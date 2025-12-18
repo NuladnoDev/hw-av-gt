@@ -144,26 +144,9 @@ export default function HomeScreen() {
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [createOpen, tab])
-  useEffect(() => {
-    const vv = (window as any).visualViewport
-    if (!vv) return
-    const handler = () => {
-      const off = (vv.offsetTop && vv.offsetTop > 0) ? vv.offsetTop : Math.max(0, window.innerHeight - vv.height)
-      document.documentElement.style.setProperty('--vv-offset-top', `${off}px`)
-    }
-    vv.addEventListener('resize', handler)
-    vv.addEventListener('scroll', handler)
-    handler()
-    return () => {
-      vv.removeEventListener('resize', handler)
-      vv.removeEventListener('scroll', handler)
-      document.documentElement.style.removeProperty('--vv-offset-top')
-    }
-  }, [])
-
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `translateY(var(--vv-offset-top, 0px)) scale(${scale})` }}>
+      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
         <div
           className="absolute left-0 top-0 h-[812px] w-[375px]"
           style={{ backgroundColor: '#0A0A0A' }}
