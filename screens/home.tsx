@@ -263,7 +263,89 @@ export default function HomeScreen() {
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)', height: 'calc(812px - 88px - 56px - var(--home-header-offset))' }}
           >
             {tab === 'feed' && (
-              <div className="flex h-full w-full items-center justify-center">
+              <div className="relative h-full w-full">
+                <div
+                  className="absolute left-0 right-0 flex items-center justify-center"
+                  style={{
+                    top: 'var(--feed-controls-top)',
+                    height: 'var(--feed-search-height)',
+                  }}
+                >
+                  <div
+                    className="flex w-full items-center"
+                    style={{
+                      height: 'var(--feed-search-height)',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="flex flex-1 items-center justify-start"
+                      style={{
+                        height: '100%',
+                        borderRadius: 'var(--feed-search-radius)',
+                        background: 'var(--feed-search-bg)',
+                        paddingLeft: 14,
+                        paddingRight: 14,
+                      }}
+                    >
+                      <img
+                        src="/interface/search-02.svg"
+                        alt=""
+                        style={{
+                          width: 'var(--feed-search-icon-size)',
+                          height: 'var(--feed-search-icon-size)',
+                          marginRight: 'var(--feed-search-gap)',
+                        }}
+                      />
+                      <span
+                        className="font-sf-ui-light"
+                        style={{
+                          fontSize: 'var(--feed-search-text-size)',
+                          lineHeight: '18px',
+                          color: 'var(--feed-search-text-color)',
+                        }}
+                      >
+                        Поиск постов
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="flex items-center justify-center"
+                      style={{
+                        width: 'var(--feed-create-width)',
+                        height: '100%',
+                        borderRadius: 'var(--feed-create-radius)',
+                        background: 'var(--feed-create-bg)',
+                        paddingLeft: 12,
+                        paddingRight: 12,
+                        marginLeft: 'calc(-1 * var(--feed-create-overlap))',
+                      }}
+                      onClick={() => setCreateOpen(true)}
+                    >
+                      <img
+                        src="/interface/chevron-left.svg"
+                        alt=""
+                        style={{
+                          width: 'var(--feed-create-chevron-size)',
+                          height: 'var(--feed-create-chevron-size)',
+                          marginRight: 4,
+                        }}
+                      />
+                      <span
+                        className="font-vk-demi"
+                        style={{
+                          fontSize: 'var(--feed-create-text-size)',
+                          lineHeight: '19px',
+                          color: '#FFFFFF',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Создать пост
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
             {tab === 'ads' && <Ads />}

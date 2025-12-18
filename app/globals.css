@@ -210,6 +210,21 @@
   --ads-buttons-gap: 10px;
   --ads-main-button-height: 58px;
   --ads-secondary-button-height: 58px;
+  --feed-controls-top: 10px;
+  --feed-search-height: 58px;
+  --feed-search-radius: 10px;
+  --feed-search-bg: linear-gradient(90deg, #111111 0%, #1D1F1D 100%);
+  --feed-search-icon-size: 20px;
+  --feed-search-text-size: 16px;
+  --feed-search-text-color: #A8A8A8;
+  --feed-search-gap: 10px;
+  --feed-create-width: 150px;
+  --feed-create-height: 56px;
+  --feed-create-radius: 10px;
+  --feed-create-bg: linear-gradient(90deg, #93B49E 0%, #306741 100%);
+  --feed-create-chevron-size: 24px;
+  --feed-create-text-size: 15px;
+  --feed-create-overlap: 18px;
 }
 
 @font-face {
