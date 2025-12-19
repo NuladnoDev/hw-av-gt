@@ -10,6 +10,14 @@
   --profile-name-size: 20px;
   --profile-name-margin-top: 0px;
   --profile-switch-offset: 12px;
+  --profile-tabs-scale: 1.1;
+  --profile-tabs-container-height: calc(45px * var(--profile-tabs-scale));
+  --profile-tabs-item-height: calc(32px * var(--profile-tabs-scale));
+  --profile-tabs-font-size: calc(14px * var(--profile-tabs-scale));
+  --profile-tabs-padding-x: calc(10px * var(--profile-tabs-scale));
+  --profile-tabs-radius: calc(12px * var(--profile-tabs-scale));
+  --profile-tabs-item-radius: calc(8px * var(--profile-tabs-scale));
+  --profile-tabs-gap: calc(4px * var(--profile-tabs-scale));
   --profile-empty-icon-size: 190px;
   --profile-empty-icon-top: 0px;
   --profile-empty-text-bottom: -230px;
