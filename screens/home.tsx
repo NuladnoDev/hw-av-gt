@@ -19,6 +19,8 @@ export default function HomeScreen() {
   const [returnToSettingsAfterEdit, setReturnToSettingsAfterEdit] = useState(false)
   const [infoMeOpen, setInfoMeOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [profileMenuClosing, setProfileMenuClosing] = useState(false)
   const [currentTag, setCurrentTag] = useState<string | null>(() => {
     try {
       const authRaw = typeof window !== 'undefined' ? window.localStorage.getItem('hw-auth') : null
@@ -31,6 +33,18 @@ export default function HomeScreen() {
   })
 
  
+
+  const openProfileMenu = () => {
+    setProfileMenuClosing(false)
+    setProfileMenuOpen(true)
+  }
+  const closeProfileMenu = () => {
+    setProfileMenuClosing(true)
+    setTimeout(() => {
+      setProfileMenuOpen(false)
+      setProfileMenuClosing(false)
+    }, 180)
+  }
 
   useEffect(() => {
     const client = getSupabase()
@@ -196,30 +210,26 @@ export default function HomeScreen() {
                 aria-label="Редактировать профиль"
               >
                 <img
-                  src="/interface/pencil-03.svg"
+                  src="/interface/pencil-02.svg"
                   alt="edit"
                   className="h-[22px] w-[22px]"
-                  style={{
-                    filter:
-                      'invert(56%) sepia(30%) saturate(1409%) hue-rotate(85deg) brightness(97%) contrast(89%)',
-                  }}
                 />
               </button>
               <div className="absolute right-6 top-0 flex h-full items-center">
                 <button
                   type="button"
                   onClick={() => {
-                    setSettingsOrigin('profile')
-                    setSettingsOpen(true)
+                    if (profileMenuOpen) closeProfileMenu()
+                    else openProfileMenu()
                   }}
                   className="flex h-full items-center"
-                  aria-label="Открыть настройки"
+                  aria-label="Открыть меню профиля"
                 >
                   <img
-                    src="/setting/settings.svg"
-                    alt="settings"
+                    src="/interface/dot-vertical.svg"
+                    alt="menu"
                     className="h-[22px] w-[22px]"
-                    />
+                  />
                 </button>
               </div>
               <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
@@ -233,11 +243,266 @@ export default function HomeScreen() {
         )}
 
         {tab === 'profile' && (
-          <Profile
-            profileTab={profileTab}
-            setProfileTab={setProfileTab}
-            userTag={currentTag ?? undefined}
-          />
+          <>
+            <Profile
+              profileTab={profileTab}
+              setProfileTab={setProfileTab}
+              userTag={currentTag ?? undefined}
+            />
+            {profileMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  className="absolute inset-0"
+                  style={{ zIndex: 70 }}
+                  onClick={closeProfileMenu}
+                />
+                <div
+                  className="absolute right-6"
+                  style={{
+                    top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-menu-offset-y))',
+                    zIndex: 80,
+                  }}
+                >
+                  <div
+                    className={profileMenuClosing ? 'profile-menu-out' : 'profile-menu-in'}
+                    style={{
+                      width: 'var(--profile-menu-width)',
+                      borderRadius: 'var(--profile-menu-radius)',
+                      transformOrigin: 'var(--profile-menu-transform-origin)',
+                      background: 'var(--profile-menu-bg)',
+                      border: '1px solid var(--profile-menu-border)',
+                      boxShadow: 'var(--profile-menu-shadow)',
+                      overflow: 'hidden',
+                      backdropFilter: 'blur(var(--profile-menu-item-backdrop-blur))',
+                      paddingTop: 'var(--profile-menu-padding-top)',
+                      paddingBottom: 'var(--profile-menu-padding-bottom)',
+                      paddingLeft: 'var(--profile-menu-padding-x)',
+                      paddingRight: 'var(--profile-menu-padding-x)',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeProfileMenu()
+                        setProfileEdit(true)
+                      }}
+                      className="flex w-full items-center"
+                      style={{
+                        height: 'var(--profile-menu-edit-height)',
+                        paddingLeft: 'var(--profile-menu-item-padding-x)',
+                        paddingRight: 'var(--profile-menu-item-padding-x)',
+                        background: 'var(--profile-menu-item-bg)',
+                      }}
+                    >
+                      <div
+                        className="flex w-full items-center"
+                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                      >
+                        <span
+                          className="font-sf-ui-light"
+                          style={{
+                            fontSize: 'var(--profile-menu-item-font-size)',
+                            color: 'var(--profile-menu-item-text-color)',
+                            lineHeight: 'var(--profile-menu-edit-line-height)',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <span>Редактировать</span>
+                          <br />
+                          <span>профиль</span>
+                        </span>
+                        <div
+                          style={{
+                            marginLeft: 'auto',
+                            width: 'var(--profile-menu-item-icon-size)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                          }}
+                        >
+                          <img
+                            src="/setting/settings.svg"
+                            alt=""
+                            style={{
+                              width: 'var(--profile-menu-item-icon-size)',
+                              height: 'var(--profile-menu-item-icon-size)',
+                              filter: 'var(--profile-menu-item-icon-filter)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+                    <div
+                      style={{
+                        height: 'var(--profile-menu-divider-thickness)',
+                        background: 'var(--profile-menu-divider-color)',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeProfileMenu()
+                        setSettingsOrigin('profile')
+                        setSettingsOpen(true)
+                      }}
+                      className="flex w-full items-center"
+                      style={{
+                        height: 'var(--profile-menu-item-height)',
+                        paddingLeft: 'var(--profile-menu-item-padding-x)',
+                        paddingRight: 'var(--profile-menu-item-padding-x)',
+                        background: 'var(--profile-menu-item-bg)',
+                      }}
+                    >
+                      <div
+                        className="flex w-full items-center"
+                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                      >
+                        <span
+                          className="font-sf-ui-light"
+                          style={{
+                            fontSize: 'var(--profile-menu-item-font-size)',
+                            color: 'var(--profile-menu-item-text-color)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Настройки
+                        </span>
+                        <div
+                          style={{
+                            marginLeft: 'auto',
+                            width: 'var(--profile-menu-item-icon-size)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                          }}
+                        >
+                          <img
+                            src="/setting/settings.svg"
+                            alt=""
+                            style={{
+                              width: 'var(--profile-menu-item-icon-size)',
+                              height: 'var(--profile-menu-item-icon-size)',
+                              filter: 'var(--profile-menu-item-icon-filter)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+                    <div
+                      style={{
+                        height: 'var(--profile-menu-divider-thickness)',
+                        background: 'var(--profile-menu-divider-color)',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeProfileMenu()
+                      }}
+                      className="flex w-full items-center"
+                      style={{
+                        height: 'var(--profile-menu-item-height)',
+                        paddingLeft: 'var(--profile-menu-item-padding-x)',
+                        paddingRight: 'var(--profile-menu-item-padding-x)',
+                        background: 'var(--profile-menu-item-bg)',
+                      }}
+                    >
+                      <div
+                        className="flex w-full items-center"
+                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                      >
+                        <span
+                          className="font-sf-ui-light"
+                          style={{
+                            fontSize: 'var(--profile-menu-item-font-size)',
+                            color: 'var(--profile-menu-item-text-color)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Помощь
+                        </span>
+                        <div
+                          style={{
+                            marginLeft: 'auto',
+                            width: 'var(--profile-menu-item-icon-size)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                          }}
+                        >
+                          <img
+                            src="/setting/settings.svg"
+                            alt=""
+                            style={{
+                              width: 'var(--profile-menu-item-icon-size)',
+                              height: 'var(--profile-menu-item-icon-size)',
+                              filter: 'var(--profile-menu-item-icon-filter)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+                    <div
+                      style={{
+                        height: 'var(--profile-menu-share-divider-thickness)',
+                        background: 'var(--profile-menu-share-divider-color)',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeProfileMenu()
+                      }}
+                      className="flex w-full items-center"
+                      style={{
+                        height: 'var(--profile-menu-item-height)',
+                        paddingLeft: 'var(--profile-menu-item-padding-x)',
+                        paddingRight: 'var(--profile-menu-item-padding-x)',
+                        background: 'var(--profile-menu-item-bg)',
+                        backdropFilter: 'blur(var(--profile-menu-item-backdrop-blur))',
+                      }}
+                    >
+                      <div
+                        className="flex w-full items-center"
+                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                      >
+                        <span
+                          className="font-sf-ui-light"
+                          style={{
+                            fontSize: 'var(--profile-menu-share-font-size)',
+                            color: 'var(--profile-menu-item-text-color)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Поделиться профилем
+                        </span>
+                        <div
+                          style={{
+                            marginLeft: 'auto',
+                            width: 'var(--profile-menu-item-icon-size)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                          }}
+                        >
+                          <img
+                            src="/setting/settings.svg"
+                            alt=""
+                            style={{
+                              width: 'var(--profile-menu-item-icon-size)',
+                              height: 'var(--profile-menu-item-icon-size)',
+                              filter: 'var(--profile-menu-item-icon-filter)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
         )}
 
         {tab !== 'profile' && (

@@ -225,6 +225,37 @@
   --feed-create-chevron-size: 24px;
   --feed-create-text-size: 15px;
   --feed-create-overlap: 18px;
+  --profile-menu-width: 236px;
+  --profile-menu-radius: 12px;
+  --profile-menu-bg: #111111;
+  --profile-menu-border: rgba(255, 255, 255, 0.14);
+  --profile-menu-shadow: 0 18px 40px rgba(0,0,0,0.7);
+  --profile-menu-padding-top: 0px;
+  --profile-menu-padding-bottom: 0px;
+  --profile-menu-padding-x: 0px;
+  --profile-menu-offset-x: 0px;
+  --profile-menu-offset-y: 8px;
+  --profile-menu-item-height: 44px;
+  --profile-menu-edit-height: 62px;
+  --profile-menu-item-padding-x: 16px;
+  --profile-menu-item-gap: 10px;
+  --profile-menu-item-icon-size: 20px;
+  --profile-menu-item-font-size: 16px;
+  --profile-menu-item-text-color: #FFFFFF;
+  --profile-menu-item-icon-filter: invert(0%) brightness(2);
+  --profile-menu-divider-color: rgba(255, 255, 255, 0.16);
+  --profile-menu-divider-thickness: 1px;
+  --profile-menu-share-divider-thickness: 1.4px;
+  --profile-menu-share-divider-color: rgba(255, 255, 255, 0.22);
+  --profile-menu-item-bg: transparent;
+  --profile-menu-item-backdrop-blur: 60px;
+  --profile-menu-share-spacing-top: 3px;
+  --profile-menu-edit-line-height: 1.25;
+  --profile-menu-open-scale: 0.7;
+  --profile-menu-open-translate-x: 6px;
+  --profile-menu-open-translate-y: -6px;
+  --profile-menu-transform-origin: top right;
+  --profile-menu-share-font-size: 15.5px;
 }
 
 @font-face {
@@ -294,6 +325,34 @@ body {
 }
 .reveal-text {
   animation: revealText 200ms ease-out both;
+}
+
+@keyframes profileMenuIn {
+  from {
+    opacity: 0;
+    transform: translate(var(--profile-menu-open-translate-x), var(--profile-menu-open-translate-y)) scale(var(--profile-menu-open-scale));
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+.profile-menu-in {
+  animation: profileMenuIn 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes profileMenuOut {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--profile-menu-open-translate-x), var(--profile-menu-open-translate-y)) scale(var(--profile-menu-open-scale));
+  }
+}
+.profile-menu-out {
+  animation: profileMenuOut 160ms cubic-bezier(0.4, 0.0, 0.2, 1) both;
 }
 
 @font-face {
