@@ -27,7 +27,7 @@ export default function Ads() {
               width: 350.07,
               height: 'var(--ads-main-button-height)',
               borderRadius: 10,
-              background: 'linear-gradient(90deg, #93B49E 0%, #304838 100%)',
+              background: 'var(--feed-create-bg)',
               paddingLeft: 18,
               paddingRight: 18,
             }}

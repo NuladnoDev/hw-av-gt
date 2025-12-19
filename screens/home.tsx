@@ -160,7 +160,7 @@ export default function HomeScreen() {
   }, [createOpen, tab])
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
+      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, willChange: 'transform' }}>
         <div
           className="absolute left-0 top-0 h-[812px] w-[375px]"
           style={{ backgroundColor: '#0A0A0A' }}
@@ -258,7 +258,7 @@ export default function HomeScreen() {
                   onClick={closeProfileMenu}
                 />
                 <div
-                  className="absolute right-6"
+                  className="absolute right-4"
                   style={{
                     top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-menu-offset-y))',
                     zIndex: 80,
@@ -275,6 +275,9 @@ export default function HomeScreen() {
                       boxShadow: 'var(--profile-menu-shadow)',
                       overflow: 'hidden',
                       backdropFilter: 'blur(var(--profile-menu-item-backdrop-blur))',
+                      WebkitBackdropFilter: 'blur(var(--profile-menu-item-backdrop-blur))',
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden',
                       paddingTop: 'var(--profile-menu-padding-top)',
                       paddingBottom: 'var(--profile-menu-padding-bottom)',
                       paddingLeft: 'var(--profile-menu-padding-x)',
@@ -322,7 +325,7 @@ export default function HomeScreen() {
                           }}
                         >
                           <img
-                            src="/setting/settings.svg"
+                            src="/interface/pencil-01.svg"
                             alt=""
                             style={{
                               width: 'var(--profile-menu-item-icon-size)',
@@ -432,7 +435,61 @@ export default function HomeScreen() {
                           }}
                         >
                           <img
-                            src="/setting/settings.svg"
+                            src="/interface/help.svg"
+                            alt=""
+                            style={{
+                              width: 'var(--profile-menu-item-icon-size)',
+                              height: 'var(--profile-menu-item-icon-size)',
+                              filter: 'var(--profile-menu-item-icon-filter)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+                    <div
+                      style={{
+                        height: 'var(--profile-menu-divider-thickness)',
+                        background: 'var(--profile-menu-divider-color)',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeProfileMenu()
+                      }}
+                      className="flex w-full items-center"
+                      style={{
+                        height: 'var(--profile-menu-item-height)',
+                        paddingLeft: 'var(--profile-menu-item-padding-x)',
+                        paddingRight: 'var(--profile-menu-item-padding-x)',
+                        background: 'var(--profile-menu-item-bg)',
+                      }}
+                    >
+                      <div
+                        className="flex w-full items-center"
+                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                      >
+                        <span
+                          className="font-sf-ui-light"
+                          style={{
+                            fontSize: 'var(--profile-menu-item-font-size)',
+                            color: 'var(--profile-menu-item-text-color)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Поддержка
+                        </span>
+                        <div
+                          style={{
+                            marginLeft: 'auto',
+                            width: 'var(--profile-menu-item-icon-size)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                          }}
+                        >
+                          <img
+                            src="/interface/address.svg"
                             alt=""
                             style={{
                               width: 'var(--profile-menu-item-icon-size)',
@@ -460,7 +517,60 @@ export default function HomeScreen() {
                         paddingLeft: 'var(--profile-menu-item-padding-x)',
                         paddingRight: 'var(--profile-menu-item-padding-x)',
                         background: 'var(--profile-menu-item-bg)',
-                        backdropFilter: 'blur(var(--profile-menu-item-backdrop-blur))',
+                      }}
+                    >
+                      <div
+                        className="flex w-full items-center"
+                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                      >
+                        <span
+                          className="font-sf-ui-light"
+                          style={{
+                            fontSize: 'var(--profile-menu-item-font-size)',
+                            color: 'var(--profile-menu-item-text-color)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Скопировать ссылку
+                        </span>
+                        <div
+                          style={{
+                            marginLeft: 'auto',
+                            width: 'var(--profile-menu-item-icon-size)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                          }}
+                        >
+                          <img
+                            src="/interface/hyperlink.svg"
+                            alt=""
+                            style={{
+                              width: 'var(--profile-menu-item-icon-size)',
+                              height: 'var(--profile-menu-item-icon-size)',
+                              filter: 'var(--profile-menu-item-icon-filter)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+                    <div
+                      style={{
+                        height: 'var(--profile-menu-divider-thickness)',
+                        background: 'var(--profile-menu-divider-color)',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeProfileMenu()
+                      }}
+                      className="flex w-full items-center"
+                      style={{
+                        height: 'var(--profile-menu-item-height)',
+                        paddingLeft: 'var(--profile-menu-item-padding-x)',
+                        paddingRight: 'var(--profile-menu-item-padding-x)',
+                        background: 'var(--profile-menu-item-bg)',
                       }}
                     >
                       <div
@@ -487,13 +597,14 @@ export default function HomeScreen() {
                           }}
                         >
                           <img
-                            src="/setting/settings.svg"
+                            src="/interface/share2.svg"
                             alt=""
                             style={{
                               width: 'var(--profile-menu-item-icon-size)',
                               height: 'var(--profile-menu-item-icon-size)',
                               filter: 'var(--profile-menu-item-icon-filter)',
                             }}
+
                           />
                         </div>
                       </div>
@@ -564,7 +675,7 @@ export default function HomeScreen() {
                         width: 'var(--feed-create-width)',
                         height: '100%',
                         borderRadius: 'var(--feed-create-radius)',
-                        background: 'var(--feed-create-bg)',
+                        background: 'var(--post-create-bg)',
                         paddingLeft: 12,
                         paddingRight: 12,
                         marginLeft: 'calc(-1 * var(--feed-create-overlap))',

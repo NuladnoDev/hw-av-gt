@@ -307,7 +307,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in">
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
+      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, willChange: 'transform' }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
 
         <div
