@@ -435,7 +435,7 @@ export default function HomeScreen() {
                           }}
                         >
                           <img
-                            src="/interface/help.svg"
+                            src="/interface/Help.svg"
                             alt=""
                             style={{
                               width: 'var(--profile-menu-item-icon-size)',
@@ -543,7 +543,7 @@ export default function HomeScreen() {
                           }}
                         >
                           <img
-                            src="/interface/hyperlink.svg"
+                            src="/interface/Hyperlink.svg"
                             alt=""
                             style={{
                               width: 'var(--profile-menu-item-icon-size)',
