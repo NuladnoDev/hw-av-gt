@@ -123,7 +123,7 @@ export default function Setting({
     <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in">
       <div
         className="relative h-[812px] w-[375px]"
-        style={{ transform: `scale(${scale})`, willChange: 'transform', '--settings-scale': 2, '--settings-list-top-margin': '18px' } as React.CSSProperties}
+        style={{ transform: `scale(${scale})`, '--settings-scale': 2, '--settings-list-top-margin': '18px' } as React.CSSProperties}
       >
         <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
 

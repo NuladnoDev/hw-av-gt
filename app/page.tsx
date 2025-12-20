@@ -47,7 +47,6 @@ export default function Home() {
       const a = window.localStorage.getItem('hw-auth')
       setIsAuthed(!!a)
     }
-    onLocalAuthChanged()
     window.addEventListener('local-auth-changed', onLocalAuthChanged as EventListener)
     return () => window.removeEventListener('local-auth-changed', onLocalAuthChanged as EventListener)
   }, [envReady])

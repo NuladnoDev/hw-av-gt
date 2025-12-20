@@ -321,71 +321,32 @@ export default function Profile({
             </div>
           )}
           <div className="flex w-full items-center justify-center" style={{ marginTop: 'var(--profile-switch-offset)' }}>
-            <div 
-              className="flex items-center justify-between border border-[#2B2B2B] bg-[#111111] px-2"
-              style={{ 
-                height: 'var(--profile-tabs-container-height)',
-                borderRadius: 'var(--profile-tabs-radius)',
-                gap: 'var(--profile-tabs-gap)'
-              }}
-            >
+            <div className="flex h-[45px] items-center justify-between rounded-[12px] border border-[#2B2B2B] bg-[#111111] px-2">
               <button
                 type="button"
                 onClick={() => setProfileTab('posts')}
-                className={`flex items-center justify-center ${profileTab === 'posts' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
-                style={{
-                  height: 'var(--profile-tabs-item-height)',
-                  borderRadius: 'var(--profile-tabs-item-radius)',
-                  paddingLeft: 'var(--profile-tabs-padding-x)',
-                  paddingRight: 'var(--profile-tabs-padding-x)',
-                  fontSize: 'var(--profile-tabs-font-size)',
-                  whiteSpace: 'nowrap',
-                }}
+                className={`h-[32px] rounded-[8px] px-3 text-[14px] ${profileTab === 'posts' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
               >
                 Посты
               </button>
               <button
                 type="button"
                 onClick={() => setProfileTab('ads')}
-                className={`flex items-center justify-center ${profileTab === 'ads' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
-                style={{
-                  height: 'var(--profile-tabs-item-height)',
-                  borderRadius: 'var(--profile-tabs-item-radius)',
-                  paddingLeft: 'var(--profile-tabs-padding-x)',
-                  paddingRight: 'var(--profile-tabs-padding-x)',
-                  fontSize: 'var(--profile-tabs-font-size)',
-                  whiteSpace: 'nowrap',
-                }}
+                className={`h-[32px] rounded-[8px] px-3 text-[14px] ${profileTab === 'ads' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
               >
                 Объявления
               </button>
               <button
                 type="button"
                 onClick={() => setProfileTab('about')}
-                className={`flex items-center justify-center ${profileTab === 'about' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
-                style={{
-                  height: 'var(--profile-tabs-item-height)',
-                  borderRadius: 'var(--profile-tabs-item-radius)',
-                  paddingLeft: 'var(--profile-tabs-padding-x)',
-                  paddingRight: 'var(--profile-tabs-padding-x)',
-                  fontSize: 'var(--profile-tabs-font-size)',
-                  whiteSpace: 'nowrap',
-                }}
+                className={`h-[32px] rounded-[8px] px-3 text-[14px] ${profileTab === 'about' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
               >
                 О себе
               </button>
               <button
                 type="button"
                 aria-disabled="true"
-                className="flex items-center justify-center text-white/40 cursor-not-allowed"
-                style={{
-                  height: 'var(--profile-tabs-item-height)',
-                  borderRadius: 'var(--profile-tabs-item-radius)',
-                  paddingLeft: 'var(--profile-tabs-padding-x)',
-                  paddingRight: 'var(--profile-tabs-padding-x)',
-                  fontSize: 'var(--profile-tabs-font-size)',
-                  whiteSpace: 'nowrap',
-                }}
+                className="h-[32px] rounded-[8px] px-3 text-[14px] text-white/40 cursor-not-allowed"
               >
                 Скоро
               </button>

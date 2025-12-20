@@ -1,6 +1,10 @@
 'use client'
 
-export default function Ads() {
+export default function Ads({
+  onCreate,
+}: {
+  onCreate?: () => void
+}) {
   return (
     <div
       className="absolute left-0 flex w-full justify-center"
@@ -14,29 +18,20 @@ export default function Ads() {
         style={{ maxWidth: 370 }}
       >
         <div
-          className="absolute left-0 right-0 flex flex-col items-center"
-          style={{
-            top: 'var(--ads-buttons-top)',
-            rowGap: 'var(--ads-buttons-gap)',
-          }}
+          className="flex flex-col items-center"
+          style={{ marginTop: 56, rowGap: 12 }}
         >
           <button
             type="button"
-            className="relative flex items-center justify-center gap-2"
+            className="relative flex items-center justify-center"
             style={{
               width: 350.07,
-              height: 'var(--ads-main-button-height)',
+              height: 53.86,
               borderRadius: 10,
-              background: 'var(--feed-create-bg)',
-              paddingLeft: 18,
-              paddingRight: 18,
+              background: 'linear-gradient(90deg, #93B49E 0%, #304838 100%)',
             }}
+            onClick={onCreate}
           >
-            <img
-              src="/interface/plus-02.svg"
-              alt=""
-              className="h-6 w-6"
-            />
             <span
               className="font-vk-demi"
               style={{
@@ -51,25 +46,19 @@ export default function Ads() {
 
           <div
             className="flex justify-between"
-            style={{ width: 355, height: 'var(--ads-secondary-button-height)' }}
+            style={{ width: 355, height: 54 }}
           >
             <button
               type="button"
-              className="flex items-center gap-2"
+              className="flex items-center"
               style={{
                 width: 209.21,
-                height: 'var(--ads-secondary-button-height)',
+                height: 53.86,
                 borderRadius: 10,
                 background: 'linear-gradient(90deg, #111111 0%, #1D1F1D 100%)',
                 paddingLeft: 16,
-                paddingRight: 12,
               }}
             >
-              <img
-                src="/interface/search-02.svg"
-                alt=""
-                className="h-6 w-6"
-              />
               <span
                 className="font-sf-ui-light"
                 style={{
@@ -84,14 +73,12 @@ export default function Ads() {
 
             <button
               type="button"
-              className="flex items-center justify-center gap-2"
+              className="flex items-center justify-center"
               style={{
                 width: 135,
-                height: 'var(--ads-secondary-button-height)',
+                height: 54,
                 borderRadius: 10,
                 background: 'linear-gradient(180deg, #111111 0%, #1D1F1D 100%)',
-                paddingLeft: 16,
-                paddingRight: 12,
               }}
             >
               <span
@@ -104,11 +91,6 @@ export default function Ads() {
               >
                 Фильтры
               </span>
-              <img
-                src="/interface/filter.svg"
-                alt=""
-                className="h-8 w-8"
-              />
             </button>
           </div>
         </div>
