@@ -142,6 +142,8 @@ export default function PostCreate({
     el.style.height = `${el.scrollHeight}px`
   }, [createText, createImages.length])
 
+  const hasContent = createText.trim().length > 0 || createImages.length > 0
+
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
       <div
@@ -150,7 +152,7 @@ export default function PostCreate({
           backgroundColor: '#0A0A0A',
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          transform: slideIn ? 'translateX(0)' : 'translateX(-100%)',
+          transform: slideIn ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 260ms ease-out',
         }}
       >
@@ -168,12 +170,25 @@ export default function PostCreate({
               Новый пост
             </span>
           </div>
-          <button type="button" className="flex h-full items-center" style={{ marginTop: 'var(--create-header-right-icon-margin-top, var(--create-header-icons-margin-top))' }} aria-label="Загрузка">
-            <img
-              src="/interface/upload.svg"
-              alt="upload"
-              className="h-[var(--create-header-right-icon-size)] w-[var(--create-header-right-icon-size)]"
-            />
+          <button
+            type="button"
+            className="flex h-full items-center"
+            style={{
+              marginTop: 'var(--create-header-right-icon-margin-top, var(--create-header-icons-margin-top))',
+            }}
+            aria-label="Далее"
+          >
+            <span
+              className="font-sf-ui-light"
+              style={{
+                fontSize: 16,
+                lineHeight: '18px',
+                color: '#FFFFFF',
+                opacity: hasContent ? 1 : 0.4,
+              }}
+            >
+              Далее
+            </span>
           </button>
         </div>
 

@@ -187,8 +187,12 @@ export default function AdsCreate({
             height: 'calc(812px - 56px - 88px - var(--home-header-offset))',
           }}
         >
-          {step === 1 && (
-            <div className="pt-6">
+          <div
+            key={step}
+            className={step === 1 ? 'ads-step-slide-up' : 'ads-step-slide-left'}
+          >
+            {step === 1 && (
+              <div className="pt-6">
               <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
@@ -277,10 +281,10 @@ export default function AdsCreate({
                 </button>
               </div>
             </div>
-          )}
+            )}
 
-          {step === 2 && (
-            <div className="pt-6">
+            {step === 2 && (
+              <div className="pt-6">
               <div className="mb-4 text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
                 Добавьте несколько фото товара. Первое фото будет обложкой.
               </div>
@@ -325,10 +329,10 @@ export default function AdsCreate({
                 </button>
               </div>
             </div>
-          )}
+            )}
 
-          {step === 3 && (
-            <div className="pt-6">
+            {step === 3 && (
+              <div className="pt-6">
               <div className="mb-3 text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
                 Укажите короткое и понятное название объявления.
               </div>
@@ -339,10 +343,10 @@ export default function AdsCreate({
                 className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
               />
             </div>
-          )}
+            )}
 
-          {step === 4 && (
-            <div className="pt-6 space-y-3">
+            {step === 4 && (
+              <div className="pt-6 space-y-3">
               <button
                 type="button"
                 onClick={() => setCondition('new')}
@@ -476,10 +480,10 @@ export default function AdsCreate({
                 </div>
               </button>
             </div>
-          )}
+            )}
 
-          {step === 5 && (
-            <div className="pt-6 space-y-4">
+            {step === 5 && (
+              <div className="pt-6 space-y-4">
               <div>
                 <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                   Бренд/Производитель
@@ -503,10 +507,10 @@ export default function AdsCreate({
                 />
               </div>
             </div>
-          )}
+            )}
 
-          {step === 6 && (
-            <div className="pt-6">
+            {step === 6 && (
+              <div className="pt-6">
               <div className="mb-3 text-[14px] leading-[1.4em] text-white font-sf-ui-light">
                 Описание отражает сам товар. Старайтесь описать возможности, пожелания по использованию и т.п
               </div>
@@ -521,29 +525,30 @@ export default function AdsCreate({
                 className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 py-3 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
               />
             </div>
-          )}
+            )}
 
-          {step === 7 && (
-            <div className="pt-6 space-y-4">
-              <div>
-                <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                  Цена
-                </div>
-                <div className="relative w-full">
-                  <input
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    inputMode="decimal"
-                    placeholder="0"
-                    className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-10 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                  />
-                  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[16px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                    ₽
+            {step === 7 && (
+              <div className="pt-6 space-y-4">
+                <div>
+                  <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                    Цена
+                  </div>
+                  <div className="relative w-full">
+                    <input
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      inputMode="decimal"
+                      placeholder="0"
+                      className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-10 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                    />
+                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[16px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
+                      ₽
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div
@@ -573,4 +578,3 @@ export default function AdsCreate({
     </div>
   )
 }
-

@@ -323,6 +323,36 @@ body {
   animation: slideInUp 300ms ease-out both;
 }
 
+@keyframes adsStepSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes adsStepSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ads-step-slide-up {
+  animation: adsStepSlideUp 260ms ease-out both;
+}
+
+.ads-step-slide-left {
+  animation: adsStepSlideLeft 260ms ease-out both;
+}
+
 @keyframes revealText {
   from {
     opacity: 0;

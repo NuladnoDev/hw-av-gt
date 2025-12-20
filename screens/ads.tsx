@@ -1,25 +1,19 @@
 'use client'
 
-export default function Ads({
-  onCreate,
-}: {
-  onCreate?: () => void
-}) {
+import { useState } from 'react'
+import AdsCreate from './Ads_Create'
+
+export default function Ads() {
+  const [createOpen, setCreateOpen] = useState(false)
   return (
-    <div
-      className="absolute left-0 flex w-full justify-center"
-      style={{
-        top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-        height: 'calc(812px - 88px - 56px - var(--home-header-offset))',
-      }}
-    >
+    <div className="relative h-full w-full">
       <div
-        className="relative h-full w-full"
-        style={{ maxWidth: 370 }}
+        className="absolute left-0 right-0 flex items-center justify-center"
+        style={{ top: 'var(--feed-controls-top)' }}
       >
         <div
-          className="flex flex-col items-center"
-          style={{ marginTop: 56, rowGap: 12 }}
+          className="flex w-full flex-col items-center"
+          style={{ rowGap: 'var(--ads-buttons-gap)' }}
         >
           <button
             type="button"
@@ -28,10 +22,15 @@ export default function Ads({
               width: 350.07,
               height: 53.86,
               borderRadius: 10,
-              background: 'linear-gradient(90deg, #93B49E 0%, #304838 100%)',
+              background: 'var(--feed-create-bg)',
             }}
-            onClick={onCreate}
+            onClick={() => setCreateOpen(true)}
           >
+            <img
+              src="/interface/plus-02.svg"
+              alt=""
+              style={{ width: 25, height: 26, marginRight: 8 }}
+            />
             <span
               className="font-vk-demi"
               style={{
@@ -59,6 +58,11 @@ export default function Ads({
                 paddingLeft: 16,
               }}
             >
+              <img
+                src="/interface/search-02.svg"
+                alt=""
+                style={{ width: 22, height: 22, marginRight: 8 }}
+              />
               <span
                 className="font-sf-ui-light"
                 style={{
@@ -81,6 +85,11 @@ export default function Ads({
                 background: 'linear-gradient(180deg, #111111 0%, #1D1F1D 100%)',
               }}
             >
+              <img
+                src="/interface/filter.svg"
+                alt=""
+                style={{ width: 24, height: 24, marginRight: 8 }}
+              />
               <span
                 className="font-vk-demi"
                 style={{
@@ -94,9 +103,16 @@ export default function Ads({
             </button>
           </div>
         </div>
-
-        <div className="flex h-full w-full items-center justify-center" />
       </div>
+
+      <div className="flex h-full w-full items-center justify-center" />
+      {createOpen && (
+        <AdsCreate
+          onClose={() => {
+            setCreateOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }
