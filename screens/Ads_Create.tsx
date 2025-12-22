@@ -1,10 +1,49 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Smartphone, Wrench, Cigarette, Briefcase, Ellipsis } from 'lucide-react'
 
 type AdsCategory = 'nicotine' | 'job' | 'service' | 'things' | 'other'
 type AdsCondition = 'new' | 'excellent' | 'good' | 'bad'
 type AdsCreateStep = 1 | 2 | 3 | 4 | 5 | 6 | 7
+
+const CATEGORY_CONFIGS: {
+  id: AdsCategory
+  label: string
+  color: string
+  icon: React.ReactNode
+}[] = [
+  {
+    id: 'things',
+    label: 'Вещи, электроника',
+    color: '#3b82f6',
+    icon: <Smartphone size={32} strokeWidth={1.5} />,
+  },
+  {
+    id: 'service',
+    label: 'Услуги',
+    color: '#8b5cf6',
+    icon: <Wrench size={32} strokeWidth={1.5} />,
+  },
+  {
+    id: 'nicotine',
+    label: 'Никотиновые устройства',
+    color: '#f59e0b',
+    icon: <Cigarette size={32} strokeWidth={1.5} />,
+  },
+  {
+    id: 'job',
+    label: 'Работа',
+    color: '#10b981',
+    icon: <Briefcase size={32} strokeWidth={1.5} />,
+  },
+  {
+    id: 'other',
+    label: 'Другое',
+    color: '#ec4899',
+    icon: <Ellipsis size={32} strokeWidth={1.5} />,
+  },
+]
 
 export default function AdsCreate({
   onClose,
@@ -30,7 +69,7 @@ export default function AdsCreate({
       const vw = window.innerWidth
       const vh = window.innerHeight
       const s = Math.min(vw / baseW, vh / baseH)
-      setScale(Math.max(1, s))
+      setScale(Math.min(1, s))
     }
     update()
     window.addEventListener('resize', update)
@@ -115,21 +154,11 @@ export default function AdsCreate({
     setStep((s) => (s > 1 ? ((s - 1) as AdsCreateStep) : s))
   }
 
-  const stepTitle = (() => {
-    if (step === 1) return 'Тип обьявления'
-    if (step === 2) return 'Внешний вид'
-    if (step === 3) return 'Укажите название'
-    if (step === 4) return 'Состояние'
-    if (step === 5) return 'Характеристики'
-    if (step === 6) return 'Заполните описание'
-    return 'Цена'
-  })()
-
   const primaryButtonLabel = step === 7 ? 'Опубликовать' : 'Продолжить'
 
   return (
     <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
+      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
 
         <div
@@ -159,24 +188,6 @@ export default function AdsCreate({
                 />
               )}
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute right-6 top-0 flex h-full items-center"
-              aria-label="Закрыть"
-            >
-              <img
-                src="/interface/x-01.svg"
-                alt="close"
-                className="h-[22px] w-[22px]"
-                style={{ filter: 'invert(1) brightness(1.6)' }}
-              />
-            </button>
-            <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
-              <div className="text-[24px] font-bold leading-[1em] text-white font-ttc-bold">
-                {stepTitle}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -192,95 +203,87 @@ export default function AdsCreate({
             className={step === 1 ? 'ads-step-slide-up' : 'ads-step-slide-left'}
           >
             {step === 1 && (
-              <div className="pt-6">
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setCategory('nicotine')}
-                  className="flex w-full items-center rounded-[10px] border px-4 py-3"
-                  style={{
-                    borderColor: category === 'nicotine' ? '#6EBC3D' : '#2B2B2B',
-                    background:
-                      category === 'nicotine'
-                        ? 'linear-gradient(90deg, #111111 0%, #1D1F1D 100%)'
-                        : '#111111',
-                  }}
-                >
-                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#1C1C1C]" />
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-light">
-                    Никотиновые устройства
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategory('job')}
-                  className="flex w-full items-center rounded-[10px] border px-4 py-3"
-                  style={{
-                    borderColor: category === 'job' ? '#6EBC3D' : '#2B2B2B',
-                    background:
-                      category === 'job'
-                        ? 'linear-gradient(90deg, #111111 0%, #1D1F1D 100%)'
-                        : '#111111',
-                  }}
-                >
-                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#1C1C1C]" />
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-light">
-                    Работа
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategory('service')}
-                  className="flex w-full items-center rounded-[10px] border px-4 py-3"
-                  style={{
-                    borderColor: category === 'service' ? '#6EBC3D' : '#2B2B2B',
-                    background:
-                      category === 'service'
-                        ? 'linear-gradient(90deg, #111111 0%, #1D1F1D 100%)'
-                        : '#111111',
-                  }}
-                >
-                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#1C1C1C]" />
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-light">
-                    Услуги
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategory('things')}
-                  className="flex w-full items-center rounded-[10px] border px-4 py-3"
-                  style={{
-                    borderColor: category === 'things' ? '#6EBC3D' : '#2B2B2B',
-                    background:
-                      category === 'things'
-                        ? 'linear-gradient(90deg, #111111 0%, #1D1F1D 100%)'
-                        : '#111111',
-                  }}
-                >
-                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#1C1C1C]" />
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-light">
-                    Вещи, электроника
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategory('other')}
-                  className="flex w-full items-center rounded-[10px] border px-4 py-3"
-                  style={{
-                    borderColor: category === 'other' ? '#6EBC3D' : '#2B2B2B',
-                    background:
-                      category === 'other'
-                        ? 'linear-gradient(90deg, #111111 0%, #1D1F1D 100%)'
-                        : '#111111',
-                  }}
-                >
-                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#1C1C1C]" />
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-light">
-                    Другое
-                  </span>
-                </button>
+              <div className="pt-4">
+                <div className="mb-8">
+                  <div className="mb-2 text-[24px] leading-[1.2em] text-white font-ttc-bold">
+                    Тип объявления
+                  </div>
+                  <div className="text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
+                    Выберите подходящую категорию
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  {CATEGORY_CONFIGS.map((cfg, index) => {
+                    const selected = category === cfg.id
+                    return (
+                      <button
+                        key={cfg.id}
+                        type="button"
+                        onClick={() => setCategory(cfg.id)}
+                        className={`group relative w-full overflow-hidden transition-all duration-500 ease-out ${
+                          selected ? 'py-4' : 'py-3 hover:py-3.5'
+                        }`}
+                        style={{ animationDelay: `${index * 100}ms` }}
+                      >
+                        <div
+                          className={`absolute inset-0 transition-all duration-500 ${
+                            selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
+                          }`}
+                          style={{
+                            background: `linear-gradient(90deg, ${cfg.color}40 0%, ${cfg.color}10 100%)`,
+                          }}
+                        />
+                        <div
+                          className={`absolute left-0 top-0 bottom-0 w-1 transition-all duration-500 ${
+                            selected ? 'opacity-100 w-1.5' : 'opacity-0 group-hover:opacity-100'
+                          }`}
+                          style={{ background: cfg.color }}
+                        />
+                        <div className="relative flex items-center gap-6 px-4">
+                          <div
+                            className={`flex items-center justify-center transition-all duration-500 ${
+                              selected ? 'h-16 w-16' : 'h-12 w-12 group-hover:h-14 group-hover:w-14'
+                            }`}
+                            style={{ color: cfg.color }}
+                          >
+                            {cfg.icon}
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div
+                              className={`transition-all duration-300 ${
+                                selected ? 'text-white text-[17px]' : 'text-white/70 group-hover:text-white'
+                              }`}
+                            >
+                              {cfg.label}
+                            </div>
+                          </div>
+                          <div
+                            className={`transition-all duration-300 ${
+                              selected
+                                ? 'opacity-100 translate-x-0'
+                                : 'opacity-0 -translate-x-2 group-hover:opacity-60 group-hover:translate-x-0'
+                            }`}
+                            style={{ color: cfg.color }}
+                          >
+                            <svg
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
             )}
 
             {step === 2 && (
