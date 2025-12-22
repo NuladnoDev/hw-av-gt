@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Smartphone, Wrench, Cigarette, Briefcase, Ellipsis } from 'lucide-react'
+import { Smartphone, Wrench, Cigarette, Briefcase, Ellipsis, Plus, X } from 'lucide-react'
 
 type AdsCategory = 'nicotine' | 'job' | 'service' | 'things' | 'other'
 type AdsCondition = 'new' | 'excellent' | 'good' | 'bad'
@@ -61,6 +61,7 @@ export default function AdsCreate({
   const [color, setColor] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   useEffect(() => {
     const baseW = 375
@@ -113,10 +114,11 @@ export default function AdsCreate({
     if (!files || files.length === 0) return
     try {
       const urls = await readFilesAsDataUrls(Array.from(files))
+      const maxPhotos = 6
       setImages((prev) => {
         const next = [...prev]
         for (const u of urls) {
-          if (!next.includes(u)) next.push(u)
+          if (!next.includes(u) && next.length < maxPhotos) next.push(u)
         }
         return next
       })
@@ -126,6 +128,10 @@ export default function AdsCreate({
 
   const openFilePicker = () => {
     fileInputRef.current?.click()
+  }
+
+  const removeImageAt = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index))
   }
 
   const canGoNext =
@@ -180,12 +186,29 @@ export default function AdsCreate({
                   style={{ filter: 'invert(1) brightness(1.6)' }}
                 />
               ) : (
-                <img
-                  src="/interface/str.svg"
-                  alt="back"
-                  className="h-[22px] w-[22px]"
-                  style={{ filter: 'invert(1) brightness(1.4)' }}
-                />
+                <svg
+                  width="27"
+                  height="21"
+                  viewBox="0 0 27 21"
+                  className="block"
+                  fill="none"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M11.5 4L4 10.5L11.5 17"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M5 10.5H23"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               )}
             </button>
           </div>
@@ -203,8 +226,8 @@ export default function AdsCreate({
             className={step === 1 ? 'ads-step-slide-up' : 'ads-step-slide-left'}
           >
             {step === 1 && (
-              <div className="pt-4">
-                <div className="mb-8">
+              <div className="pt-8">
+                <div className="mb-12">
                   <div className="mb-2 text-[24px] leading-[1.2em] text-white font-ttc-bold">
                     Тип объявления
                   </div>
@@ -287,31 +310,63 @@ export default function AdsCreate({
             )}
 
             {step === 2 && (
-              <div className="pt-6">
-              <div className="mb-4 text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                Добавьте несколько фото товара. Первое фото будет обложкой.
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {Array.from({ length: 6 }).map((_, idx) => {
-                  const src = images[idx]
-                  return (
-                    <div
-                      key={idx}
-                      className="relative overflow-hidden rounded-[15px] bg-[#111111] border border-[#2B2B2B]"
-                      style={{ aspectRatio: '1 / 1' }}
-                    >
-                      {src ? (
+              <div className="pt-8">
+                <div className="mb-12">
+                  <div className="mb-2 text-[24px] leading-[1.2em] text-white font-ttc-bold">
+                    Внешний вид
+                  </div>
+                  <div className="text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
+                    Первое фото будет обложкой объявления
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {images.map((src, index) => (
+                    <div key={src} className="relative w-full overflow-hidden rounded-2xl" style={{ aspectRatio: '1 / 1' }}>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImage(src)}
+                        className="block h-full w-full active:opacity-80 transition-opacity"
+                      >
                         <img src={src} alt="preview" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <div className="h-10 w-10 rounded-full bg-[#1C1C1C]" />
+                      </button>
+                      {index === 0 && (
+                        <div className="absolute left-3 top-3 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-sm pointer-events-none">
+                          <span className="text-xs text-white font-sf-ui-light">
+                            Обложка
+                          </span>
                         </div>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => removeImageAt(index)}
+                        className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-red-500/90 shadow-lg backdrop-blur-sm active:scale-90 transition-transform"
+                      >
+                        <X size={16} className="text-white" />
+                      </button>
                     </div>
-                  )
-                })}
-              </div>
-              <div className="mt-6">
+                  ))}
+                  {images.length < 6 && (
+                    <button
+                      type="button"
+                      onClick={openFilePicker}
+                      className="group relative w-full aspect-square rounded-2xl border-2 border-dashed border-white/20 bg-white/5 active:scale-95 active:bg-white/10 transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 transition-all duration-300">
+                          <Plus size={24} className="text-white/60" />
+                        </div>
+                        <span className="text-sm text-white/60 font-sf-ui-light">
+                          Добавить фото
+                        </span>
+                      </div>
+                    </button>
+                  )}
+                </div>
+                <div className="mt-6 text-center">
+                  <span className="text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
+                    {images.length} / 6 фото
+                  </span>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -320,18 +375,7 @@ export default function AdsCreate({
                   className="hidden"
                   onChange={(e) => handlePickedFiles(e.target.files)}
                 />
-                <button
-                  type="button"
-                  onClick={openFilePicker}
-                  className="flex w-full items-center justify-center rounded-[10px] bg-[#111111]"
-                  style={{ height: 48 }}
-                >
-                  <span className="text-[16px] leading-[1.25em] text-white font-vk-demi">
-                    Добавить фото
-                  </span>
-                </button>
               </div>
-            </div>
             )}
 
             {step === 3 && (
@@ -577,6 +621,27 @@ export default function AdsCreate({
           className="absolute left-0 w-full bg-[#0A0A0A]"
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
+        {previewImage && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md px-6"
+            onClick={() => setPreviewImage(null)}
+          >
+            <button
+              type="button"
+              className="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200"
+              onClick={() => setPreviewImage(null)}
+            >
+              <X size={24} className="text-white" />
+            </button>
+            <div className="w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={previewImage}
+                alt="preview"
+                className="h-auto max-h-[80vh] w-full rounded-2xl object-contain"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
