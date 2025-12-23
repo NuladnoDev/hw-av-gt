@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { getSupabase } from '@/lib/supabaseClient'
+import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import {
   Smartphone,
   Wrench,
@@ -153,49 +153,62 @@ export default function AdsCreate({
     const priceTrim = price.trim()
     if (titleTrim.length === 0 || priceTrim.length === 0) return
     if (images.length === 0) return
-    try {
-      if (typeof window === 'undefined') return
-      const authRaw = window.localStorage.getItem('hw-auth')
-      const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
-      const uid = auth?.uid ?? null
-      const userTag = auth?.tag ?? null
 
-      let location: string | null = null
-      const profRaw = window.localStorage.getItem('hw-profiles')
-      if (profRaw && uid) {
-        try {
+    const imageUrl = images[0]
+    if (!imageUrl) return
+
+    let uid: string | null = null
+    let userTag: string | null = null
+    let location: string | null = null
+
+    try {
+      const auth = await loadLocalAuth()
+      uid = auth?.uid ?? null
+      userTag = auth?.tag ?? null
+    } catch {
+      uid = null
+      userTag = null
+    }
+
+    try {
+      if (typeof window !== 'undefined' && uid) {
+        const profRaw = window.localStorage.getItem('hw-profiles')
+        if (profRaw) {
           const profMap = JSON.parse(profRaw) as Record<string, { city?: string }>
           const p = profMap[uid]
           if (p && typeof p.city === 'string' && p.city.trim().length > 0) {
             location = p.city.trim()
           }
-        } catch {
         }
       }
+    } catch {
+      location = null
+    }
 
-      const now = Date.now()
-      const imageUrl = images[0]
-      if (!imageUrl) return
-      const conditionLabel = getConditionLabel(condition)
+    const conditionLabel = getConditionLabel(condition)
+    const client = getSupabase()
+    if (!client) return
 
-      const client = getSupabase()
-      if (!client) return
-
+    try {
       await client.from('ads').insert({
         user_id: uid,
-        user_tag: userTag ?? null,
+        user_tag: userTag,
         title: titleTrim,
         price: priceTrim,
         image_url: imageUrl,
         condition: conditionLabel,
         location,
         category,
-        created_at: new Date(now).toISOString(),
+        created_at: new Date().toISOString(),
       })
-
-      const ev = new CustomEvent('ads-updated', { detail: { type: 'created' } })
-      window.dispatchEvent(ev)
-    } catch {
+      if (typeof window !== 'undefined') {
+        const ev = new CustomEvent('ads-updated', { detail: { type: 'created' } })
+        window.dispatchEvent(ev)
+      }
+    } catch (e) {
+      if (typeof window !== 'undefined') {
+        console.error('failed_to_publish_ad', e)
+      }
     }
   }
 
