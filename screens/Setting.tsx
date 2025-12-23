@@ -34,47 +34,51 @@ export default function Setting({
     const client = getSupabase()
     ;(async () => {
       try {
+        const saved = await loadLocalAuth()
+        const localId = saved?.uid ?? null
+        if (localId) setUserId(localId)
+
+        let email: string | null = null
+        let tagFromDb: string | undefined
+        let avatarFromDb: string | undefined
+
         if (client) {
           const { data } = await client.auth.getUser()
-          const id = data.user?.id ?? null
-          const email = data.user?.email ?? null
-          setUserId(id)
-          const { data: prof } = id
-            ? await client.from('profiles').select('tag, avatar_url').eq('id', id).maybeSingle()
-            : { data: null }
-          const tagFromDb = (prof?.tag as string | undefined) ?? undefined
-          const avatarFromDb = (prof?.avatar_url as string | undefined) ?? undefined
-          if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
-            setTagText(tagFromDb.trim())
-          } else if (typeof email === 'string' && email.trim().length > 0) {
-            setTagText(email.split('@')[0])
-          } else {
-            const saved = await loadLocalAuth()
-            if (saved?.tag && saved.tag.trim().length > 0) setTagText(saved.tag.trim())
+          const supabaseId = data.user?.id ?? null
+          email = data.user?.email ?? null
+          if (supabaseId) {
+            const { data: prof } = await client
+              .from('profiles')
+              .select('tag, avatar_url')
+              .eq('id', supabaseId)
+              .maybeSingle()
+            tagFromDb = (prof?.tag as string | undefined) ?? undefined
+            avatarFromDb = (prof?.avatar_url as string | undefined) ?? undefined
           }
-          if (typeof avatarFromDb === 'string' && avatarFromDb.trim().length > 0) {
-            setAvatarUrl(avatarFromDb)
-          } else {
-            const profRaw = window.localStorage.getItem('hw-profiles')
-            const profMap = profRaw
-              ? (JSON.parse(profRaw) as Record<string, { avatar_url?: string; tag?: string }>)
-              : {}
-            const p = id ? profMap[id] : undefined
-            if (p?.avatar_url) setAvatarUrl(p.avatar_url)
-            if (!tagFromDb && p?.tag && p.tag.trim().length > 0) setTagText(p.tag.trim())
-          }
-        } else {
-          const saved = await loadLocalAuth()
-          const id = saved?.uid ?? null
-          setUserId(id)
-          if (saved?.tag && saved.tag.trim().length > 0) setTagText(saved.tag.trim())
-          const profRaw = window.localStorage.getItem('hw-profiles')
-          const profMap = profRaw
-            ? (JSON.parse(profRaw) as Record<string, { avatar_url?: string; tag?: string }>)
-            : {}
-          const p = id ? profMap[id] : undefined
-          if (p?.avatar_url) setAvatarUrl(p.avatar_url)
-          if (p?.tag && p.tag.trim().length > 0) setTagText(p.tag.trim())
+        }
+
+        if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
+          setTagText(tagFromDb.trim())
+        } else if (typeof email === 'string' && email.trim().length > 0) {
+          setTagText(email.split('@')[0])
+        } else if (saved?.tag && saved.tag.trim().length > 0) {
+          setTagText(saved.tag.trim())
+        }
+
+        const profRaw = window.localStorage.getItem('hw-profiles')
+        const profMap = profRaw
+          ? (JSON.parse(profRaw) as Record<string, { avatar_url?: string; tag?: string }>)
+          : {}
+        const p = localId ? profMap[localId] : undefined
+
+        if (typeof avatarFromDb === 'string' && avatarFromDb.trim().length > 0) {
+          setAvatarUrl(avatarFromDb)
+        } else if (p?.avatar_url) {
+          setAvatarUrl(p.avatar_url)
+        }
+
+        if (!tagFromDb && (!saved?.tag || saved.tag.trim().length === 0) && p?.tag && p.tag.trim().length > 0) {
+          setTagText(p.tag.trim())
         }
       } catch {}
     })()

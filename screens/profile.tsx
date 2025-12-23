@@ -21,7 +21,6 @@ export default function Profile({
   const [avatarLoading, setAvatarLoading] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
-  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null)
   const [description, setDescription] = useState<string>('')
   const [age, setAge] = useState<string>('')
   const [gender, setGender] = useState<string>('')
@@ -58,7 +57,12 @@ export default function Profile({
     const idLocal = auth?.uid ?? null
     setUserId(idLocal)
     const profRaw = window.localStorage.getItem('hw-profiles')
-    const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>) : {}
+    const profMap = profRaw
+      ? (JSON.parse(profRaw) as Record<
+          string,
+          { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }
+        >)
+      : {}
     const p = idLocal ? profMap[idLocal] : undefined
     const tagLocal = p?.tag ?? (typeof userTag === 'string' ? userTag.replace(/^@/, '') : '')
     if (tagLocal) setTagText(tagLocal)
@@ -70,42 +74,41 @@ export default function Profile({
     if (p?.political) setPolitical(p.political)
     if (p?.hobbies) setHobbies(p.hobbies)
     const client = getSupabase()
-    if (!client) return
+    if (!client || !idLocal) return
     ;(async () => {
-      const { data } = await client.auth.getUser()
-      const id = data.user?.id ?? null
-      setSupabaseUserId(id)
-      if (!id) return
-      const { data: prof, error: err } = await client
-        .from('profiles')
-        .select('tag, avatar_url, description, age, gender, city, political, hobbies')
-        .eq('id', id)
-        .maybeSingle()
-      if (err || !prof) {
-        return
+      try {
+        const { data: prof, error: err } = await client
+          .from('profiles')
+          .select('tag, avatar_url, description, age, gender, city, political, hobbies')
+          .eq('id', idLocal)
+          .maybeSingle()
+        if (err || !prof) {
+          return
+        }
+        const tagFromDb = (prof.tag as string | undefined) ?? undefined
+        const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
+        const descFromDb = (prof.description as string | undefined) ?? ''
+        const ageFromDb = (prof.age as string | number | undefined) ?? undefined
+        const genderFromDb = (prof.gender as string | undefined) ?? undefined
+        const politicalFromDb = (prof.political as string | undefined) ?? undefined
+        const hobbiesFromDb = (prof.hobbies as string | undefined) ?? undefined
+        if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
+          setTagText(tagFromDb.trim())
+        } else if (typeof userTag === 'string' && userTag.trim().length > 0) {
+          setTagText(userTag.replace(/^@/, '').trim())
+        }
+        if (typeof avatarFromDb === 'string' && avatarFromDb.trim().length > 0) {
+          setAvatarUrl(avatarFromDb)
+        }
+        setDescription(descFromDb ?? '')
+        if (typeof ageFromDb === 'number') setAge(String(ageFromDb))
+        else if (typeof ageFromDb === 'string') setAge(ageFromDb)
+        setGender(typeof genderFromDb === 'string' ? genderFromDb : '')
+        setCity(typeof (prof.city as string | undefined) === 'string' ? (prof.city as string) : '')
+        setPolitical(typeof politicalFromDb === 'string' ? politicalFromDb : '')
+        setHobbies(typeof hobbiesFromDb === 'string' ? hobbiesFromDb : '')
+      } catch {
       }
-      const tagFromDb = (prof.tag as string | undefined) ?? undefined
-      const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
-      const descFromDb = (prof.description as string | undefined) ?? ''
-      const ageFromDb = (prof.age as string | number | undefined) ?? undefined
-      const genderFromDb = (prof.gender as string | undefined) ?? undefined
-      const politicalFromDb = (prof.political as string | undefined) ?? undefined
-      const hobbiesFromDb = (prof.hobbies as string | undefined) ?? undefined
-      if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
-        setTagText(tagFromDb.trim())
-      } else if (typeof userTag === 'string' && userTag.trim().length > 0) {
-        setTagText(userTag.replace(/^@/, '').trim())
-      }
-      if (typeof avatarFromDb === 'string' && avatarFromDb.trim().length > 0) {
-        setAvatarUrl(avatarFromDb)
-      }
-      setDescription(descFromDb ?? '')
-      if (typeof ageFromDb === 'number') setAge(String(ageFromDb))
-      else if (typeof ageFromDb === 'string') setAge(ageFromDb)
-      setGender(typeof genderFromDb === 'string' ? genderFromDb : '')
-      setCity(typeof (prof.city as string | undefined) === 'string' ? (prof.city as string) : '')
-      setPolitical(typeof politicalFromDb === 'string' ? politicalFromDb : '')
-      setHobbies(typeof hobbiesFromDb === 'string' ? hobbiesFromDb : '')
     })()
   }, [userTag])
   useEffect(() => {
@@ -125,7 +128,7 @@ export default function Profile({
   }, [])
 
   const gradientIndex = (() => {
-    const base = userId ?? supabaseUserId ?? 'user'
+    const base = userId ?? 'user'
     let sum = 0
     for (let i = 0; i < base.length; i++) sum += base.charCodeAt(i)
     return sum % avatarGradients.length
@@ -135,18 +138,27 @@ export default function Profile({
 
   const handleAvatarFile = async (files: FileList | null) => {
     const f = files && files[0]
-    if (!f || !supabaseUserId) return
+    if (!f || !userId) return
     setAvatarLoading(true)
     try {
       const client = getSupabase()
       let finalUrl: string | null = null
       if (client) {
-        const path = `${supabaseUserId}/${Date.now()}_${f.name}`
+        const path = `${userId}/${Date.now()}_${f.name}`
         const up = await client.storage.from('avatars').upload(path, f, { upsert: true })
         if (!up.error) {
           const pub = client.storage.from('avatars').getPublicUrl(path)
           finalUrl = pub.data.publicUrl
-          await client.from('profiles').upsert({ id: supabaseUserId, tag: tagText, avatar_url: finalUrl })
+          const { error } = await client.from('profiles').upsert({ id: userId, tag: tagText, avatar_url: finalUrl })
+          if (error) {
+            const profRaw = window.localStorage.getItem('hw-profiles')
+            const profMap = profRaw
+              ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+              : {}
+            const prev = profMap[userId] ?? {}
+            profMap[userId] = { ...prev, avatar_url: finalUrl ?? undefined }
+            window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+          }
         }
       }
       if (!finalUrl) {
@@ -156,6 +168,13 @@ export default function Profile({
           reader.readAsDataURL(f)
         })
         finalUrl = dataUrl
+        const profRaw = window.localStorage.getItem('hw-profiles')
+        const profMap = profRaw
+          ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+          : {}
+        const prev = profMap[userId] ?? {}
+        profMap[userId] = { ...prev, avatar_url: finalUrl ?? undefined }
+        window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
       }
       if (finalUrl) {
         setAvatarUrl(finalUrl)
@@ -170,14 +189,69 @@ export default function Profile({
   const saveTag = async (next: string) => {
     setTagText(next)
     const client = getSupabase()
-    if (!client || !supabaseUserId) return
-    await client.from('profiles').upsert({ id: supabaseUserId, tag: next })
+    if (!userId) return
+    if (client) {
+      const { error } = await client.from('profiles').upsert({ id: userId, tag: next })
+      if (error) {
+        const profRaw = window.localStorage.getItem('hw-profiles')
+        const profMap = profRaw
+          ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+          : {}
+        const prev = profMap[userId] ?? {}
+        profMap[userId] = { ...prev, tag: next }
+        window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+      }
+    } else {
+      const profRaw = window.localStorage.getItem('hw-profiles')
+      const profMap = profRaw
+        ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+        : {}
+      const prev = profMap[userId] ?? {}
+      profMap[userId] = { ...prev, tag: next }
+      window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+    }
   }
 
   const upsertProfile = async (patch: Partial<{ description: string; age: string; gender: string; city: string; political: string; hobbies: string }>) => {
     const client = getSupabase()
-    if (!client || !supabaseUserId) return
-    await client.from('profiles').upsert({ id: supabaseUserId, ...patch })
+    if (!userId) return
+    const payload: Record<string, unknown> = { id: userId, ...patch }
+    if (client) {
+      const { error } = await client.from('profiles').upsert(payload)
+      if (error) {
+        const profRaw = window.localStorage.getItem('hw-profiles')
+        const profMap = profRaw
+          ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+          : {}
+        const prev = profMap[userId] ?? {}
+        profMap[userId] = {
+          ...prev,
+          description: (payload.description as string | undefined) ?? prev.description,
+          age: (payload.age as string | undefined) ?? prev.age,
+          gender: (payload.gender as string | undefined) ?? prev.gender,
+          city: (payload.city as string | undefined) ?? prev.city,
+          political: (payload.political as string | undefined) ?? prev.political,
+          hobbies: (payload.hobbies as string | undefined) ?? prev.hobbies,
+        }
+        window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+      }
+    } else {
+      const profRaw = window.localStorage.getItem('hw-profiles')
+      const profMap = profRaw
+        ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+        : {}
+      const prev = profMap[userId] ?? {}
+      profMap[userId] = {
+        ...prev,
+        description: (payload.description as string | undefined) ?? prev.description,
+        age: (payload.age as string | undefined) ?? prev.age,
+        gender: (payload.gender as string | undefined) ?? prev.gender,
+        city: (payload.city as string | undefined) ?? prev.city,
+        political: (payload.political as string | undefined) ?? prev.political,
+        hobbies: (payload.hobbies as string | undefined) ?? prev.hobbies,
+      }
+      window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+    }
   }
   const saveDescription = async (next: string) => {
     setDescription(next)

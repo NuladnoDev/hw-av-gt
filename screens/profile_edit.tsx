@@ -97,154 +97,95 @@ export default function ProfileEdit({
 
   useEffect(() => {
     const client = getSupabase()
-    if (client) {
-      ;(async () => {
-        try {
-          const { data } = await client.auth.getUser()
-          const id = data.user?.id ?? null
-          setUserId(id)
-          if (!id) return
-          const { data: prof, error: profError } = await client
-            .from('profiles')
-            .select('tag, avatar_url, description, age, gender, city, political, hobbies')
-            .eq('id', id)
-            .maybeSingle()
-          if (profError) {
-            const authRaw = window.localStorage.getItem('hw-auth')
-            const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
-            const profRaw = window.localStorage.getItem('hw-profiles')
-            const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>) : {}
-            const p = id ? profMap[id] : undefined
-            const tagLocal = p?.tag ?? auth?.tag ?? (typeof initialTagProp === 'string' ? initialTagProp.replace(/^@/, '') : '')
-            setTagText(tagLocal ?? '')
-            setOriginalTag(tagLocal ?? '')
-            if (p?.avatar_url) setAvatarUrl(p.avatar_url)
-            const d = p?.description ?? ''
-            setDescription(d)
-            setOriginalDescription(d)
-            const a = p?.age ?? ''
-            setAge(a)
-            setOriginalAge(a)
-            const g = p?.gender ?? ''
-            setGender(g)
-            setOriginalGender(g)
-            const c = p?.city ?? ''
-            setCity(c)
-            setOriginalCity(c)
-            const pl = p?.political ?? ''
-            setPolitical(pl)
-            setOriginalPolitical(pl)
-            const hb = p?.hobbies ?? ''
-            setHobbies(hb)
-            setOriginalHobbies(hb)
-            return
-          }
-          const tagFromDb = (prof?.tag as string | undefined) ?? undefined
-          const avatarFromDb = (prof?.avatar_url as string | undefined) ?? undefined
-          const descFromDb = (prof?.description as string | undefined) ?? ''
-          const ageFromDb = (prof?.age as string | number | undefined) ?? undefined
-          const genderFromDb = (prof?.gender as string | undefined) ?? undefined
-          const politicalFromDb = (prof?.political as string | undefined) ?? undefined
-          const hobbiesFromDb = (prof?.hobbies as string | undefined) ?? undefined
-          const cityFromDb = (prof?.city as string | undefined) ?? undefined
-          if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
-            setTagText(tagFromDb.trim())
-            setOriginalTag(tagFromDb.trim())
-          } else if (typeof initialTagProp === 'string' && initialTagProp.trim().length > 0) {
-            setTagText(initialTagProp.replace(/^@/, '').trim())
-            setOriginalTag(initialTagProp.replace(/^@/, '').trim())
-          }
-          if (typeof avatarFromDb === 'string' && avatarFromDb.trim().length > 0) {
-            setAvatarUrl(avatarFromDb)
-          }
-          setDescription(descFromDb ?? '')
-          setOriginalDescription(descFromDb ?? '')
-          if (typeof ageFromDb === 'number') {
-            const a = String(ageFromDb)
-            setAge(a)
-            setOriginalAge(a)
-          } else if (typeof ageFromDb === 'string') {
-            setAge(ageFromDb)
-            setOriginalAge(ageFromDb)
-          } else {
-            setAge('')
-            setOriginalAge('')
-          }
-          const g = typeof genderFromDb === 'string' ? genderFromDb : ''
-          setGender(g)
-          setOriginalGender(g)
-          const c = typeof cityFromDb === 'string' ? cityFromDb : ''
-          setCity(c)
-          setOriginalCity(c)
-          const p = typeof politicalFromDb === 'string' ? politicalFromDb : ''
-          setPolitical(p)
-          setOriginalPolitical(p)
-          const h = typeof hobbiesFromDb === 'string' ? hobbiesFromDb : ''
-          setHobbies(h)
-          setOriginalHobbies(h)
-        } catch {
-          const authRaw = window.localStorage.getItem('hw-auth')
-          const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
-          const id = auth?.uid ?? null
-          setUserId(id)
-          const profRaw = window.localStorage.getItem('hw-profiles')
-          const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>) : {}
-          const p = id ? profMap[id] : undefined
-          const tagLocal = p?.tag ?? auth?.tag ?? (typeof initialTagProp === 'string' ? initialTagProp.replace(/^@/, '') : '')
-          setTagText(tagLocal ?? '')
-          setOriginalTag(tagLocal ?? '')
-          if (p?.avatar_url) setAvatarUrl(p.avatar_url)
-          const d = p?.description ?? ''
-          setDescription(d)
-          setOriginalDescription(d)
-          const a = p?.age ?? ''
-          setAge(a)
-          setOriginalAge(a)
-          const g = p?.gender ?? ''
-          setGender(g)
-          setOriginalGender(g)
-          const c = p?.city ?? ''
-          setCity(c)
-          setOriginalCity(c)
-          const pl = p?.political ?? ''
-          setPolitical(pl)
-          setOriginalPolitical(pl)
-          const hb = p?.hobbies ?? ''
-          setHobbies(hb)
-          setOriginalHobbies(hb)
-        }
-      })()
-    } else {
+    ;(async () => {
       const authRaw = window.localStorage.getItem('hw-auth')
-      const auth = authRaw ? JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string } : null
+      const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
       const id = auth?.uid ?? null
       setUserId(id)
       const profRaw = window.localStorage.getItem('hw-profiles')
-      const profMap = profRaw ? JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }> : {}
-      const p = id ? profMap[id] : undefined
-      const tagLocal = p?.tag ?? auth?.tag ?? (typeof initialTagProp === 'string' ? initialTagProp.replace(/^@/, '') : '')
-      setTagText(tagLocal ?? '')
-      setOriginalTag(tagLocal ?? '')
-      if (p?.avatar_url) setAvatarUrl(p.avatar_url)
-      const d = p?.description ?? ''
+      const profMap = profRaw
+        ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+        : {}
+      const localProf = id ? profMap[id] : undefined
+      const baseTag =
+        localProf?.tag ??
+        auth?.tag ??
+        (typeof initialTagProp === 'string' ? initialTagProp.replace(/^@/, '') : '') ??
+        ''
+      setTagText(baseTag)
+      setOriginalTag(baseTag)
+      if (localProf?.avatar_url) setAvatarUrl(localProf.avatar_url)
+      const d = localProf?.description ?? ''
       setDescription(d)
       setOriginalDescription(d)
-      const a = p?.age ?? ''
+      const a = localProf?.age ?? ''
       setAge(a)
       setOriginalAge(a)
-      const g = p?.gender ?? ''
+      const g = localProf?.gender ?? ''
       setGender(g)
       setOriginalGender(g)
-      const c = p?.city ?? ''
+      const c = localProf?.city ?? ''
       setCity(c)
       setOriginalCity(c)
-      const pl = p?.political ?? ''
+      const pl = localProf?.political ?? ''
       setPolitical(pl)
       setOriginalPolitical(pl)
-      const hb = p?.hobbies ?? ''
+      const hb = localProf?.hobbies ?? ''
       setHobbies(hb)
       setOriginalHobbies(hb)
-    }
+
+      if (!client || !id) return
+      try {
+        const { data: prof, error: profError } = await client
+          .from('profiles')
+          .select('tag, avatar_url, description, age, gender, city, political, hobbies')
+          .eq('id', id)
+          .maybeSingle()
+        if (profError || !prof) return
+        const tagFromDb = (prof.tag as string | undefined) ?? undefined
+        const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
+        const descFromDb = (prof.description as string | undefined) ?? ''
+        const ageFromDb = (prof.age as string | number | undefined) ?? undefined
+        const genderFromDb = (prof.gender as string | undefined) ?? undefined
+        const politicalFromDb = (prof.political as string | undefined) ?? undefined
+        const hobbiesFromDb = (prof.hobbies as string | undefined) ?? undefined
+        const cityFromDb = (prof.city as string | undefined) ?? undefined
+
+        if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
+          setTagText(tagFromDb.trim())
+          setOriginalTag(tagFromDb.trim())
+        }
+        if (typeof avatarFromDb === 'string' && avatarFromDb.trim().length > 0) {
+          setAvatarUrl(avatarFromDb)
+        }
+        setDescription(descFromDb ?? '')
+        setOriginalDescription(descFromDb ?? '')
+        if (typeof ageFromDb === 'number') {
+          const a2 = String(ageFromDb)
+          setAge(a2)
+          setOriginalAge(a2)
+        } else if (typeof ageFromDb === 'string') {
+          setAge(ageFromDb)
+          setOriginalAge(ageFromDb)
+        } else {
+          setAge('')
+          setOriginalAge('')
+        }
+        const g2 = typeof genderFromDb === 'string' ? genderFromDb : ''
+        setGender(g2)
+        setOriginalGender(g2)
+        const c2 = typeof cityFromDb === 'string' ? cityFromDb : ''
+        setCity(c2)
+        setOriginalCity(c2)
+        const p2 = typeof politicalFromDb === 'string' ? politicalFromDb : ''
+        setPolitical(p2)
+        setOriginalPolitical(p2)
+        const h2 = typeof hobbiesFromDb === 'string' ? hobbiesFromDb : ''
+        setHobbies(h2)
+        setOriginalHobbies(h2)
+      } catch {
+      }
+    })()
   }, [])
 
   const gradientIndex = (() => {
