@@ -21,6 +21,7 @@ export default function Profile({
   const [avatarLoading, setAvatarLoading] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null)
   const [description, setDescription] = useState<string>('')
   const [age, setAge] = useState<string>('')
   const [gender, setGender] = useState<string>('')
@@ -73,7 +74,7 @@ export default function Profile({
     ;(async () => {
       const { data } = await client.auth.getUser()
       const id = data.user?.id ?? null
-      setUserId(id)
+      setSupabaseUserId(id)
       if (!id) return
       const { data: prof, error: err } = await client
         .from('profiles')
@@ -124,7 +125,7 @@ export default function Profile({
   }, [])
 
   const gradientIndex = (() => {
-    const base = userId ?? 'user'
+    const base = userId ?? supabaseUserId ?? 'user'
     let sum = 0
     for (let i = 0; i < base.length; i++) sum += base.charCodeAt(i)
     return sum % avatarGradients.length
@@ -134,18 +135,18 @@ export default function Profile({
 
   const handleAvatarFile = async (files: FileList | null) => {
     const f = files && files[0]
-    if (!f || !userId) return
+    if (!f || !supabaseUserId) return
     setAvatarLoading(true)
     try {
       const client = getSupabase()
       let finalUrl: string | null = null
       if (client) {
-        const path = `${userId}/${Date.now()}_${f.name}`
+        const path = `${supabaseUserId}/${Date.now()}_${f.name}`
         const up = await client.storage.from('avatars').upload(path, f, { upsert: true })
         if (!up.error) {
           const pub = client.storage.from('avatars').getPublicUrl(path)
           finalUrl = pub.data.publicUrl
-          await client.from('profiles').upsert({ id: userId, tag: tagText, avatar_url: finalUrl })
+          await client.from('profiles').upsert({ id: supabaseUserId, tag: tagText, avatar_url: finalUrl })
         }
       }
       if (!finalUrl) {
@@ -169,14 +170,14 @@ export default function Profile({
   const saveTag = async (next: string) => {
     setTagText(next)
     const client = getSupabase()
-    if (!client || !userId) return
-    await client.from('profiles').upsert({ id: userId, tag: next })
+    if (!client || !supabaseUserId) return
+    await client.from('profiles').upsert({ id: supabaseUserId, tag: next })
   }
 
   const upsertProfile = async (patch: Partial<{ description: string; age: string; gender: string; city: string; political: string; hobbies: string }>) => {
     const client = getSupabase()
-    if (!client || !userId) return
-    await client.from('profiles').upsert({ id: userId, ...patch })
+    if (!client || !supabaseUserId) return
+    await client.from('profiles').upsert({ id: supabaseUserId, ...patch })
   }
   const saveDescription = async (next: string) => {
     setDescription(next)
@@ -436,19 +437,20 @@ export default function Profile({
                       marginRight: -12,
                     }}
                   >
-                    {userAds.map((ad) => (
-                      <AdCard
-                        key={ad.id}
-                        id={ad.id}
-                        title={ad.title}
-                        price={ad.price}
-                        imageUrl={ad.imageUrl}
-                        username={(ad.userTag ?? 'user').replace(/^@/, '')}
-                        condition={ad.condition ?? undefined}
-                        location={ad.location ?? undefined}
-                        onDelete={() => deleteAdById(ad.id)}
-                      />
-                    ))}
+                  {userAds.map((ad) => (
+                    <AdCard
+                      key={ad.id}
+                      id={ad.id}
+                      title={ad.title}
+                      price={ad.price}
+                      imageUrl={ad.imageUrl}
+                      username={(ad.userTag ?? 'user').replace(/^@/, '')}
+                      condition={ad.condition ?? undefined}
+                      location={ad.location ?? undefined}
+                      onDelete={() => deleteAdById(ad.id)}
+                      isOwn
+                    />
+                  ))}
                   </div>
                 ) : (
                   <>

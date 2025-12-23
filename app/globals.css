@@ -353,6 +353,25 @@ body {
   animation: adsStepSlideLeft 260ms ease-out both;
 }
 
+@keyframes adsPublishProgress {
+  0% {
+    transform: translateX(-60%);
+  }
+  50% {
+    transform: translateX(-10%);
+  }
+  100% {
+    transform: translateX(60%);
+  }
+}
+.ads-publish-progress-fill {
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(90deg, #6e9b7d 0%, #34975f 100%);
+  animation: adsPublishProgress 900ms ease-in-out infinite;
+}
+
 @keyframes revealText {
   from {
     opacity: 0;

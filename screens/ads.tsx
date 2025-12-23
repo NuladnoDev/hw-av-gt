@@ -12,6 +12,8 @@ interface AdCardProps {
   username: string
   condition?: string
   location?: string
+  onDelete?: () => void
+  isOwn?: boolean
 }
 
 const ADS_SIDE_PADDING = 4
@@ -88,20 +90,21 @@ export const deleteAdById = async (id: string): Promise<void> => {
   }
 }
 
-export function AdCard({ title, price, imageUrl, username, condition, location, onDelete }: AdCardProps & { onDelete?: () => void }) {
+export function AdCard({ title, price, imageUrl, username, condition, location, onDelete, isOwn }: AdCardProps) {
   const [touchStartX, setTouchStartX] = useState<number | null>(null)
   const [translateX, setTranslateX] = useState(0)
   const [deleting, setDeleting] = useState(false)
+  const canSwipe = !!onDelete && (isOwn === undefined || isOwn === true)
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (deleting) return
+    if (deleting || !canSwipe) return
     if (e.touches.length > 0) {
       setTouchStartX(e.touches[0].clientX)
     }
   }
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (deleting) return
+    if (deleting || !canSwipe) return
     if (touchStartX === null) return
     if (e.touches.length === 0) return
     const currentX = e.touches[0].clientX
@@ -112,7 +115,7 @@ export function AdCard({ title, price, imageUrl, username, condition, location, 
   }
 
   const handleTouchEnd = () => {
-    if (deleting) return
+    if (deleting || !canSwipe) return
     if (translateX < -80 && onDelete) {
       setDeleting(true)
       setTranslateX(-400)
@@ -181,6 +184,19 @@ export function AdCard({ title, price, imageUrl, username, condition, location, 
 export default function Ads() {
   const [createOpen, setCreateOpen] = useState(false)
   const [items, setItems] = useState<StoredAd[]>([])
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = window.localStorage.getItem('hw-auth')
+      const auth = raw ? (JSON.parse(raw) as { uid?: string | null } | null) : null
+      const uid = auth?.uid ?? null
+      setCurrentUserId(typeof uid === 'string' && uid.length > 0 ? uid : null)
+    } catch {
+      setCurrentUserId(null)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -190,7 +206,20 @@ export default function Ads() {
       setItems(all.sort((a, b) => b.createdAt - a.createdAt))
     }
     load()
-    const handler = () => {
+    const handler = (e: Event) => {
+      const ev = e as CustomEvent<{ type?: string; id?: string; row?: AdsTableRow }>
+      if (ev.detail?.type === 'created' && ev.detail.row) {
+        const ad = mapRowToStoredAd(ev.detail.row)
+        setItems((prev) => {
+          if (prev.some((x) => x.id === ad.id)) return prev
+          return [ad, ...prev]
+        })
+        return
+      }
+      if (ev.detail?.type === 'deleted' && ev.detail.id) {
+        setItems((prev) => prev.filter((a) => a.id !== ev.detail.id))
+        return
+      }
       load()
     }
     if (typeof window !== 'undefined') {
@@ -311,27 +340,31 @@ export default function Ads() {
           paddingRight: ADS_SIDE_PADDING,
           paddingBottom: 16,
         }}
-      >
-        <div
-          className="grid grid-cols-2 pb-4"
+        >
+          <div
+            className="grid grid-cols-2 pb-4"
           style={{
             columnGap: ADS_GRID_GAP,
             rowGap: ADS_GRID_GAP,
           }}
-        >
-          {items.map((ad) => (
-            <AdCard
-              key={ad.id}
-              id={ad.id}
-              title={ad.title}
-              price={ad.price}
-              imageUrl={ad.imageUrl}
-              username={(ad.userTag ?? 'user').replace(/^@/, '')}
-              condition={ad.condition ?? undefined}
-              location={ad.location ?? undefined}
-              onDelete={() => deleteAdById(ad.id)}
-            />
-          ))}
+          >
+            {items.map((ad) => {
+              const isOwn = currentUserId !== null && ad.userId === currentUserId
+              return (
+                <AdCard
+                  key={ad.id}
+                  id={ad.id}
+                  title={ad.title}
+                  price={ad.price}
+                  imageUrl={ad.imageUrl}
+                  username={(ad.userTag ?? 'user').replace(/^@/, '')}
+                  condition={ad.condition ?? undefined}
+                  location={ad.location ?? undefined}
+                  onDelete={isOwn ? () => deleteAdById(ad.id) : undefined}
+                  isOwn={isOwn}
+                />
+              )
+            })}
         </div>
       </div>
       {createOpen && (

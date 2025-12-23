@@ -142,20 +142,22 @@ export default function AdsCreate({
 
   const [otherType, setOtherType] = useState('')
   const [otherDetails, setOtherDetails] = useState('')
+  const [publishing, setPublishing] = useState(false)
+  const [publishPhase, setPublishPhase] = useState<'idle' | 'running' | 'full'>('idle')
 
   const getConditionLabel = (c: AdsCondition | null) => {
     const found = CONDITION_OPTIONS.find((o) => o.id === c)
     return found?.label ?? null
   }
 
-  const publishAd = async () => {
+  const publishAd = async (): Promise<boolean> => {
     const titleTrim = title.trim()
     const priceTrim = price.trim()
-    if (titleTrim.length === 0 || priceTrim.length === 0) return
-    if (images.length === 0) return
+    if (titleTrim.length === 0 || priceTrim.length === 0) return false
+    if (images.length === 0) return false
 
     const imageUrl = images[0]
-    if (!imageUrl) return
+    if (!imageUrl) return false
 
     let uid: string | null = null
     let userTag: string | null = null
@@ -187,10 +189,10 @@ export default function AdsCreate({
 
     const conditionLabel = getConditionLabel(condition)
     const client = getSupabase()
-    if (!client) return
+    if (!client) return false
 
     try {
-      const { error } = await client
+      const { data, error } = await client
         .from('ads')
         .insert({
           user_id: uid,
@@ -210,17 +212,19 @@ export default function AdsCreate({
         if (typeof window !== 'undefined') {
           console.error('publish_ad_supabase_error', error)
         }
-        return
+        return false
       }
 
       if (typeof window !== 'undefined') {
-        const ev = new CustomEvent('ads-updated', { detail: { type: 'created' } })
+        const ev = new CustomEvent('ads-updated', { detail: { type: 'created', row: data } })
         window.dispatchEvent(ev)
       }
+      return true
     } catch (e) {
       if (typeof window !== 'undefined') {
         console.error('failed_to_publish_ad', e)
       }
+      return false
     }
   }
 
@@ -305,13 +309,40 @@ export default function AdsCreate({
     (step === 7 && price.trim().length > 0 && images.length > 0)
 
   const goNext = async () => {
-    if (!canGoNext) return
+    if (!canGoNext || publishing) return
     if (step < 7) {
       setStep((s) => (s < 7 ? ((s + 1) as AdsCreateStep) : s))
       return
     }
-    await publishAd()
-    onClose()
+    const minDuration = 3500
+    setPublishing(true)
+    setPublishPhase('running')
+    const startedAt = Date.now()
+    let phaseTimer: number | undefined
+    if (typeof window !== 'undefined') {
+      phaseTimer = window.setTimeout(() => {
+        setPublishPhase('full')
+      }, minDuration)
+    }
+    const ok = await publishAd()
+    const finish = () => {
+      if (typeof window !== 'undefined' && phaseTimer !== undefined) {
+        window.clearTimeout(phaseTimer)
+      }
+      setPublishing(false)
+      setPublishPhase('idle')
+      if (ok) {
+        onClose()
+      }
+    }
+    const elapsed = Date.now() - startedAt
+    if (elapsed >= minDuration) {
+      finish()
+    } else if (typeof window !== 'undefined') {
+      window.setTimeout(finish, minDuration - elapsed)
+    } else {
+      finish()
+    }
   }
 
   const goBack = () => {
@@ -1051,13 +1082,25 @@ export default function AdsCreate({
             <button
               type="button"
               onClick={goNext}
-              disabled={!canGoNext}
+              disabled={!canGoNext || publishing}
               className="flex w-full items-center justify-center rounded-[10px] bg-[#111111]"
-              style={{ height: 52, opacity: canGoNext ? 1 : 0.5 }}
+              style={{ height: 52, opacity: canGoNext && !publishing ? 1 : 0.5 }}
             >
-              <span className="text-[18px] font-semibold leading-[1.25em] tracking-[0.015em] text-white font-vk-demi">
-                {primaryButtonLabel}
-              </span>
+              {step === 7 && publishing ? (
+                <div className="relative w-full max-w-[240px] h-[6px] rounded-full bg-white/10 overflow-hidden">
+                  {publishPhase === 'running' && <div className="ads-publish-progress-fill" />}
+                  {publishPhase === 'full' && (
+                    <div
+                      className="absolute inset-0 rounded-full"
+                      style={{ background: 'linear-gradient(90deg, #6e9b7d 0%, #34975f 100%)' }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <span className="text-[18px] font-semibold leading-[1.25em] tracking-[0.015em] text-white font-vk-demi">
+                  {primaryButtonLabel}
+                </span>
+              )}
             </button>
           </div>
         </div>
