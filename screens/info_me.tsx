@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { ChevronDown, ChevronLeft, X } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 
 type InfoMeProps = {
@@ -314,270 +315,197 @@ export default function InfoMe({ onClose }: InfoMeProps) {
           className="absolute left-0 w-full bg-[#0A0A0A]"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
         >
-          <div className="relative h-full w-full">
+          <div className="relative h-full w-full flex items-center justify-center">
             <button
               type="button"
               onClick={handleClose}
-              className="absolute left-6 top-0 flex h-full items-center"
+              className="absolute left-4 p-2 -ml-1 rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-300"
               aria-label="Назад"
               style={{ marginTop: 'var(--about-header-icon-margin-top)' }}
             >
-              <svg
-                width="22"
-                height="17"
-                viewBox="0 0 22 17"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M5.55387 1L1 5.6155M1 5.6155L5.55387 10.231M1 5.6155H16.2C18.4091 5.6155 20.2 7.40631 20.2 9.61551V11.4C20.2 13.6091 18.4091 15.4 16.2 15.4H10.6"
-                  stroke="var(--about-header-icon-color)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <ChevronLeft size={24} className="text-white" />
             </button>
-            <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
-              <div
-                className="font-bold leading-[1em] text-white font-ttc-bold"
-                style={{ fontSize: 'var(--about-title-size)', marginTop: 'var(--about-header-title-margin-top)' }}
-              >
-                Обо мне
-              </div>
+            <div
+              className="font-ttc-bold text-white"
+              style={{ fontSize: 'var(--about-title-size)', marginTop: 'var(--about-header-title-margin-top)' }}
+            >
+              Обо мне
             </div>
           </div>
         </div>
 
         <div
-          className="absolute left-0 w-full px-6 overflow-y-auto"
+          className="absolute left-0 w-full overflow-y-auto"
           style={{
             top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
             height: 'calc(812px - 56px - var(--home-header-offset))',
           }}
         >
-          <div className="pt-4 pb-8">
-            <div
-              className="mb-3 leading-[1.6em] text-white/80 font-sf-ui-light"
-              style={{ fontSize: 'var(--about-label-size)', marginBottom: 'var(--about-label-input-gap)' }}
-            >
-              Возраст
-            </div>
-            <div className="relative w-full">
-              <input
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                inputMode="numeric"
-                className="w-full rounded-[10px] bg-[#111111] pl-3 pr-10 leading-[1.4em] text-white outline-none font-sf-ui-light"
-                style={{ height: 'var(--about-input-height)', fontSize: 'var(--about-text-size)', border: '1px solid #2B2B2B' }}
-              />
-              {age.trim().length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setAge('')}
-                  className="absolute right-2 top-1/2 flex h-[24px] w-[24px] -translate-y-1/2 items-center justify-center rounded-full"
-                  aria-label="Очистить"
-                >
-                  <img
-                    src="/interface/x-01.svg"
-                    alt="clear"
-                    className="h-[18px] w-[18px]"
-                    style={{ filter: 'invert(72%) sepia(4%) saturate(0%) hue-rotate(163deg) brightness(90%) contrast(88%)', opacity: 'var(--about-clear-icon-color-opacity, 1)' }}
+          <div className="relative max-w-[370px] mx-auto px-6 py-8">
+            <div className="flex flex-col gap-6">
+              <div>
+                <label className="block text-white/60 text-sm mb-2 font-sf-ui-light">
+                  Возраст
+                </label>
+                <div className="relative">
+                  <input
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    inputMode="numeric"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all"
+                    placeholder="Введите возраст"
                   />
-                </button>
-              )}
-            </div>
-
-            <div
-              className="mb-3 leading-[1.6em] text-white/80 font-sf-ui-light"
-              style={{ marginTop: 'var(--about-section-gap)', fontSize: 'var(--about-label-size)' }}
-            >
-              Политические взгляды
-            </div>
-            <div className="relative w-full">
-              <input
-                value={political}
-                readOnly
-                onClick={() => setPoliticalOpen((v) => !v)}
-                placeholder="Выбери один из вариантов"
-                className="w-full cursor-pointer rounded-[10px] bg-[#111111] px-3 leading-[1.4em] text-white outline-none font-sf-ui-light placeholder:text-[#A1A1A1]"
-                style={{ height: 'var(--about-input-height)', fontSize: 'var(--about-text-size)', border: '1px solid #2B2B2B' }}
-              />
-              <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-                <img src="/interface/down.svg" alt="open political" className="h-6 w-6" />
+                  {age.trim().length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setAge('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-all"
+                      aria-label="Очистить"
+                    >
+                      <X size={18} className="text-white/40" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-            <div
-              className="mt-2 overflow-hidden rounded-[12px] bg-[#151515]"
-              style={{
-                maxHeight: politicalOpen ? 'var(--about-political-max-height, 260px)' : '0px',
-                transition: 'max-height 220ms ease, opacity 220ms ease, transform 220ms ease',
-                opacity: politicalOpen ? 1 : 0,
-                transform: politicalOpen ? 'translateY(0)' : 'translateY(-4px)',
-              }}
-            >
-              {politicalOptions.map((option) => (
+
+              <div>
+                <label className="block text-white/60 text-sm mb-2 font-sf-ui-light">
+                  Политические взгляды
+                </label>
                 <button
-                  key={option}
                   type="button"
-                  className="flex w-full items-center justify-between px-4"
-                  style={{ height: 'var(--about-political-row-height, 44px)' }}
-                  onClick={() => {
-                    setPolitical(option)
-                    setPoliticalOpen(false)
+                  onClick={() => setPoliticalOpen((v) => !v)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light flex items-center justify-between hover:bg-white/10 transition-all text-left"
+                >
+                  <span className={political ? '' : 'text-white/50'}>
+                    {political || 'Выбери один из вариантов'}
+                  </span>
+                  <ChevronDown size={20} className="text-white/40" />
+                </button>
+                <div
+                  className="mt-2 overflow-hidden rounded-[12px] bg-[#151515]"
+                  style={{
+                    maxHeight: politicalOpen ? 'var(--about-political-max-height, 260px)' : '0px',
+                    transition: 'max-height 220ms ease, opacity 220ms ease, transform 220ms ease',
+                    opacity: politicalOpen ? 1 : 0,
+                    transform: politicalOpen ? 'translateY(0)' : 'translateY(-4px)',
                   }}
                 >
-                  <div
-                    className="leading-[20px] text-white font-sf-ui-light"
-                    style={{ fontSize: 'var(--about-political-text-size, 16px)' }}
-                  >
-                    {option}
-                  </div>
-                  {political === option && (
-                    <div
-                      className="rounded-full"
-                      style={{
-                        width: 'var(--about-political-dot-size, 8px)',
-                        height: 'var(--about-political-dot-size, 8px)',
-                        backgroundColor: '#6EBC3D',
+                  {politicalOptions.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className="flex w-full items-center justify-between px-4"
+                      style={{ height: 'var(--about-political-row-height, 44px)' }}
+                      onClick={() => {
+                        setPolitical(option)
+                        setPoliticalOpen(false)
                       }}
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div
-              className="mb-3 leading-[1.6em] text-white/80 font-sf-ui-light"
-              style={{ marginTop: 'var(--about-section-gap)', fontSize: 'var(--about-label-size)' }}
-            >
-              Место жительства
-            </div>
-            <div className="relative w-full">
-              <input
-                value={city}
-                readOnly
-                onClick={openCitySelector}
-                placeholder="Выберите город"
-                className="w-full cursor-pointer rounded-[10px] bg-[#111111] pl-3 pr-10 leading-[1.4em] text-white outline-none font-sf-ui-light placeholder:text-[#A1A1A1]"
-                style={{ height: 'var(--about-input-height)', fontSize: 'var(--about-text-size)', border: '1px solid #2B2B2B' }}
-              />
-              <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-                <img src="/interface/down.svg" alt="open" className="h-6 w-6" />
+                    >
+                      <div
+                        className="leading-[20px] text-white font-sf-ui-light"
+                        style={{ fontSize: 'var(--about-political-text-size, 16px)' }}
+                      >
+                        {option}
+                      </div>
+                      {political === option && (
+                        <div
+                          className="rounded-full"
+                          style={{
+                            width: 'var(--about-political-dot-size, 8px)',
+                            height: 'var(--about-political-dot-size, 8px)',
+                            backgroundColor: '#6EBC3D',
+                          }}
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div
-              className="mb-3 leading-[1.6em] text-white/80 font-sf-ui-light"
-              style={{ marginTop: 'var(--about-section-gap)', fontSize: 'var(--about-label-size)', marginBottom: 'var(--about-label-input-gap)' }}
-            >
-              Увлечения
-            </div>
-            <div className="relative w-full">
-              <input
-                value={hobbies}
-                onChange={(e) => setHobbies(e.target.value)}
-                placeholder="Программист, дизайнер, художник"
-                className="w-full rounded-[10px] bg-[#111111] pl-3 pr-10 leading-[1.4em] text-white outline-none font-sf-ui-light placeholder:text-[#A1A1A1]"
-                style={{ height: 'var(--about-input-height)', fontSize: 'var(--about-text-size)', border: '1px solid #2B2B2B' }}
-              />
-              {hobbies.trim().length > 0 && (
+              <div>
+                <label className="block text-white/60 text-sm mb-2 font-sf-ui-light">
+                  Место жительства
+                </label>
                 <button
                   type="button"
-                  onClick={() => setHobbies('')}
-                  className="absolute right-2 top-1/2 flex h-[24px] w-[24px] -translate-y-1/2 items-center justify-center rounded-full"
-                  aria-label="Очистить"
+                  onClick={openCitySelector}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light flex items-center justify-between hover:bg-white/10 transition-all text-left"
                 >
-                  <img
-                    src="/interface/x-01.svg"
-                    alt="clear"
-                    className="h-[18px] w-[18px]"
-                    style={{ filter: 'invert(72%) sepia(4%) saturate(0%) hue-rotate(163deg) brightness(90%) contrast(88%)', opacity: 'var(--about-clear-icon-color-opacity, 1)' }}
-                  />
+                  <span className={city ? '' : 'text-white/50'}>
+                    {city || 'Выберите город'}
+                  </span>
+                  <ChevronDown size={20} className="text-white/40" />
                 </button>
-              )}
-            </div>
+              </div>
 
-            <div
-              className="mb-3 leading-[1.6em] text-white/80 font-sf-ui-light"
-              style={{ marginTop: 'var(--about-gender-title-margin-top)', fontSize: 'var(--about-label-size)' }}
-            >
-              Выберите пол
-            </div>
-            <div className="overflow-hidden rounded-[12px] bg-[#151515]">
-              <button
-                type="button"
-                className="flex w-full items-center justify-center"
-                style={{ height: 'var(--about-gender-row-height)' }}
-                onClick={() => setGender('Женский')}
-              >
-                <div className="flex h-full w-[48px] items-center justify-center">
-                  <div
-                    className="flex items-center justify-center rounded-full"
-                    style={{
-                      width: 'var(--about-gender-radio-size)',
-                      height: 'var(--about-gender-radio-size)',
-                      borderRadius: '50%',
-                      border: '2px solid #6EBC3D',
-                    }}
-                  >
-                    {isGenderSelected('жен') && (
-                      <div
-                        className="rounded-full"
-                        style={{
-                          width: 'var(--about-gender-inner-size)',
-                          height: 'var(--about-gender-inner-size)',
-                          backgroundColor: '#FFFFFF',
-                        }}
-                      />
-                    )}
-                  </div>
+              <div>
+                <label className="block text-white/60 text-sm mb-2 font-sf-ui-light">
+                  Увлечения
+                </label>
+                <div className="relative">
+                  <input
+                    value={hobbies}
+                    onChange={(e) => setHobbies(e.target.value)}
+                    placeholder="Программист, дизайнер, художник"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all placeholder:text-white/50"
+                  />
+                  {hobbies.trim().length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setHobbies('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-all"
+                      aria-label="Очистить"
+                    >
+                      <X size={18} className="text-white/40" />
+                    </button>
+                  )}
                 </div>
-                <div className="flex-1 flex items-center justify-center px-0">
-                  <div
-                    className="leading-[20px] text-white font-sf-ui-light"
-                    style={{ fontSize: 'var(--about-gender-text-size)' }}
+              </div>
+
+              <div className="mt-2">
+                <label className="block text-white/60 text-sm mb-4 font-sf-ui-light">
+                  Выберите пол
+                </label>
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGender('Женский')}
+                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 active:bg-white/10 transition-all"
                   >
-                    Женский
-                  </div>
-                </div>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-center"
-                style={{ height: 'var(--about-gender-row-height)' }}
-                onClick={() => setGender('Мужской')}
-              >
-                <div className="flex h-full w-[48px] items-center justify-center">
-                  <div
-                    className="flex items-center justify-center rounded-full"
-                    style={{
-                      width: 'var(--about-gender-radio-size)',
-                      height: 'var(--about-gender-radio-size)',
-                      borderRadius: '50%',
-                      border: '2px solid #6EBC3D',
-                    }}
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                        isGenderSelected('жен') ? 'border-[#4CAF50] bg-[#4CAF50]' : 'border-white/30'
+                      }`}
+                    >
+                      {isGenderSelected('жен') && (
+                        <div className="w-3 h-3 rounded-full bg-[#0a0a0a]" />
+                      )}
+                    </div>
+                    <span className="text-white font-sf-ui-light">
+                      Женский
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender('Мужской')}
+                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 active:bg-white/10 transition-all"
                   >
-                    {isGenderSelected('муж') && (
-                      <div
-                        className="rounded-full"
-                        style={{
-                          width: 'var(--about-gender-inner-size)',
-                          height: 'var(--about-gender-inner-size)',
-                          backgroundColor: '#FFFFFF',
-                        }}
-                      />
-                    )}
-                  </div>
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                        isGenderSelected('муж') ? 'border-[#4CAF50] bg-[#4CAF50]' : 'border-white/30'
+                      }`}
+                    >
+                      {isGenderSelected('муж') && (
+                        <div className="w-3 h-3 rounded-full bg-[#0a0a0a]" />
+                      )}
+                    </div>
+                    <span className="text-white font-sf-ui-light">
+                      Мужской
+                    </span>
+                  </button>
                 </div>
-                <div className="flex-1 flex items-center justify-center px-0">
-                  <div
-                    className="leading-[20px] text-white font-sf-ui-light"
-                    style={{ fontSize: 'var(--about-gender-text-size)' }}
-                  >
-                    Мужской
-                  </div>
-                </div>
-              </button>
+              </div>
             </div>
           </div>
         </div>

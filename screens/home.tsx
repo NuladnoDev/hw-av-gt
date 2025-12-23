@@ -618,11 +618,14 @@ export default function HomeScreen() {
 
         {tab !== 'profile' && (
           <div
-            className="absolute left-0 w-full px-6"
-            style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)', height: 'calc(812px - 88px - 56px - var(--home-header-offset))' }}
+            className="absolute left-0 w-full"
+            style={{
+              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
+              height: 'calc(812px - 88px - 56px - var(--home-header-offset))',
+            }}
           >
             {tab === 'feed' && (
-              <div className="relative h-full w-full">
+              <div className="relative h-full w-full px-6">
                 <div
                   className="absolute left-0 right-0 flex items-center justify-center"
                   style={{

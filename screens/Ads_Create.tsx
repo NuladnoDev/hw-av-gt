@@ -112,6 +112,36 @@ export default function AdsCreate({
   const [price, setPrice] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
 
+  const [nicotineFormat, setNicotineFormat] = useState('')
+  const [nicotineTankVolume, setNicotineTankVolume] = useState('')
+  const [nicotineBatteryCapacity, setNicotineBatteryCapacity] = useState('')
+  const [nicotineStrength, setNicotineStrength] = useState('')
+  const [nicotinePuffs, setNicotinePuffs] = useState('')
+  const [nicotineFlavor, setNicotineFlavor] = useState('')
+
+  const [thingsModel, setThingsModel] = useState('')
+  const [thingsMemory, setThingsMemory] = useState('')
+  const [thingsDiagonal, setThingsDiagonal] = useState('')
+  const [thingsYear, setThingsYear] = useState('')
+  const [thingsWarranty, setThingsWarranty] = useState('')
+  const [thingsKit, setThingsKit] = useState('')
+
+  const [serviceType, setServiceType] = useState('')
+  const [serviceExperience, setServiceExperience] = useState('')
+  const [serviceFormat, setServiceFormat] = useState('')
+  const [servicePrice, setServicePrice] = useState('')
+  const [serviceRegion, setServiceRegion] = useState('')
+
+  const [jobPosition, setJobPosition] = useState('')
+  const [jobEmploymentType, setJobEmploymentType] = useState('')
+  const [jobSchedule, setJobSchedule] = useState('')
+  const [jobFormat, setJobFormat] = useState('')
+  const [jobSalary, setJobSalary] = useState('')
+  const [jobExperience, setJobExperience] = useState('')
+
+  const [otherType, setOtherType] = useState('')
+  const [otherDetails, setOtherDetails] = useState('')
+
   useEffect(() => {
     const baseW = 375
     const baseH = 812
@@ -359,12 +389,12 @@ export default function AdsCreate({
             )}
 
             {step === 2 && (
-              <div className="pt-8">
-                <div className="mb-12">
-                  <div className="mb-2 text-[24px] leading-[1.2em] text-white font-ttc-bold">
+              <div className="pt-2">
+                <div className="mb-4">
+                  <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
                     Внешний вид
                   </div>
-                  <div className="text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
+                  <div className="mt-1 text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
                     Первое фото будет обложкой объявления
                   </div>
                 </div>
@@ -428,27 +458,32 @@ export default function AdsCreate({
             )}
 
             {step === 3 && (
-              <div className="pt-6">
-              <div className="mb-3 text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                Укажите короткое и понятное название объявления.
+              <div className="pt-2">
+                <div className="mb-4">
+                  <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
+                    Название товара
+                  </div>
+                </div>
+                <div className="mb-4 text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
+                  Укажите короткое и понятное название вашего товара.
+                </div>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Название товара"
+                  className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                />
               </div>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Название объявления"
-                className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-              />
-            </div>
             )}
 
             {step === 4 && (
-              <div className="pt-8">
-                <div className="mb-12">
+              <div className="pt-2">
+                <div className="mb-4">
                   <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
                     Состояние
                   </div>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
                   {CONDITION_OPTIONS.map((opt) => {
                     const selected = condition === opt.id
                     return (
@@ -456,7 +491,7 @@ export default function AdsCreate({
                         key={opt.id}
                         type="button"
                         onClick={() => setCondition(opt.id)}
-                        className="w-full rounded-2xl bg-white/0 py-6 px-6 text-left transition-all duration-300 group hover:bg-white/5 active:bg-white/10"
+                        className="w-full rounded-2xl bg-white/0 py-4 px-5 text-left transition-all duration-300 group hover:bg-white/5 active:bg-white/10"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div
@@ -498,66 +533,424 @@ export default function AdsCreate({
             )}
 
             {step === 5 && (
-              <div className="pt-6 space-y-4">
-              <div>
-                <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                  Бренд/Производитель
+              <div className="pt-2">
+                <div className="mb-4">
+                  <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
+                    Характеристики
+                  </div>
                 </div>
-                <input
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  placeholder="Например, Apple, Sony"
-                  className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                />
-              </div>
-              <div>
-                <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                  Цвет
+                <div className="space-y-4">
+                  {category === 'nicotine' && (
+                    <>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Бренд/Производитель
+                        </div>
+                        <input
+                          value={brand}
+                          onChange={(e) => setBrand(e.target.value)}
+                          placeholder="HQD, Elf Bar и др."
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Тип устройства
+                        </div>
+                        <input
+                          value={nicotineFormat}
+                          onChange={(e) => setNicotineFormat(e.target.value)}
+                          placeholder="Одноразовое, pod-система, мод"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Объем жидкости (мл)
+                        </div>
+                        <input
+                          value={nicotineTankVolume}
+                          onChange={(e) => setNicotineTankVolume(e.target.value)}
+                          placeholder="2, 5, 10"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Емкость аккумулятора (mAh)
+                        </div>
+                        <input
+                          value={nicotineBatteryCapacity}
+                          onChange={(e) => setNicotineBatteryCapacity(e.target.value)}
+                          placeholder="400, 850, 1500"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Крепость никотина (мг/мл)
+                        </div>
+                        <input
+                          value={nicotineStrength}
+                          onChange={(e) => setNicotineStrength(e.target.value)}
+                          placeholder="20, 35, 50"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Количество затяжек
+                        </div>
+                        <input
+                          value={nicotinePuffs}
+                          onChange={(e) => setNicotinePuffs(e.target.value)}
+                          placeholder="800, 1500, 2500"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Вкус
+                        </div>
+                        <input
+                          value={nicotineFlavor}
+                          onChange={(e) => setNicotineFlavor(e.target.value)}
+                          placeholder="Манго, ягодный микс, кола"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Цвет
+                        </div>
+                        <input
+                          value={color}
+                          onChange={(e) => setColor(e.target.value)}
+                          placeholder="Черный, градиент и др."
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {category === 'things' && (
+                    <>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Бренд/Производитель
+                        </div>
+                        <input
+                          value={brand}
+                          onChange={(e) => setBrand(e.target.value)}
+                          placeholder="Apple, Samsung, Sony"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Модель
+                        </div>
+                        <input
+                          value={thingsModel}
+                          onChange={(e) => setThingsModel(e.target.value)}
+                          placeholder="iPhone 13, PlayStation 5"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Память/объем хранилища
+                        </div>
+                        <input
+                          value={thingsMemory}
+                          onChange={(e) => setThingsMemory(e.target.value)}
+                          placeholder="128 ГБ, 512 ГБ"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Диагональ/размер
+                        </div>
+                        <input
+                          value={thingsDiagonal}
+                          onChange={(e) => setThingsDiagonal(e.target.value)}
+                          placeholder='6.1", 55"'
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Год выпуска
+                        </div>
+                        <input
+                          value={thingsYear}
+                          onChange={(e) => setThingsYear(e.target.value)}
+                          placeholder="2020, 2021"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Комплектация
+                        </div>
+                        <input
+                          value={thingsKit}
+                          onChange={(e) => setThingsKit(e.target.value)}
+                          placeholder="Коробка, зарядка, документы"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Гарантия
+                        </div>
+                        <input
+                          value={thingsWarranty}
+                          onChange={(e) => setThingsWarranty(e.target.value)}
+                          placeholder="Осталось 6 месяцев, без гарантии"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Цвет
+                        </div>
+                        <input
+                          value={color}
+                          onChange={(e) => setColor(e.target.value)}
+                          placeholder="Черный, белый, серебристый"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {category === 'service' && (
+                    <>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Вид услуги
+                        </div>
+                        <input
+                          value={serviceType}
+                          onChange={(e) => setServiceType(e.target.value)}
+                          placeholder="Маникюр, репетитор, доставка и др."
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Опыт работы
+                        </div>
+                        <input
+                          value={serviceExperience}
+                          onChange={(e) => setServiceExperience(e.target.value)}
+                          placeholder="Без опыта, 3 года и т.п."
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Формат работы
+                        </div>
+                        <input
+                          value={serviceFormat}
+                          onChange={(e) => setServiceFormat(e.target.value)}
+                          placeholder="Выезд, у себя, онлайн"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Стоимость
+                        </div>
+                        <input
+                          value={servicePrice}
+                          onChange={(e) => setServicePrice(e.target.value)}
+                          placeholder="1500 ₽/час, по договоренности"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Регион/район
+                        </div>
+                        <input
+                          value={serviceRegion}
+                          onChange={(e) => setServiceRegion(e.target.value)}
+                          placeholder="Город, район, метро"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {category === 'job' && (
+                    <>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Должность
+                        </div>
+                        <input
+                          value={jobPosition}
+                          onChange={(e) => setJobPosition(e.target.value)}
+                          placeholder="Официант, бариста, SMM-специалист"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Уровень занятости
+                        </div>
+                        <input
+                          value={jobEmploymentType}
+                          onChange={(e) => setJobEmploymentType(e.target.value)}
+                          placeholder="Полная, частичная, подработка"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          График
+                        </div>
+                        <input
+                          value={jobSchedule}
+                          onChange={(e) => setJobSchedule(e.target.value)}
+                          placeholder="5/2, 2/2, смены"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Формат работы
+                        </div>
+                        <input
+                          value={jobFormat}
+                          onChange={(e) => setJobFormat(e.target.value)}
+                          placeholder="Офис, удалёнка, гибрид"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Зарплата
+                        </div>
+                        <input
+                          value={jobSalary}
+                          onChange={(e) => setJobSalary(e.target.value)}
+                          placeholder="от 40 000 ₽"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Требуемый опыт
+                        </div>
+                        <input
+                          value={jobExperience}
+                          onChange={(e) => setJobExperience(e.target.value)}
+                          placeholder="Без опыта, 1 год и т.п."
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {category === 'other' && (
+                    <>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Тип товара
+                        </div>
+                        <input
+                          value={otherType}
+                          onChange={(e) => setOtherType(e.target.value)}
+                          placeholder="Что за товар или объект"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Бренд/Производитель
+                        </div>
+                        <input
+                          value={brand}
+                          onChange={(e) => setBrand(e.target.value)}
+                          placeholder="При наличии бренда"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Цвет
+                        </div>
+                        <input
+                          value={color}
+                          onChange={(e) => setColor(e.target.value)}
+                          placeholder="Основной цвет товара"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                          Дополнительные характеристики
+                        </div>
+                        <input
+                          value={otherDetails}
+                          onChange={(e) => setOtherDetails(e.target.value)}
+                          placeholder="Размер, материал, особенности"
+                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
-                <input
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  placeholder="Черный, белый, синий"
-                  className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                />
               </div>
-            </div>
             )}
 
             {step === 6 && (
-              <div className="pt-6">
-              <div className="mb-3 text-[14px] leading-[1.4em] text-white font-sf-ui-light">
-                Описание отражает сам товар. Старайтесь описать возможности, пожелания по использованию и т.п
+              <div className="pt-2">
+                <div className="mb-4">
+                  <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
+                    Описание
+                  </div>
+                </div>
+                <div className="mb-3 text-[14px] leading-[1.4em] text-white font-sf-ui-light">
+                  Описание товара
+                </div>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Расскажите о товаре: его особенности, история покупки, причина продажи..."
+                  className="h-[160px] w-full resize-none rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                />
               </div>
-              <div className="mb-3 text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                Убедите пользователя приобрести ваш товар
-              </div>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={5}
-                placeholder="Расскажите подробнее о товаре"
-                className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 py-3 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-              />
-            </div>
             )}
 
             {step === 7 && (
-              <div className="pt-6 space-y-4">
-                <div>
-                  <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+              <div className="pt-2">
+                <div className="mb-4">
+                  <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
                     Цена
                   </div>
-                  <div className="relative w-full">
-                    <input
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      inputMode="decimal"
-                      placeholder="0"
-                      className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-10 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                    />
-                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[16px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                      ₽
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
+                      Стоимость
+                    </div>
+                    <div className="relative w-full">
+                      <input
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        inputMode="decimal"
+                        placeholder="0"
+                        className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-10 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                      />
+                      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[16px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
+                        ₽
+                      </div>
                     </div>
                   </div>
                 </div>

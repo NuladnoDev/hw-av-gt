@@ -3,6 +3,98 @@
 import { useState } from 'react'
 import AdsCreate from './Ads_Create'
 
+interface AdCardProps {
+  id: string
+  title: string
+  price: string
+  imageUrl: string
+  username: string
+  condition?: string
+  location?: string
+}
+
+const ADS_SIDE_PADDING = 4
+const ADS_GRID_GAP = 6
+
+const MOCK_ADS: AdCardProps[] = [
+  {
+    id: '1',
+    title: 'HQD Cuvie Plus Манго',
+    price: '900',
+    imageUrl: '/interface/Posting.png',
+    username: 'vape_shop',
+    condition: 'Новое',
+    location: 'Кадуй',
+  },
+  {
+    id: '2',
+    title: 'iPhone 13 128 ГБ',
+    price: '55000',
+    imageUrl: '/interface/Posting.png',
+    username: 'tech_seller',
+    condition: 'Отличное',
+    location: 'Череповец',
+  },
+  {
+    id: '3',
+    title: 'Маникюр с выездом',
+    price: '1500',
+    imageUrl: '/interface/Posting.png',
+    username: 'nails_by_anna',
+    condition: 'Услуга',
+    location: 'Кадуй',
+  },
+  {
+    id: '4',
+    title: 'Бариста в кофейню',
+    price: '45000',
+    imageUrl: '/interface/Posting.png',
+    username: 'coffee_place',
+    condition: 'Вакансия',
+    location: 'Кадуй',
+  },
+]
+
+function AdCard({ title, price, imageUrl, username, condition, location }: AdCardProps) {
+  return (
+    <div className="relative h-[240px] cursor-pointer overflow-hidden rounded-2xl bg-[#151515] group">
+      <div className="absolute inset-0 overflow-hidden">
+        <div
+          className="absolute inset-0 scale-110 blur-xl opacity-50"
+          style={{
+            backgroundImage: `url(${imageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+      </div>
+
+      <div className="relative h-[160px] overflow-hidden">
+        <img src={imageUrl} alt={title} className="relative z-10 h-full w-full object-contain" />
+        <div className="absolute left-2 top-2 z-20 rounded-full bg-black/60 px-3 py-1.5 backdrop-blur-sm">
+          <p className="text-xs text-white font-['SF_UI_Text:Light',sans-serif]">@{username}</p>
+        </div>
+      </div>
+
+      <div className="relative flex h-[80px] flex-col justify-between bg-gradient-to-b from-[#151515]/95 to-[#151515] p-3">
+        <div>
+          <h3 className="mb-1 line-clamp-1 text-sm text-white font-['SF_UI_Text:Medium',sans-serif]">
+            {title}
+          </h3>
+          <div className="flex items-center gap-2 text-xs text-white/50">
+            {condition && <span>{condition}</span>}
+            {condition && location && <span>•</span>}
+            {location && <span>{location}</span>}
+          </div>
+        </div>
+        <p className="text-lg text-white font-vk-demi">{price} ₽</p>
+      </div>
+
+      <div className="absolute inset-0 bg-white/0 transition-all duration-300 group-hover:bg-white/5" />
+    </div>
+  )
+}
+
 export default function Ads() {
   const [createOpen, setCreateOpen] = useState(false)
   return (
@@ -105,7 +197,27 @@ export default function Ads() {
         </div>
       </div>
 
-      <div className="flex h-full w-full items-center justify-center" />
+      <div
+        className="absolute left-0 right-0 bottom-0 overflow-y-auto"
+        style={{
+          top: 'calc(var(--feed-controls-top) + 130px)',
+          paddingLeft: ADS_SIDE_PADDING,
+          paddingRight: ADS_SIDE_PADDING,
+          paddingBottom: 16,
+        }}
+      >
+        <div
+          className="grid grid-cols-2 pb-4"
+          style={{
+            columnGap: ADS_GRID_GAP,
+            rowGap: ADS_GRID_GAP,
+          }}
+        >
+          {MOCK_ADS.map((ad) => (
+            <AdCard key={ad.id} {...ad} />
+          ))}
+        </div>
+      </div>
       {createOpen && (
         <AdsCreate
           onClose={() => {
