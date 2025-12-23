@@ -190,17 +190,29 @@ export default function AdsCreate({
     if (!client) return
 
     try {
-      await client.from('ads').insert({
-        user_id: uid,
-        user_tag: userTag,
-        title: titleTrim,
-        price: priceTrim,
-        image_url: imageUrl,
-        condition: conditionLabel,
-        location,
-        category,
-        created_at: new Date().toISOString(),
-      })
+      const { error } = await client
+        .from('ads')
+        .insert({
+          user_id: uid,
+          user_tag: userTag,
+          title: titleTrim,
+          price: priceTrim,
+          image_url: imageUrl,
+          condition: conditionLabel,
+          location,
+          category,
+          created_at: new Date().toISOString(),
+        })
+        .select('*')
+        .single()
+
+      if (error) {
+        if (typeof window !== 'undefined') {
+          console.error('publish_ad_supabase_error', error)
+        }
+        return
+      }
+
       if (typeof window !== 'undefined') {
         const ev = new CustomEvent('ads-updated', { detail: { type: 'created' } })
         window.dispatchEvent(ev)
