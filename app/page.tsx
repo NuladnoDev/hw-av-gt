@@ -33,23 +33,33 @@ export default function Home() {
     const client = getSupabase()
     if (!client) return
     client.auth.getSession().then(({ data }) => {
-      setIsAuthed(!!data.session)
+      if (data.session) {
+        setIsAuthed(true)
+      } else {
+        const a = window.localStorage.getItem('hw-auth')
+        setIsAuthed(!!a)
+      }
     })
     const { data } = client.auth.onAuthStateChange((_event, session) => {
-      setIsAuthed(!!session)
+      if (session) {
+        setIsAuthed(true)
+      } else {
+        const a = window.localStorage.getItem('hw-auth')
+        setIsAuthed(!!a)
+      }
     })
     return () => data.subscription.unsubscribe()
   }, [envReady, isMobile])
 
   useEffect(() => {
-    if (envReady) return
     const onLocalAuthChanged = () => {
       const a = window.localStorage.getItem('hw-auth')
       setIsAuthed(!!a)
     }
+    onLocalAuthChanged()
     window.addEventListener('local-auth-changed', onLocalAuthChanged as EventListener)
     return () => window.removeEventListener('local-auth-changed', onLocalAuthChanged as EventListener)
-  }, [envReady])
+  }, [])
 
   async function signUpWithTagAndPassword(tag: string, password: string) {
     const client = getSupabase()

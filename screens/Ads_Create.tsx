@@ -1,7 +1,19 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Smartphone, Wrench, Cigarette, Briefcase, Ellipsis, Plus, X } from 'lucide-react'
+import {
+  Smartphone,
+  Wrench,
+  Cigarette,
+  Briefcase,
+  Ellipsis,
+  Plus,
+  X,
+  Sparkles,
+  Star,
+  ThumbsUp,
+  CircleAlert,
+} from 'lucide-react'
 
 type AdsCategory = 'nicotine' | 'job' | 'service' | 'things' | 'other'
 type AdsCondition = 'new' | 'excellent' | 'good' | 'bad'
@@ -42,6 +54,43 @@ const CATEGORY_CONFIGS: {
     label: 'Другое',
     color: '#ec4899',
     icon: <Ellipsis size={32} strokeWidth={1.5} />,
+  },
+]
+
+const CONDITION_OPTIONS: {
+  id: AdsCondition
+  label: string
+  description: string
+  icon: React.ReactNode
+  color: string
+}[] = [
+  {
+    id: 'new',
+    label: 'Новое',
+    description: 'Есть чек, сохранена оригинальная упаковка',
+    icon: <Sparkles size={24} />,
+    color: '#4CAF50',
+  },
+  {
+    id: 'excellent',
+    label: 'Отличное',
+    description: 'Целостность товара сохранена, нет дефектов',
+    icon: <Star size={24} />,
+    color: '#2196F3',
+  },
+  {
+    id: 'good',
+    label: 'Хорошее',
+    description: 'Есть небольшие дефекты, потёртости и т.п',
+    icon: <ThumbsUp size={24} />,
+    color: '#FF9800',
+  },
+  {
+    id: 'bad',
+    label: 'Не очень',
+    description: 'Есть видимые дефекты, неисправности',
+    icon: <CircleAlert size={24} />,
+    color: '#F44336',
   },
 ]
 
@@ -393,140 +442,59 @@ export default function AdsCreate({
             )}
 
             {step === 4 && (
-              <div className="pt-6 space-y-3">
-              <button
-                type="button"
-                onClick={() => setCondition('new')}
-                className="flex w-full items-start justify-between rounded-[12px] border px-4 py-3 bg-[#111111]"
-                style={{ borderColor: condition === 'new' ? '#6EBC3D' : '#2B2B2B' }}
-              >
-                <div className="flex flex-1 flex-col gap-1">
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-medium">
-                    Новое
-                  </span>
-                  <span className="text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                    Есть чек, сохранена оригинальная упаковка
-                  </span>
-                </div>
-                <div className="flex h-[24px] w-[24px] items-center justify-center">
-                  <div
-                    className="flex items-center justify-center rounded-full"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      border: '2px solid #6EBC3D',
-                    }}
-                  >
-                    {condition === 'new' && (
-                      <div
-                        className="rounded-full"
-                        style={{ width: 12, height: 12, backgroundColor: '#FFFFFF' }}
-                      />
-                    )}
+              <div className="pt-8">
+                <div className="mb-12">
+                  <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
+                    Состояние
                   </div>
                 </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCondition('excellent')}
-                className="flex w-full items-start justify-between rounded-[12px] border px-4 py-3 bg-[#111111]"
-                style={{ borderColor: condition === 'excellent' ? '#6EBC3D' : '#2B2B2B' }}
-              >
-                <div className="flex flex-1 flex-col gap-1">
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-medium">
-                    Отличное
-                  </span>
-                  <span className="text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                    Целостность товара сохранена, нет дефектов
-                  </span>
+                <div className="flex flex-col gap-2">
+                  {CONDITION_OPTIONS.map((opt) => {
+                    const selected = condition === opt.id
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setCondition(opt.id)}
+                        className="w-full rounded-2xl bg-white/0 py-6 px-6 text-left transition-all duration-300 group hover:bg-white/5 active:bg-white/10"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div
+                            className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full transition-all duration-300"
+                            style={{
+                              backgroundColor: `${opt.color}26`,
+                              color: opt.color,
+                            }}
+                          >
+                            {opt.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div className="mb-1 text-[20px] text-white font-sf-ui-light">
+                              {opt.label}
+                            </div>
+                            <div className="text-[16px] leading-[20px] text-white/60 font-sf-ui-light">
+                              {opt.description}
+                            </div>
+                          </div>
+                          <div className="mt-1 flex-shrink-0">
+                            <div
+                              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                                selected
+                                  ? 'border-white bg-white'
+                                  : 'border-white/30 group-hover:border-white/50'
+                              }`}
+                            >
+                              {selected && (
+                                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#0A0A0A' }} />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
-                <div className="flex h-[24px] w-[24px] items-center justify-center">
-                  <div
-                    className="flex items-center justify-center rounded-full"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      border: '2px solid #6EBC3D',
-                    }}
-                  >
-                    {condition === 'excellent' && (
-                      <div
-                        className="rounded-full"
-                        style={{ width: 12, height: 12, backgroundColor: '#FFFFFF' }}
-                      />
-                    )}
-                  </div>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCondition('good')}
-                className="flex w-full items-start justify-between rounded-[12px] border px-4 py-3 bg-[#111111]"
-                style={{ borderColor: condition === 'good' ? '#6EBC3D' : '#2B2B2B' }}
-              >
-                <div className="flex flex-1 flex-col gap-1">
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-medium">
-                    Хорошее
-                  </span>
-                  <span className="text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                    Есть небольшие дефекты, потёртости и т.п
-                  </span>
-                </div>
-                <div className="flex h-[24px] w-[24px] items-center justify-center">
-                  <div
-                    className="flex items-center justify-center rounded-full"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      border: '2px solid #6EBC3D',
-                    }}
-                  >
-                    {condition === 'good' && (
-                      <div
-                        className="rounded-full"
-                        style={{ width: 12, height: 12, backgroundColor: '#FFFFFF' }}
-                      />
-                    )}
-                  </div>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCondition('bad')}
-                className="flex w-full items-start justify-between rounded-[12px] border px-4 py-3 bg-[#111111]"
-                style={{ borderColor: condition === 'bad' ? '#6EBC3D' : '#2B2B2B' }}
-              >
-                <div className="flex flex-1 flex-col gap-1">
-                  <span className="text-[16px] leading-[1.4em] text-white font-sf-ui-medium">
-                    Не очень
-                  </span>
-                  <span className="text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                    Есть видимые дефекты, неисправности
-                  </span>
-                </div>
-                <div className="flex h-[24px] w-[24px] items-center justify-center">
-                  <div
-                    className="flex items-center justify-center rounded-full"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      border: '2px solid #6EBC3D',
-                    }}
-                  >
-                    {condition === 'bad' && (
-                      <div
-                        className="rounded-full"
-                        style={{ width: 12, height: 12, backgroundColor: '#FFFFFF' }}
-                      />
-                    )}
-                  </div>
-                </div>
-              </button>
-            </div>
+              </div>
             )}
 
             {step === 5 && (
