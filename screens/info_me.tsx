@@ -131,105 +131,59 @@ export default function InfoMe({ onClose }: InfoMeProps) {
 
   useEffect(() => {
     const client = getSupabase()
-    if (client) {
-      ;(async () => {
-        try {
-          const { data } = await client.auth.getUser()
-          const id = data.user?.id ?? null
-          setUserId(id)
-          if (!id) return
-          const { data: prof, error: profError } = await client
-            .from('profiles')
-            .select('age, gender, city, political, hobbies')
-            .eq('id', id)
-            .maybeSingle()
-          if (profError) {
-            const authRaw = window.localStorage.getItem('hw-auth')
-            const auth = authRaw ? (JSON.parse(authRaw) as { uid?: string }) : null
-            const localId = auth?.uid ?? null
-            setUserId(localId)
-            const profRaw = window.localStorage.getItem('hw-profiles')
-            const profMap = profRaw
-              ? (JSON.parse(profRaw) as Record<string, { age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
-              : {}
-            const p = localId ? profMap[localId] : undefined
-            const a = p?.age ?? ''
-            const g = p?.gender ?? ''
-            const c = p?.city ?? ''
-            const pl = p?.political ?? ''
-            const hb = p?.hobbies ?? ''
-            setAge(a)
-            setGender(g)
-            setCity(c)
-            setPolitical(pl)
-            setHobbies(hb)
-            return
-          }
-          const ageFromDb = (prof?.age as string | number | undefined) ?? undefined
-          const genderFromDb = (prof?.gender as string | undefined) ?? undefined
-          const cityFromDb = (prof?.city as string | undefined) ?? undefined
-          const politicalFromDb = (prof?.political as string | undefined) ?? undefined
-          const hobbiesFromDb = (prof?.hobbies as string | undefined) ?? undefined
-          if (typeof ageFromDb === 'number') {
-            const a = String(ageFromDb)
-            setAge(a)
-          } else if (typeof ageFromDb === 'string') {
-            setAge(ageFromDb)
-          } else {
-            setAge('')
-          }
-          const g = typeof genderFromDb === 'string' ? genderFromDb : ''
-          setGender(g)
-          const c = typeof cityFromDb === 'string' ? cityFromDb : ''
-          setCity(c)
-          const p = typeof politicalFromDb === 'string' ? politicalFromDb : ''
-          setPolitical(p)
-          const h = typeof hobbiesFromDb === 'string' ? hobbiesFromDb : ''
-          setHobbies(h)
-        } catch {
-          const authRaw = window.localStorage.getItem('hw-auth')
-          const auth = authRaw ? (JSON.parse(authRaw) as { uid?: string }) : null
-          const localId = auth?.uid ?? null
-          setUserId(localId)
-          const profRaw = window.localStorage.getItem('hw-profiles')
-          const profMap = profRaw
-            ? (JSON.parse(profRaw) as Record<string, { age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
-            : {}
-          const p = localId ? profMap[localId] : undefined
-          const a = p?.age ?? ''
-          const g = p?.gender ?? ''
-          const c = p?.city ?? ''
-          const pl = p?.political ?? ''
-          const hb = p?.hobbies ?? ''
+    ;(async () => {
+      const authRaw = window.localStorage.getItem('hw-auth')
+      const auth = authRaw ? (JSON.parse(authRaw) as { uid?: string }) : null
+      const id = auth?.uid ?? null
+      setUserId(id)
+      const profRaw = window.localStorage.getItem('hw-profiles')
+      const profMap = profRaw
+        ? (JSON.parse(profRaw) as Record<string, { age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+        : {}
+      const localProf = id ? profMap[id] : undefined
+      const aLocal = localProf?.age ?? ''
+      const gLocal = localProf?.gender ?? ''
+      const cLocal = localProf?.city ?? ''
+      const pLocal = localProf?.political ?? ''
+      const hLocal = localProf?.hobbies ?? ''
+      setAge(aLocal)
+      setGender(gLocal)
+      setCity(cLocal)
+      setPolitical(pLocal)
+      setHobbies(hLocal)
+
+      if (!client || !id) return
+      try {
+        const { data: prof, error: profError } = await client
+          .from('profiles')
+          .select('age, gender, city, political, hobbies')
+          .eq('id', id)
+          .maybeSingle()
+        if (profError || !prof) return
+        const ageFromDb = (prof.age as string | number | undefined) ?? undefined
+        const genderFromDb = (prof.gender as string | undefined) ?? undefined
+        const cityFromDb = (prof.city as string | undefined) ?? undefined
+        const politicalFromDb = (prof.political as string | undefined) ?? undefined
+        const hobbiesFromDb = (prof.hobbies as string | undefined) ?? undefined
+        if (typeof ageFromDb === 'number') {
+          const a = String(ageFromDb)
           setAge(a)
-          setGender(g)
-          setCity(c)
-          setPolitical(pl)
-          setHobbies(hb)
+        } else if (typeof ageFromDb === 'string') {
+          setAge(ageFromDb)
+        } else {
+          setAge('')
         }
-      })()
-    } else {
-      ;(() => {
-        const authRaw = window.localStorage.getItem('hw-auth')
-        const auth = authRaw ? (JSON.parse(authRaw) as { uid?: string }) : null
-        const localId = auth?.uid ?? null
-        const profRaw = window.localStorage.getItem('hw-profiles')
-        const profMap = profRaw
-          ? (JSON.parse(profRaw) as Record<string, { age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
-          : {}
-        const p = localId ? profMap[localId] : undefined
-        const a = p?.age ?? ''
-        const g = p?.gender ?? ''
-        const c = p?.city ?? ''
-        const pl = p?.political ?? ''
-        const hb = p?.hobbies ?? ''
-        setAge(a)
+        const g = typeof genderFromDb === 'string' ? genderFromDb : ''
         setGender(g)
+        const c = typeof cityFromDb === 'string' ? cityFromDb : ''
         setCity(c)
-        setPolitical(pl)
-        setHobbies(hb)
-      })()
-    }
+        const p = typeof politicalFromDb === 'string' ? politicalFromDb : ''
+        setPolitical(p)
+        const h = typeof hobbiesFromDb === 'string' ? hobbiesFromDb : ''
+        setHobbies(h)
+      } catch {
+      }
+    })()
   }, [])
 
   const saveAbout = async () => {
