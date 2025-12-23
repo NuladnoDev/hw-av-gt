@@ -634,9 +634,11 @@ export default function HomeScreen() {
                   }}
                 >
                   <div
-                    className="flex w-full items-center"
+                    className="flex items-center"
                     style={{
                       height: 'var(--feed-search-height)',
+                      width: 355,
+                      maxWidth: '100%',
                     }}
                   >
                     <button

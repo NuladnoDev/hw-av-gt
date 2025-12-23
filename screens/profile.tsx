@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getSupabase } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
+import { AdCard, loadAdsFromStorage, deleteAdById, StoredAd } from './ads'
 
 export default function Profile({
   profileTab,
@@ -26,6 +27,29 @@ export default function Profile({
   const [city, setCity] = useState<string>('')
   const [political, setPolitical] = useState<string>('')
   const [hobbies, setHobbies] = useState<string>('')
+  const [userAds, setUserAds] = useState<StoredAd[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      if (!userId) {
+        setUserAds([])
+        return
+      }
+      const all = await loadAdsFromStorage()
+      if (cancelled) return
+      setUserAds(all.filter((a) => a.userId === userId).sort((a, b) => b.createdAt - a.createdAt))
+    }
+    load()
+    const handler = () => {
+      load()
+    }
+    window.addEventListener('ads-updated', handler as EventListener)
+    return () => {
+      cancelled = true
+      window.removeEventListener('ads-updated', handler as EventListener)
+    }
+  }, [userId])
 
   useEffect(() => {
     const authRaw = window.localStorage.getItem('hw-auth')
@@ -401,52 +425,80 @@ export default function Profile({
                 </button>
               </>
             ) : profileTab === 'ads' ? (
-              <>
-                <img
-                  src="/interface/glass.png"
-                  alt="empty"
-                  style={{
-                    position: 'absolute',
-                    top: 'var(--profile-empty-icon-top)',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 'var(--profile-empty-icon-size)',
-                    height: 'var(--profile-empty-icon-size)',
-                  }}
-                />
-                <div
-                  className="text-center text-[16px] leading-[1.4em] text-[#A1A1A1]"
-                  style={{ position: 'absolute', left: 0, right: 0, bottom: 'var(--profile-empty-text-bottom)' }}
-                >
-                  У вас ещё нет объявлений
-                </div>
-                <button
-                  type="button"
-                  className="text-center rounded-[10px] bg-[#111111]"
-                  style={{
-                    position: 'absolute',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    bottom: 'var(--profile-empty-button-bottom)',
-                    width: 'var(--profile-empty-button-width)',
-                    height: 'var(--profile-empty-button-height)',
-                    borderRadius: 'var(--profile-empty-button-radius)',
-                    background: 'var(--profile-empty-button-bg)',
-                  }}
-                >
-                  <span
-                    className="inline-block font-vk-demi"
+              <div className="w-full">
+                {userAds.length > 0 ? (
+                  <div
+                    className="grid grid-cols-2 pb-8"
                     style={{
-                      fontSize: 'var(--profile-empty-button-text-size)',
-                      color: 'var(--profile-empty-button-text-color)',
-                      lineHeight: '1.25em',
-                      letterSpacing: '0.015em',
+                      columnGap: 6,
+                      rowGap: 6,
+                      marginLeft: -12,
+                      marginRight: -12,
                     }}
                   >
-                    Добавить
-                  </span>
-                </button>
-              </>
+                    {userAds.map((ad) => (
+                      <AdCard
+                        key={ad.id}
+                        id={ad.id}
+                        title={ad.title}
+                        price={ad.price}
+                        imageUrl={ad.imageUrl}
+                        username={(ad.userTag ?? 'user').replace(/^@/, '')}
+                        condition={ad.condition ?? undefined}
+                        location={ad.location ?? undefined}
+                        onDelete={() => deleteAdById(ad.id)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <img
+                      src="/interface/glass.png"
+                      alt="empty"
+                      style={{
+                        position: 'absolute',
+                        top: 'var(--profile-empty-icon-top)',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 'var(--profile-empty-icon-size)',
+                        height: 'var(--profile-empty-icon-size)',
+                      }}
+                    />
+                    <div
+                      className="text-center text-[16px] leading-[1.4em] text-[#A1A1A1]"
+                      style={{ position: 'absolute', left: 0, right: 0, bottom: 'var(--profile-empty-text-bottom)' }}
+                    >
+                      У вас ещё нет объявлений
+                    </div>
+                    <button
+                      type="button"
+                      className="text-center rounded-[10px] bg-[#111111]"
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        bottom: 'var(--profile-empty-button-bottom)',
+                        width: 'var(--profile-empty-button-width)',
+                        height: 'var(--profile-empty-button-height)',
+                        borderRadius: 'var(--profile-empty-button-radius)',
+                        background: 'var(--profile-empty-button-bg)',
+                      }}
+                    >
+                      <span
+                        className="inline-block font-vk-demi"
+                        style={{
+                          fontSize: 'var(--profile-empty-button-text-size)',
+                          color: 'var(--profile-empty-button-text-color)',
+                          lineHeight: '1.25em',
+                          letterSpacing: '0.015em',
+                        }}
+                      >
+                        Добавить
+                      </span>
+                    </button>
+                  </>
+                )}
+              </div>
             ) : profileTab === 'about' ? (
                 <>
                 <div style={{ marginLeft: '-24px', marginRight: '-24px' }}>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { getSupabase } from '@/lib/supabaseClient'
 import {
   Smartphone,
   Wrench,
@@ -142,6 +143,62 @@ export default function AdsCreate({
   const [otherType, setOtherType] = useState('')
   const [otherDetails, setOtherDetails] = useState('')
 
+  const getConditionLabel = (c: AdsCondition | null) => {
+    const found = CONDITION_OPTIONS.find((o) => o.id === c)
+    return found?.label ?? null
+  }
+
+  const publishAd = async () => {
+    const titleTrim = title.trim()
+    const priceTrim = price.trim()
+    if (titleTrim.length === 0 || priceTrim.length === 0) return
+    if (images.length === 0) return
+    try {
+      if (typeof window === 'undefined') return
+      const authRaw = window.localStorage.getItem('hw-auth')
+      const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
+      const uid = auth?.uid ?? null
+      const userTag = auth?.tag ?? null
+
+      let location: string | null = null
+      const profRaw = window.localStorage.getItem('hw-profiles')
+      if (profRaw && uid) {
+        try {
+          const profMap = JSON.parse(profRaw) as Record<string, { city?: string }>
+          const p = profMap[uid]
+          if (p && typeof p.city === 'string' && p.city.trim().length > 0) {
+            location = p.city.trim()
+          }
+        } catch {
+        }
+      }
+
+      const now = Date.now()
+      const imageUrl = images[0]
+      if (!imageUrl) return
+      const conditionLabel = getConditionLabel(condition)
+
+      const client = getSupabase()
+      if (!client) return
+
+      await client.from('ads').insert({
+        user_id: uid,
+        user_tag: userTag ?? null,
+        title: titleTrim,
+        price: priceTrim,
+        image_url: imageUrl,
+        condition: conditionLabel,
+        location,
+        category,
+        created_at: new Date(now).toISOString(),
+      })
+
+      const ev = new CustomEvent('ads-updated', { detail: { type: 'created' } })
+      window.dispatchEvent(ev)
+    } catch {
+    }
+  }
+
   useEffect(() => {
     const baseW = 375
     const baseH = 812
@@ -215,19 +272,20 @@ export default function AdsCreate({
 
   const canGoNext =
     (step === 1 && category !== null) ||
-    step === 2 ||
+    (step === 2 && images.length > 0) ||
     (step === 3 && title.trim().length > 0) ||
     (step === 4 && condition !== null) ||
     step === 5 ||
     (step === 6 && description.trim().length > 0) ||
-    (step === 7 && price.trim().length > 0)
+    (step === 7 && price.trim().length > 0 && images.length > 0)
 
-  const goNext = () => {
+  const goNext = async () => {
     if (!canGoNext) return
     if (step < 7) {
       setStep((s) => (s < 7 ? ((s + 1) as AdsCreateStep) : s))
       return
     }
+    await publishAd()
     onClose()
   }
 

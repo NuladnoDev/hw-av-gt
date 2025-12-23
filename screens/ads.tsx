@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { getSupabase } from '@/lib/supabaseClient'
 import AdsCreate from './Ads_Create'
 
 interface AdCardProps {
@@ -15,49 +16,131 @@ interface AdCardProps {
 
 const ADS_SIDE_PADDING = 4
 const ADS_GRID_GAP = 6
+const ADS_TITLE_MAX_LENGTH = 40
 
-const MOCK_ADS: AdCardProps[] = [
-  {
-    id: '1',
-    title: 'HQD Cuvie Plus Манго',
-    price: '900',
-    imageUrl: '/interface/Posting.png',
-    username: 'vape_shop',
-    condition: 'Новое',
-    location: 'Кадуй',
-  },
-  {
-    id: '2',
-    title: 'iPhone 13 128 ГБ',
-    price: '55000',
-    imageUrl: '/interface/Posting.png',
-    username: 'tech_seller',
-    condition: 'Отличное',
-    location: 'Череповец',
-  },
-  {
-    id: '3',
-    title: 'Маникюр с выездом',
-    price: '1500',
-    imageUrl: '/interface/Posting.png',
-    username: 'nails_by_anna',
-    condition: 'Услуга',
-    location: 'Кадуй',
-  },
-  {
-    id: '4',
-    title: 'Бариста в кофейню',
-    price: '45000',
-    imageUrl: '/interface/Posting.png',
-    username: 'coffee_place',
-    condition: 'Вакансия',
-    location: 'Кадуй',
-  },
-]
+export type StoredAd = {
+  id: string
+  userId: string | null
+  userTag: string | null
+  title: string
+  price: string
+  imageUrl: string
+  condition: string | null
+  location: string | null
+  category: string | null
+  createdAt: number
+}
 
-function AdCard({ title, price, imageUrl, username, condition, location }: AdCardProps) {
+type AdsTableRow = {
+  id: string
+  user_id: string | null
+  user_tag: string | null
+  title: string | null
+  price: string | null
+  image_url: string | null
+  condition: string | null
+  location: string | null
+  category: string | null
+  created_at: string | null
+}
+
+const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
+  const created = row.created_at ? new Date(row.created_at).getTime() : Date.now()
+  return {
+    id: row.id,
+    userId: row.user_id ?? null,
+    userTag: row.user_tag ?? null,
+    title: row.title ?? '',
+    price: row.price ?? '',
+    imageUrl: row.image_url ?? '',
+    condition: row.condition,
+    location: row.location,
+    category: row.category,
+    createdAt: created,
+  }
+}
+
+export const loadAdsFromStorage = async (): Promise<StoredAd[]> => {
+  const client = getSupabase()
+  if (!client) return []
+  try {
+    const { data, error } = await client
+      .from('ads')
+      .select('id,user_id,user_tag,title,price,image_url,condition,location,category,created_at')
+      .order('created_at', { ascending: false })
+    if (error || !data) return []
+    return (data as AdsTableRow[]).map(mapRowToStoredAd)
+  } catch {
+    return []
+  }
+}
+
+export const deleteAdById = async (id: string): Promise<void> => {
+  const client = getSupabase()
+  if (!client) return
+  try {
+    await client.from('ads').delete().eq('id', id)
+  } finally {
+    if (typeof window !== 'undefined') {
+      const ev = new CustomEvent('ads-updated', { detail: { type: 'deleted', id } })
+      window.dispatchEvent(ev)
+    }
+  }
+}
+
+export function AdCard({ title, price, imageUrl, username, condition, location, onDelete }: AdCardProps & { onDelete?: () => void }) {
+  const [touchStartX, setTouchStartX] = useState<number | null>(null)
+  const [translateX, setTranslateX] = useState(0)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (deleting) return
+    if (e.touches.length > 0) {
+      setTouchStartX(e.touches[0].clientX)
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (deleting) return
+    if (touchStartX === null) return
+    if (e.touches.length === 0) return
+    const currentX = e.touches[0].clientX
+    const delta = currentX - touchStartX
+    if (delta < 0) {
+      setTranslateX(delta)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (deleting) return
+    if (translateX < -80 && onDelete) {
+      setDeleting(true)
+      setTranslateX(-400)
+      setTimeout(() => {
+        onDelete()
+      }, 160)
+    } else {
+      setTranslateX(0)
+    }
+    setTouchStartX(null)
+  }
+
+  const displayTitle =
+    title.length > ADS_TITLE_MAX_LENGTH
+      ? `${title.slice(0, ADS_TITLE_MAX_LENGTH - 1).trimEnd()}…`
+      : title
+
   return (
-    <div className="relative h-[240px] cursor-pointer overflow-hidden rounded-2xl bg-[#151515] group">
+    <div
+      className="relative h-[240px] cursor-pointer overflow-hidden rounded-2xl bg-[#151515] group"
+      style={{
+        transform: `translateX(${translateX}px)`,
+        transition: touchStartX === null || deleting ? 'transform 0.16s ease-out' : 'none',
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="absolute inset-0 overflow-hidden">
         <div
           className="absolute inset-0 scale-110 blur-xl opacity-50"
@@ -79,7 +162,7 @@ function AdCard({ title, price, imageUrl, username, condition, location }: AdCar
       <div className="relative flex h-[80px] flex-col justify-between bg-gradient-to-b from-[#151515]/95 to-[#151515] p-3">
         <div>
           <h3 className="mb-1 line-clamp-1 text-sm text-white font-['SF_UI_Text:Medium',sans-serif]">
-            {title}
+            {displayTitle}
           </h3>
           <div className="flex items-center gap-2 text-xs text-white/50">
             {condition && <span>{condition}</span>}
@@ -97,6 +180,29 @@ function AdCard({ title, price, imageUrl, username, condition, location }: AdCar
 
 export default function Ads() {
   const [createOpen, setCreateOpen] = useState(false)
+  const [items, setItems] = useState<StoredAd[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      const all = await loadAdsFromStorage()
+      if (cancelled) return
+      setItems(all.sort((a, b) => b.createdAt - a.createdAt))
+    }
+    load()
+    const handler = () => {
+      load()
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ads-updated', handler as EventListener)
+    }
+    return () => {
+      cancelled = true
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('ads-updated', handler as EventListener)
+      }
+    }
+  }, [])
   return (
     <div className="relative h-full w-full">
       <div
@@ -213,8 +319,18 @@ export default function Ads() {
             rowGap: ADS_GRID_GAP,
           }}
         >
-          {MOCK_ADS.map((ad) => (
-            <AdCard key={ad.id} {...ad} />
+          {items.map((ad) => (
+            <AdCard
+              key={ad.id}
+              id={ad.id}
+              title={ad.title}
+              price={ad.price}
+              imageUrl={ad.imageUrl}
+              username={(ad.userTag ?? 'user').replace(/^@/, '')}
+              condition={ad.condition ?? undefined}
+              location={ad.location ?? undefined}
+              onDelete={() => deleteAdById(ad.id)}
+            />
           ))}
         </div>
       </div>
