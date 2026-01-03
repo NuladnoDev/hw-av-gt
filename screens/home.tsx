@@ -1,24 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ShoppingBag, User } from 'lucide-react'
 import Profile from './profile'
 import ProfileEdit from './profile_edit'
 import Setting from './Setting'
 import InfoMe from './info_me'
 import { getSupabase } from '@/lib/supabaseClient'
 import Ads from './ads'
-import PostCreate from './Post_Create'
 
 export default function HomeScreen() {
   const [scale, setScale] = useState(1)
-  const [tab, setTab] = useState<'ads' | 'feed' | 'profile'>('feed')
+  const [tab, setTab] = useState<'ads' | 'profile'>('ads')
   const [profileTab, setProfileTab] = useState<'ads' | 'posts' | 'about' | 'friends'>('posts')
   const [profileEdit, setProfileEdit] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsOrigin, setSettingsOrigin] = useState<'profile' | 'edit' | null>(null)
   const [returnToSettingsAfterEdit, setReturnToSettingsAfterEdit] = useState(false)
   const [infoMeOpen, setInfoMeOpen] = useState(false)
-  const [createOpen, setCreateOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [profileMenuClosing, setProfileMenuClosing] = useState(false)
   const [currentTag, setCurrentTag] = useState<string | null>(() => {
@@ -148,7 +147,6 @@ export default function HomeScreen() {
     const baseW = 375
     const baseH = 812
     const update = () => {
-      if (createOpen && tab === 'feed') return
       const vw = window.innerWidth
       const vh = window.innerHeight
       const s = Math.min(vw / baseW, vh / baseH)
@@ -157,7 +155,7 @@ export default function HomeScreen() {
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
-  }, [createOpen, tab])
+  }, [tab])
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, willChange: 'transform' }}>
@@ -172,7 +170,7 @@ export default function HomeScreen() {
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
           >
             <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
-              {tab === 'ads' ? 'Объявления' : tab === 'feed' ? 'Лента' : 'Профиль'}
+              {tab === 'ads' ? 'Объявления' : 'Профиль'}
             </div>
             <div className="flex items-center gap-4">
               <img
@@ -180,21 +178,6 @@ export default function HomeScreen() {
                 alt="info"
                 className="h-[24px] w-[24px]"
               />
-              <button
-                type="button"
-                onClick={() => {
-                  if (tab === 'feed') {
-                    setCreateOpen(true)
-                  }
-                }}
-                className="flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
-              >
-                <img
-                  src="/interface/bar-chart-03.svg"
-                  alt="stats"
-                  className="h-[24px] w-[24px]"
-                />
-              </button>
             </div>
           </div>
         ) : (
@@ -624,94 +607,6 @@ export default function HomeScreen() {
               height: 'calc(812px - 88px - 56px - var(--home-header-offset))',
             }}
           >
-            {tab === 'feed' && (
-              <div className="relative h-full w-full px-6">
-                <div
-                  className="absolute left-0 right-0 flex items-center justify-center"
-                  style={{
-                    top: 'var(--feed-controls-top)',
-                    height: 'var(--feed-search-height)',
-                  }}
-                >
-                  <div
-                    className="flex items-center"
-                    style={{
-                      height: 'var(--feed-search-height)',
-                      width: 355,
-                      maxWidth: '100%',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      className="flex flex-1 items-center justify-start"
-                      style={{
-                        height: '100%',
-                        borderRadius: 'var(--feed-search-radius)',
-                        background: 'var(--feed-search-bg)',
-                        paddingLeft: 14,
-                        paddingRight: 14,
-                      }}
-                    >
-                      <img
-                        src="/interface/search-02.svg"
-                        alt=""
-                        style={{
-                          width: 'var(--feed-search-icon-size)',
-                          height: 'var(--feed-search-icon-size)',
-                          marginRight: 'var(--feed-search-gap)',
-                        }}
-                      />
-                      <span
-                        className="font-sf-ui-light"
-                        style={{
-                          fontSize: 'var(--feed-search-text-size)',
-                          lineHeight: '18px',
-                          color: 'var(--feed-search-text-color)',
-                        }}
-                      >
-                        Поиск постов
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="flex items-center justify-center"
-                      style={{
-                        width: 'var(--feed-create-width)',
-                        height: '100%',
-                        borderRadius: 'var(--feed-create-radius)',
-                        background: 'var(--post-create-bg)',
-                        paddingLeft: 12,
-                        paddingRight: 12,
-                        marginLeft: 'calc(-1 * var(--feed-create-overlap))',
-                      }}
-                      onClick={() => setCreateOpen(true)}
-                    >
-                      <img
-                        src="/interface/chevron-left.svg"
-                        alt=""
-                        style={{
-                          width: 'var(--feed-create-chevron-size)',
-                          height: 'var(--feed-create-chevron-size)',
-                          marginRight: 4,
-                        }}
-                      />
-                      <span
-                        className="font-vk-demi"
-                        style={{
-                          fontSize: 'var(--feed-create-text-size)',
-                          lineHeight: '19px',
-                          color: '#FFFFFF',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Создать пост
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
             {tab === 'ads' && <Ads />}
           </div>
         )}
@@ -722,66 +617,66 @@ export default function HomeScreen() {
           className="absolute left-0 w-full bg-[#0A0A0A]"
           style={{ height: '88px', bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))' }}
         >
-          <div className="absolute -top-[0.5px] left-0 w-full" style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }} />
-          <div className="grid h-full w-full grid-cols-3">
-            <button
-              type="button"
-              className="flex flex-col items-center justify-center gap-1"
-              onClick={() => setTab('ads')}
-            >
-              <img
-                src="/navigation/bag-04%201.svg"
-                alt="Объявления"
-                className="h-[24px] w-[24px]"
-                style={{ opacity: tab === 'ads' ? 1 : 0.6 }}
-              />
-              <span className={`text-[12px] ${tab === 'ads' ? 'text-white' : 'text-white/60'}`}>
-                Объявления
-              </span>
-            </button>
-            <button
-              type="button"
-              className="flex flex-col items-center justify-center gap-1"
-              onClick={() => setTab('feed')}
-            >
-              <img
-                src="/navigation/House%201.svg"
-                alt="Лента"
-                className="h-[24px] w-[24px]"
-                style={{ opacity: tab === 'feed' ? 1 : 0.6 }}
-              />
-              <span className={`text-[12px] ${tab === 'feed' ? 'text-white' : 'text-white/60'}`}>
-                Лента
-              </span>
-            </button>
-            <button
-              type="button"
-              className="flex flex-col items-center justify-center gap-1"
-              onClick={() => setTab('profile')}
-            >
-              <img
-                src="/navigation/Vector.svg"
-                alt="Профиль"
-                className="h-[24px] w-[24px]"
-                style={{ opacity: tab === 'profile' ? 1 : 0.6 }}
-              />
-              <span className={`text-[12px] ${tab === 'profile' ? 'text-white' : 'text-white/60'}`}>
-                Профиль
-              </span>
-            </button>
+          <div
+            className="absolute -top-[0.5px] left-0 w-full"
+            style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }}
+          />
+          <div className="absolute inset-x-0 bottom-3 px-4">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-[24px] bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.3)]" />
+              <div className="relative flex items-center gap-1 p-1.5">
+                <button
+                  type="button"
+                  onClick={() => setTab('ads')}
+                  className="relative flex-[7] h-[60px] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
+                >
+                  {tab === 'ads' && (
+                    <div className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]" />
+                  )}
+                  <ShoppingBag
+                    className={`w-6 h-6 transition-all duration-200 relative z-10 ${
+                      tab === 'ads' ? 'text-black scale-110' : 'text-white/70'
+                    }`}
+                    strokeWidth={2.5}
+                  />
+                  <span
+                    className={`font-medium text-[12px] transition-all duration-200 relative z-10 ${
+                      tab === 'ads' ? 'text-black' : 'text-white/70'
+                    }`}
+                  >
+                    Объявления
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab('profile')}
+                  className="relative flex-[3] h-[60px] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
+                >
+                  {tab === 'profile' && (
+                    <div className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]" />
+                  )}
+                  <User
+                    className={`w-6 h-6 transition-all duration-200 relative z-10 ${
+                      tab === 'profile' ? 'text-black scale-110' : 'text-white/70'
+                    }`}
+                    strokeWidth={2.5}
+                  />
+                  <span
+                    className={`font-medium text-[12px] transition-all duration-200 relative z-10 ${
+                      tab === 'profile' ? 'text-black' : 'text-white/70'
+                    }`}
+                  >
+                    Профиль
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         <div
           className="absolute left-0 w-full bg-[#0A0A0A]"
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
-        {createOpen && tab === 'feed' && (
-          <PostCreate
-            onClose={() => {
-              setCreateOpen(false)
-            }}
-          />
-        )}
         {profileEdit && tab === 'profile' && (
           <ProfileEdit
             onClose={() => {
