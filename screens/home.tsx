@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ShoppingBag, User } from 'lucide-react'
+import { motion } from 'motion/react'
 import Profile from './profile'
 import ProfileEdit from './profile_edit'
 import Setting from './Setting'
@@ -615,7 +616,10 @@ export default function HomeScreen() {
 
         <div
           className="absolute left-0 w-full bg-[#0A0A0A]"
-          style={{ height: '88px', bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))' }}
+          style={{
+            height: 'var(--bottom-nav-height, 96px)',
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))',
+          }}
         >
           <div
             className="absolute -top-[0.5px] left-0 w-full"
@@ -628,10 +632,20 @@ export default function HomeScreen() {
                 <button
                   type="button"
                   onClick={() => setTab('ads')}
-                  className="relative flex-[7] h-[60px] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
+                  className="relative flex-[7] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
+                  style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
                 >
                   {tab === 'ads' && (
-                    <div className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]" />
+                    <motion.div
+                      layoutId="bottom-nav-active-tab"
+                      className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                      transition={{
+                        type: 'spring',
+                        stiffness: 500,
+                        damping: 30,
+                        mass: 0.8,
+                      }}
+                    />
                   )}
                   <ShoppingBag
                     className={`w-6 h-6 transition-all duration-200 relative z-10 ${
@@ -650,10 +664,20 @@ export default function HomeScreen() {
                 <button
                   type="button"
                   onClick={() => setTab('profile')}
-                  className="relative flex-[3] h-[60px] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
+                  className="relative flex-[3] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
+                  style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
                 >
                   {tab === 'profile' && (
-                    <div className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]" />
+                    <motion.div
+                      layoutId="bottom-nav-active-tab"
+                      className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                      transition={{
+                        type: 'spring',
+                        stiffness: 500,
+                        damping: 30,
+                        mass: 0.8,
+                      }}
+                    />
                   )}
                   <User
                     className={`w-6 h-6 transition-all duration-200 relative z-10 ${

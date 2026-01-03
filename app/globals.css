@@ -5,6 +5,8 @@
   --foreground: #171717;
   --home-header-offset: 23px;
   --nav-bottom-offset: 12px;
+  --bottom-nav-height: 96px;
+  --bottom-nav-pill-height: 64px;
   --profile-cover-height: 80px;
   --profile-avatar-size: 96px;
   --profile-name-size: 20px;
