@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore react-slick не имеет встроенных типов
 import Slider from 'react-slick'
 import { motion } from 'motion/react'
 import { ChevronLeft, X } from 'lucide-react'
