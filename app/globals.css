@@ -242,7 +242,7 @@
   --feed-create-width: 154px;
   --feed-create-height: 56px;
   --feed-create-radius: 10px;
-  --feed-create-bg: linear-gradient(90deg, #75a184 0%, #34975f 100%);
+  --feed-create-bg: linear-gradient(90deg, #4778AF 0%, #659CDB 100%);
   --post-create-bg: linear-gradient(90deg, #6e9b7d 0%, #34975f 100%);
   --feed-create-chevron-size: 24px;
   --feed-create-text-size: 15px;
@@ -289,6 +289,7 @@
   --ad-card-info-height: 87px;
   --ad-card-title-price-gap: -4px;
   --ad-card-meta-price-gap: 2px;
+  --feed-controls-top: 7.7px;
 }
 
 @font-face {

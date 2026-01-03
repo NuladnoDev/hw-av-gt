@@ -1,9 +1,9 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M8.51107 15.8061H23.1013M5.2688 9.22021H26.3435M13.3745 22.3919H18.2379" stroke="url(#paint0_linear_180_596)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M8.51082 15.8061H23.101M5.26855 9.22021H26.3433M13.3742 22.3919H18.2376" stroke="url(#paint0_linear_193_880)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <defs>
-<linearGradient id="paint0_linear_180_596" x1="15.8062" y1="9.22021" x2="15.8062" y2="22.3919" gradientUnits="userSpaceOnUse">
-<stop stop-color="#64CF86"/>
-<stop offset="1" stop-color="#336944"/>
+<linearGradient id="paint0_linear_193_880" x1="15.8059" y1="9.22021" x2="15.8059" y2="22.3919" gradientUnits="userSpaceOnUse">
+<stop stop-color="#4778AF"/>
+<stop offset="1" stop-color="#FFF5F5"/>
 </linearGradient>
 </defs>
 </svg>

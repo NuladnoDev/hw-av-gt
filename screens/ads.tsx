@@ -306,7 +306,7 @@ export default function Ads({
     <div className="relative h-full w-full">
       <div
         className="absolute left-0 right-0 flex items-center justify-center"
-        style={{ top: 'var(--feed-controls-top)' }}
+        style={{ top: 'var(--feed-controls-top, 10px)' }}
       >
         <div
           className="flex w-full flex-col items-center"
