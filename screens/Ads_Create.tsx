@@ -156,7 +156,7 @@ export default function AdsCreate({
     if (titleTrim.length === 0 || priceTrim.length === 0) return false
     if (images.length === 0) return false
 
-    const imageUrl = images[0]
+    const imageUrl = JSON.stringify(images)
     if (!imageUrl) return false
 
     let uid: string | null = null

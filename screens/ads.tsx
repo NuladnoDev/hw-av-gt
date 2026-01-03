@@ -28,6 +28,7 @@ export type StoredAd = {
   title: string
   price: string
   imageUrl: string
+  imageUrls?: string[]
   condition: string | null
   location: string | null
   category: string | null
@@ -49,13 +50,35 @@ type AdsTableRow = {
 
 const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
   const created = row.created_at ? new Date(row.created_at).getTime() : Date.now()
+  let imageUrl = ''
+  let imageUrls: string[] | undefined
+  const raw = row.image_url ?? ''
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as unknown
+      if (Array.isArray(parsed)) {
+        const arr = parsed.filter((x): x is string => typeof x === 'string' && x.length > 0)
+        if (arr.length > 0) {
+          imageUrls = arr
+          imageUrl = arr[0]
+        }
+      } else if (typeof parsed === 'string' && parsed.length > 0) {
+        imageUrl = parsed
+      } else {
+        imageUrl = raw
+      }
+    } catch {
+      imageUrl = raw
+    }
+  }
   return {
     id: row.id,
     userId: row.user_id ?? null,
     userTag: row.user_tag ?? null,
     title: row.title ?? '',
     price: row.price ?? '',
-    imageUrl: row.image_url ?? '',
+    imageUrl,
+    imageUrls,
     condition: row.condition,
     location: row.location,
     category: row.category,

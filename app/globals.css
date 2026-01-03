@@ -9,10 +9,10 @@
   --nav-bottom-offset: 12px;
   --bottom-nav-height: 96px;
   --bottom-nav-pill-height: 64px;
-  --ad-detail-price-size: 35px;
+  --ad-detail-price-size: 34px;
   --ad-detail-tag-size: 15px;
-  --ad-detail-title-size: 23px;
-  --ad-detail-meta-size: 16px;
+  --ad-detail-title-size: 22px;
+  --ad-detail-meta-size: 17px;
   --ad-detail-section-title-size: 22px;
   --ad-detail-label-size: 17px;
   --ad-detail-value-size: 17px;
@@ -498,6 +498,20 @@ body {
 }
 .profile-switch-transition {
   animation: slideFade 200ms ease;
+}
+
+.slick-dots li {
+  margin: 0 4px;
+}
+
+.slick-dots li.slick-active div {
+  background: #ffffff;
+  width: 20px;
+  border-radius: 9999px;
+}
+
+.slick-dots li div {
+  transition: all 0.3s ease;
 }
 
 @keyframes bottomSheetIn {

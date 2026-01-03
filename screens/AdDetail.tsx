@@ -5,7 +5,7 @@ import { useState } from 'react'
 // @ts-ignore react-slick не имеет встроенных типов
 import Slider from 'react-slick'
 import { motion } from 'motion/react'
-import { ChevronLeft, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { StoredAd } from './ads'
 
 const CONDITION_COLORS: Record<string, string> = {
@@ -13,6 +13,14 @@ const CONDITION_COLORS: Record<string, string> = {
   Отличное: 'text-green-400',
   Хорошее: 'text-yellow-400',
   'Не очень': 'text-orange-400',
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  nicotine: 'Никотиновые устройства',
+  job: 'Работа',
+  service: 'Услуги',
+  things: 'Вещи, электроника',
+  other: 'Другое',
 }
 
 export default function AdDetail({
@@ -24,7 +32,40 @@ export default function AdDetail({
 }) {
   const [currentSlide, setCurrentSlide] = useState(0)
 
-  const images = ad.imageUrl ? [ad.imageUrl] : []
+  const images =
+    ad.imageUrls && ad.imageUrls.length > 0
+      ? ad.imageUrls
+      : ad.imageUrl
+        ? [ad.imageUrl]
+        : []
+
+  const NextArrow = (props: any) => {
+    const { onClick } = props
+    if (images.length <= 1) return null
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 backdrop-blur-sm transition-colors hover:bg-black/70"
+      >
+        <ChevronRight className="h-5 w-5 text-white" />
+      </button>
+    )
+  }
+
+  const PrevArrow = (props: any) => {
+    const { onClick } = props
+    if (images.length <= 1) return null
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 backdrop-blur-sm transition-colors hover:bg-black/70"
+      >
+        <ChevronLeft className="h-5 w-5 text-white" />
+      </button>
+    )
+  }
 
   const sliderSettings = {
     dots: true,
@@ -33,6 +74,8 @@ export default function AdDetail({
     slidesToShow: 1,
     slidesToScroll: 1,
     arrows: images.length > 1,
+    nextArrow: <NextArrow />,
+    prevArrow: <PrevArrow />,
     beforeChange: (_: number, next: number) => setCurrentSlide(next),
     customPaging: () => (
       <div className="w-2 h-2 rounded-full bg-gray-600" />
@@ -44,6 +87,7 @@ export default function AdDetail({
     (ad.condition && CONDITION_COLORS[ad.condition]) || 'text-gray-300'
 
   const locationText = ad.location ?? 'Кадуй'
+  const categoryLabel = ad.category ? CATEGORY_LABELS[ad.category] ?? ad.category : null
 
   const createdDate =
     ad.createdAt && Number.isFinite(ad.createdAt)
@@ -111,7 +155,7 @@ export default function AdDetail({
               )}
 
               {images.length > 0 && (
-                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-xs">
+                <div className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-sm backdrop-blur-sm">
                   {currentSlide + 1} / {images.length}
                 </div>
               )}
@@ -186,7 +230,7 @@ export default function AdDetail({
                 Характеристики
               </h2>
               <div className="space-y-3">
-                {ad.category && (
+                {categoryLabel && (
                   <div className="flex items-center justify-between">
                     <span
                       className="text-gray-400"
@@ -202,7 +246,7 @@ export default function AdDetail({
                         fontSize: 'var(--ad-detail-value-size, 13px)',
                       }}
                     >
-                      {ad.category}
+                      {categoryLabel}
                     </span>
                   </div>
                 )}
