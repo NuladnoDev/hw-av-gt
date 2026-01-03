@@ -152,8 +152,10 @@ export default function AdsCreate({
 
   const publishAd = async (): Promise<boolean> => {
     const titleTrim = title.trim()
+    const descriptionTrim = description.trim()
     const priceTrim = price.trim()
-    if (titleTrim.length === 0 || priceTrim.length === 0) return false
+    if (titleTrim.length === 0 || descriptionTrim.length === 0 || priceTrim.length === 0)
+      return false
     if (images.length === 0) return false
 
     const imageUrl = JSON.stringify(images)
@@ -191,22 +193,32 @@ export default function AdsCreate({
     const client = getSupabase()
     if (!client) return false
 
+    const basePayload = {
+      user_id: uid,
+      user_tag: userTag,
+      title: titleTrim,
+      price: priceTrim,
+      image_url: imageUrl,
+      condition: conditionLabel,
+      location,
+      category,
+      created_at: new Date().toISOString(),
+    }
+
     try {
-      const { data, error } = await client
-        .from('ads')
-        .insert({
-          user_id: uid,
-          user_tag: userTag,
-          title: titleTrim,
-          price: priceTrim,
-          image_url: imageUrl,
-          condition: conditionLabel,
-          location,
-          category,
-          created_at: new Date().toISOString(),
-        })
-        .select('*')
-        .single()
+      let payload: Record<string, unknown> = basePayload
+      if (descriptionTrim.length > 0) {
+        payload = { ...basePayload, description: descriptionTrim }
+      }
+
+      let { data, error } = await client.from('ads').insert(payload).select('*').single()
+
+      if (error && descriptionTrim.length > 0) {
+        const message = typeof (error as any).message === 'string' ? (error as any).message : ''
+        if (message.toLowerCase().includes('description')) {
+          ;({ data, error } = await client.from('ads').insert(basePayload).select('*').single())
+        }
+      }
 
       if (error) {
         if (typeof window !== 'undefined') {

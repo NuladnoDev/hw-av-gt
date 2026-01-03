@@ -12,9 +12,9 @@
   --ad-detail-price-size: 34px;
   --ad-detail-tag-size: 15px;
   --ad-detail-title-size: 22px;
-  --ad-detail-meta-size: 17px;
+  --ad-detail-meta-size: 16px;
   --ad-detail-section-title-size: 22px;
-  --ad-detail-label-size: 17px;
+  --ad-detail-label-size: 16px;
   --ad-detail-value-size: 17px;
   --ad-detail-body-size: 16px;
   --ad-detail-button-size: 17px;
@@ -596,4 +596,14 @@ body {
 /* create sheet specific */
 .create-textarea::placeholder {
   color: rgba(255, 255, 255, 0.5);
+}
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }

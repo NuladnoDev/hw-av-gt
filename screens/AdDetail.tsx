@@ -103,6 +103,9 @@ export default function AdDetail({
 
   const sellerTag = (ad.userTag ?? 'продавец').replace(/^@/, '')
 
+  const descriptionText =
+    ad.description && ad.description.trim().length > 0 ? ad.description : ad.title
+
   return (
     <motion.div
       className="absolute inset-0 z-50 flex flex-col bg-[#0a0a0a] text-white"
@@ -129,7 +132,7 @@ export default function AdDetail({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-hidden">
           <div className="pt-2">
             <div className="relative">
               {images.length > 0 ? (
@@ -293,7 +296,7 @@ export default function AdDetail({
               </div>
             </div>
 
-            {ad.title && (
+            {descriptionText && (
               <div className="py-5">
                 <h2
                   className="mb-3 font-semibold"
@@ -309,7 +312,7 @@ export default function AdDetail({
                     fontSize: 'var(--ad-detail-body-size, 14px)',
                   }}
                 >
-                  {ad.title}
+                  {descriptionText}
                 </p>
               </div>
             )}

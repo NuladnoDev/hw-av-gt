@@ -26,6 +26,7 @@ export type StoredAd = {
   userId: string | null
   userTag: string | null
   title: string
+  description: string | null
   price: string
   imageUrl: string
   imageUrls?: string[]
@@ -40,6 +41,7 @@ type AdsTableRow = {
   user_id: string | null
   user_tag: string | null
   title: string | null
+  description: string | null
   price: string | null
   image_url: string | null
   condition: string | null
@@ -76,6 +78,7 @@ const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
     userId: row.user_id ?? null,
     userTag: row.user_tag ?? null,
     title: row.title ?? '',
+    description: row.description ?? null,
     price: row.price ?? '',
     imageUrl,
     imageUrls,
@@ -92,7 +95,7 @@ export const loadAdsFromStorage = async (): Promise<StoredAd[]> => {
   try {
     const { data, error } = await client
       .from('ads')
-      .select('id,user_id,user_tag,title,price,image_url,condition,location,category,created_at')
+      .select('*')
       .order('created_at', { ascending: false })
     if (error || !data) return []
     return (data as AdsTableRow[]).map(mapRowToStoredAd)
@@ -224,6 +227,7 @@ export default function Ads({
   const [createOpen, setCreateOpen] = useState(false)
   const [items, setItems] = useState<StoredAd[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -271,6 +275,12 @@ export default function Ads({
       }
     }
   }, [])
+
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const visibleItems =
+    normalizedQuery.length === 0
+      ? items
+      : items.filter((ad) => ad.title.toLowerCase().includes(normalizedQuery))
   return (
     <div className="relative h-full w-full">
       <div
@@ -313,8 +323,7 @@ export default function Ads({
             className="flex justify-between"
             style={{ width: 355, height: 54 }}
           >
-            <button
-              type="button"
+            <div
               className="flex items-center"
               style={{
                 width: 209.21,
@@ -322,6 +331,7 @@ export default function Ads({
                 borderRadius: 10,
                 background: 'linear-gradient(90deg, #111111 0%, #1D1F1D 100%)',
                 paddingLeft: 16,
+                paddingRight: 16,
               }}
             >
               <img
@@ -329,17 +339,18 @@ export default function Ads({
                 alt=""
                 style={{ width: 22, height: 22, marginRight: 8 }}
               />
-              <span
-                className="font-sf-ui-light"
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск в Кадуе"
+                className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
                 style={{
                   fontSize: 15,
                   lineHeight: '18px',
                   color: '#A8A8A8',
                 }}
-              >
-                Поиск в Кадуе
-              </span>
-            </button>
+              />
+            </div>
 
             <button
               type="button"
@@ -372,7 +383,7 @@ export default function Ads({
       </div>
 
       <div
-        className="absolute left-0 right-0 bottom-0 overflow-y-auto"
+        className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hidden"
         style={{
           top: 'calc(var(--feed-controls-top) + 130px)',
           paddingLeft: ADS_SIDE_PADDING,
@@ -387,7 +398,7 @@ export default function Ads({
               rowGap: ADS_GRID_GAP,
             }}
           >
-            {items.map((ad) => {
+            {visibleItems.map((ad) => {
               const isOwn = currentUserId !== null && ad.userId === currentUserId
               return (
                 <AdCard
