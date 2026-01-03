@@ -283,6 +283,12 @@
   --ad-detail-button-width: 100%;
   --ad-detail-button-height: 56px;
   --ad-detail-button-bg: var(--feed-create-bg);
+  --ad-card-user-tag-size: 13px;
+  --ad-card-title-size: 15px;
+  --ad-card-meta-size: 14px;
+  --ad-card-info-height: 87px;
+  --ad-card-title-price-gap: -4px;
+  --ad-card-meta-price-gap: 2px;
 }
 
 @font-face {

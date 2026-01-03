@@ -172,8 +172,9 @@ export function AdCard({
 
   return (
     <div
-      className="relative h-[240px] cursor-pointer overflow-hidden rounded-2xl bg-[#151515] group"
+      className="relative cursor-pointer overflow-hidden rounded-2xl bg-[#151515] group"
       style={{
+        height: `calc(160px + var(--ad-card-info-height, 80px))`,
         transform: `translateX(${translateX}px)`,
         transition: touchStartX === null || deleting ? 'transform 0.16s ease-out' : 'none',
       }}
@@ -196,22 +197,42 @@ export function AdCard({
       <div className="relative h-[160px] overflow-hidden">
         <img src={imageUrl} alt={title} className="relative z-10 h-full w-full object-contain" />
         <div className="absolute left-2 top-2 z-20 rounded-full bg-black/60 px-3 py-1.5 backdrop-blur-sm">
-          <p className="text-xs text-white font-['SF_UI_Text:Light',sans-serif]">@{username}</p>
+          <p
+            className="text-white font-['SF_UI_Text:Light',sans-serif]"
+            style={{ fontSize: 'var(--ad-card-user-tag-size, 12px)' }}
+          >
+            @{username}
+          </p>
         </div>
       </div>
 
-      <div className="relative flex h-[80px] flex-col justify-between bg-gradient-to-b from-[#151515]/95 to-[#151515] p-3">
-        <div>
-          <h3 className="mb-1 line-clamp-1 text-sm text-white font-['SF_UI_Text:Medium',sans-serif]">
+      <div
+        className="relative flex flex-col justify-between bg-gradient-to-b from-[#151515]/95 to-[#151515] p-3"
+        style={{ height: 'var(--ad-card-info-height, 80px)' }}
+      >
+        <div style={{ marginBottom: 'var(--ad-card-title-price-gap, 4px)' }}>
+          <h3
+            className="line-clamp-1 text-white font-['SF_UI_Text:Medium',sans-serif]"
+            style={{ fontSize: 'var(--ad-card-title-size, 15px)' }}
+          >
             {displayTitle}
           </h3>
-          <div className="flex items-center gap-2 text-xs text-white/50">
+        </div>
+
+        <div>
+          <div
+            className="flex items-center gap-2 text-white/50"
+            style={{
+              fontSize: 'var(--ad-card-meta-size, 14px)',
+              marginBottom: 'var(--ad-card-meta-price-gap, 2px)',
+            }}
+          >
             {condition && <span>{condition}</span>}
             {condition && location && <span>•</span>}
             {location && <span>{location}</span>}
           </div>
+          <p className="text-lg text-white font-vk-demi">{price} ₽</p>
         </div>
-        <p className="text-lg text-white font-vk-demi">{price} ₽</p>
       </div>
 
       <div className="absolute inset-0 bg-white/0 transition-all duration-300 group-hover:bg-white/5" />
