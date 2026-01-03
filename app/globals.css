@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "slick-carousel/slick/slick.css";
+@import "slick-carousel/slick/slick-theme.css";
 
 :root {
   --background: #ffffff;
@@ -7,6 +9,15 @@
   --nav-bottom-offset: 12px;
   --bottom-nav-height: 96px;
   --bottom-nav-pill-height: 64px;
+  --ad-detail-price-size: 35px;
+  --ad-detail-tag-size: 15px;
+  --ad-detail-title-size: 23px;
+  --ad-detail-meta-size: 16px;
+  --ad-detail-section-title-size: 22px;
+  --ad-detail-label-size: 17px;
+  --ad-detail-value-size: 17px;
+  --ad-detail-body-size: 16px;
+  --ad-detail-button-size: 17px;
   --profile-cover-height: 80px;
   --profile-avatar-size: 96px;
   --profile-name-size: 20px;
@@ -268,6 +279,10 @@
   --profile-menu-open-translate-y: -6px;
   --profile-menu-transform-origin: top right;
   --profile-menu-share-font-size: 15.5px;
+  --ad-detail-divider-color: #2f2f2f;
+  --ad-detail-button-width: 100%;
+  --ad-detail-button-height: 56px;
+  --ad-detail-button-bg: var(--feed-create-bg);
 }
 
 @font-face {

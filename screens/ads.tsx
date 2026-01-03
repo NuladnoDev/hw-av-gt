@@ -14,6 +14,7 @@ interface AdCardProps {
   location?: string
   onDelete?: () => void
   isOwn?: boolean
+  onClick?: () => void
 }
 
 const ADS_SIDE_PADDING = 4
@@ -90,7 +91,17 @@ export const deleteAdById = async (id: string): Promise<void> => {
   }
 }
 
-export function AdCard({ title, price, imageUrl, username, condition, location, onDelete, isOwn }: AdCardProps) {
+export function AdCard({
+  title,
+  price,
+  imageUrl,
+  username,
+  condition,
+  location,
+  onDelete,
+  isOwn,
+  onClick,
+}: AdCardProps) {
   const [touchStartX, setTouchStartX] = useState<number | null>(null)
   const [translateX, setTranslateX] = useState(0)
   const [deleting, setDeleting] = useState(false)
@@ -140,6 +151,7 @@ export function AdCard({ title, price, imageUrl, username, condition, location, 
         transform: `translateX(${translateX}px)`,
         transition: touchStartX === null || deleting ? 'transform 0.16s ease-out' : 'none',
       }}
+      onClick={onClick}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -181,7 +193,11 @@ export function AdCard({ title, price, imageUrl, username, condition, location, 
   )
 }
 
-export default function Ads() {
+export default function Ads({
+  onOpenAd,
+}: {
+  onOpenAd?: (ad: StoredAd) => void
+}) {
   const [createOpen, setCreateOpen] = useState(false)
   const [items, setItems] = useState<StoredAd[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -343,10 +359,10 @@ export default function Ads() {
         >
           <div
             className="grid grid-cols-2 pb-4"
-          style={{
-            columnGap: ADS_GRID_GAP,
-            rowGap: ADS_GRID_GAP,
-          }}
+            style={{
+              columnGap: ADS_GRID_GAP,
+              rowGap: ADS_GRID_GAP,
+            }}
           >
             {items.map((ad) => {
               const isOwn = currentUserId !== null && ad.userId === currentUserId
@@ -362,10 +378,15 @@ export default function Ads() {
                   location={ad.location ?? undefined}
                   onDelete={isOwn ? () => deleteAdById(ad.id) : undefined}
                   isOwn={isOwn}
+                  onClick={() => {
+                    if (onOpenAd) {
+                      onOpenAd(ad)
+                    }
+                  }}
                 />
               )
             })}
-        </div>
+          </div>
       </div>
       {createOpen && (
         <AdsCreate

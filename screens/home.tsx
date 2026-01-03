@@ -8,7 +8,8 @@ import ProfileEdit from './profile_edit'
 import Setting from './Setting'
 import InfoMe from './info_me'
 import { getSupabase } from '@/lib/supabaseClient'
-import Ads from './ads'
+import Ads, { type StoredAd } from './ads'
+import AdDetail from './AdDetail'
 
 export default function HomeScreen() {
   const [scale, setScale] = useState(1)
@@ -31,7 +32,7 @@ export default function HomeScreen() {
       return null
     }
   })
-
+  const [selectedAd, setSelectedAd] = useState<StoredAd | null>(null)
  
 
   const openProfileMenu = () => {
@@ -608,7 +609,13 @@ export default function HomeScreen() {
               height: 'calc(812px - 88px - 56px - var(--home-header-offset))',
             }}
           >
-            {tab === 'ads' && <Ads />}
+            {tab === 'ads' && (
+              <Ads
+                onOpenAd={(ad) => {
+                  setSelectedAd(ad)
+                }}
+              />
+            )}
           </div>
         )}
 
@@ -734,6 +741,14 @@ export default function HomeScreen() {
             onClose={() => {
               setInfoMeOpen(false)
               setSettingsOpen(true)
+            }}
+          />
+        )}
+        {selectedAd && (
+          <AdDetail
+            ad={selectedAd}
+            onClose={() => {
+              setSelectedAd(null)
             }}
           />
         )}
