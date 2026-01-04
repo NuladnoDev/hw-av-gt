@@ -33,7 +33,7 @@ export default function HomeScreen() {
     }
   })
   const [selectedAd, setSelectedAd] = useState<StoredAd | null>(null)
- 
+  const [adsCreateRequested, setAdsCreateRequested] = useState(false)
 
   const openProfileMenu = () => {
     setProfileMenuClosing(false)
@@ -77,6 +77,19 @@ export default function HomeScreen() {
         }
       }
     })()
+  }, [])
+  useEffect(() => {
+    const handleProfileEmptyAdd = () => {
+      setTab('ads')
+      setProfileTab('ads')
+      setTimeout(() => {
+        setAdsCreateRequested(true)
+      }, 220)
+    }
+    window.addEventListener('profile-empty-add-click', handleProfileEmptyAdd)
+    return () => {
+      window.removeEventListener('profile-empty-add-click', handleProfileEmptyAdd)
+    }
   }, [])
   useEffect(() => {
     const client = getSupabase()
@@ -614,6 +627,8 @@ export default function HomeScreen() {
                 onOpenAd={(ad) => {
                   setSelectedAd(ad)
                 }}
+                createOnMount={adsCreateRequested}
+                onCreateConsumed={() => setAdsCreateRequested(false)}
               />
             )}
           </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getSupabase, saveLocalAuth } from '@/lib/supabaseClient'
 
 export default function HelloScreenLogin({
@@ -14,6 +14,50 @@ export default function HelloScreenLogin({
   const [show, setShow] = useState(false)
   const [tagError, setTagError] = useState('')
   const [passwordError, setPasswordError] = useState('')
+  const [tagExists, setTagExists] = useState<boolean | null>(null)
+  const tagCheckTimer = useRef<number | null>(null)
+
+  const handleTagChange = (value: string) => {
+    setTag(value)
+    setTagError('')
+    const trimmed = value.trim()
+    if (tagCheckTimer.current) {
+      window.clearTimeout(tagCheckTimer.current)
+      tagCheckTimer.current = null
+    }
+    if (!trimmed) {
+      setTagExists(null)
+      return
+    }
+    tagCheckTimer.current = window.setTimeout(async () => {
+      const client = getSupabase()
+      if (!client) {
+        try {
+          const usersRaw = window.localStorage.getItem('hw-users')
+          const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
+          const existsLocal = users.some((u) => u.tag === trimmed)
+          setTagExists(existsLocal)
+        } catch {
+          setTagExists(null)
+        }
+        return
+      }
+      try {
+        const { count, error } = await client
+          .from('profiles')
+          .select('tag', { count: 'exact', head: true })
+          .eq('tag', trimmed)
+        if (error) {
+          setTagExists(null)
+          return
+        }
+        const exists = typeof count === 'number' ? count > 0 : false
+        setTagExists(exists)
+      } catch {
+        setTagExists(null)
+      }
+    }, 350) as unknown as number
+  }
 
   useEffect(() => {
     const baseW = 375
@@ -29,8 +73,26 @@ export default function HelloScreenLogin({
     return () => window.removeEventListener('resize', update)
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (tagCheckTimer.current) {
+        window.clearTimeout(tagCheckTimer.current)
+      }
+    }
+  }, [])
+
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
+      <style jsx>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px #111111 inset !important;
+          -webkit-text-fill-color: white !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+      `}</style>
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px] bg-[#0A0A0A]" />
 
@@ -54,15 +116,11 @@ export default function HelloScreenLogin({
         </button>
 
         <div className="absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2 transform px-6 flex flex-col items-center">
-          <svg
-            width="122"
-            height="122"
-            viewBox="0 0 122 122"
-            xmlns="http://www.w3.org/2000/svg"
-            className="mb-10"
-          >
-            <path d="M103.698 109.8L103.699 91.5016C103.7 81.3942 95.5066 73.2 85.3992 73.2H36.6029C26.4969 73.2 18.304 81.3919 18.3029 91.4979L18.3008 109.8M79.3008 30.5C79.3008 40.6068 71.1076 48.8 61.0008 48.8C50.894 48.8 42.7008 40.6068 42.7008 30.5C42.7008 20.3932 50.894 12.2 61.0008 12.2C71.1076 12.2 79.3008 20.3932 79.3008 30.5Z" stroke="#FFD900" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <img
+            src="/interface/user-profile-01.svg"
+            alt="profile"
+            className="mb-10 h-[122px] w-[122px]"
+          />
           <div className="mb-2 w-full text-center text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
             Вход
           </div>
@@ -76,17 +134,19 @@ export default function HelloScreenLogin({
           <div className="relative mb-4 w-full">
             <input
               value={tag}
-              onChange={(e) => setTag(e.target.value)}
+              onChange={(e) => handleTagChange(e.target.value)}
               placeholder="durov"
-              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-28 text-[16px] leading-[1.4em] text-white outline-none"
+              autoComplete="off"
+              name="user_tag_login"
+              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-28 text-[16px] leading-[1.4em] text-white outline-none focus:border-[#444444] transition-colors"
             />
             {tagError && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#D45E5E] slide-in-up">
                 {tagError}
               </span>
             )}
-            {tag.trim().length > 0 && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#86D671] slide-in-up">
+            {tagExists && !tagError && (
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-white/60 slide-in-up">
                 тег найден
               </span>
             )}
@@ -101,7 +161,9 @@ export default function HelloScreenLogin({
               onChange={(e) => setPassword(e.target.value)}
               type={show ? 'text' : 'password'}
               placeholder="пароль"
-              className={`h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-24 text-[16px] leading-[1.4em] text-white outline-none ${show ? 'reveal-text' : ''}`}
+              autoComplete="new-password"
+              name="user_password_login"
+              className={`h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-24 text-[16px] leading-[1.4em] text-white outline-none focus:border-[#444444] transition-colors ${show ? 'reveal-text' : ''}`}
             />
             {passwordError && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#D45E5E]">
@@ -109,12 +171,13 @@ export default function HelloScreenLogin({
               </span>
             )}
             {password.length > 0 && (
-              <span
-                onClick={() => setShow((s) => !s)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer select-none text-[14px] leading-[1.3em] text-[#FFD900] transition-transform duration-150 hover:scale-105 active:scale-95"
+              <button
+                type="button"
+                onClick={() => setShow(!show)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-white transition-transform duration-150 hover:scale-105 active:scale-95"
               >
                 {show ? 'скрыть' : 'показать'}
-              </span>
+              </button>
             )}
           </div>
 

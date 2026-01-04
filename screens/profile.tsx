@@ -575,6 +575,10 @@ export default function Profile({
                         borderRadius: 'var(--profile-empty-button-radius)',
                         background: 'var(--profile-empty-button-bg)',
                       }}
+                      onClick={() => {
+                        const ev = new Event('profile-empty-add-click')
+                        window.dispatchEvent(ev)
+                      }}
                     >
                       <span
                         className="inline-block font-vk-demi"

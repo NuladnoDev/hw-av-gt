@@ -44,6 +44,25 @@ export type StoredAd = {
   createdAt: number
 }
 
+const toPrepositionalCity = (name: string): string => {
+  const raw = typeof name === 'string' ? name.trim() : ''
+  if (!raw) return ''
+  const lower = raw.toLowerCase()
+  if (lower === 'кадуй') return 'Кадуе'
+  if (lower === 'воронеж') return 'Воронеже'
+  const last = raw.slice(-1)
+  if (last === 'а' || last === 'А') {
+    return `${raw.slice(0, -1)}е`
+  }
+  if (last === 'я' || last === 'Я') {
+    return `${raw.slice(0, -1)}и`
+  }
+  if (last === 'ь' || last === 'Ь') {
+    return `${raw.slice(0, -1)}и`
+  }
+  return `${raw}е`
+}
+
 type AdsTableRow = {
   id: string
   user_id: string | null
@@ -271,14 +290,82 @@ export function AdCard({
 
 export default function Ads({
   onOpenAd,
+  createOnMount,
+  onCreateConsumed,
 }: {
   onOpenAd?: (ad: StoredAd) => void
+  createOnMount?: boolean
+  onCreateConsumed?: () => void
 }) {
   const [createOpen, setCreateOpen] = useState(false)
   const [items, setItems] = useState<StoredAd[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
+
+  const [userCity, setUserCity] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (createOnMount && !createOpen) {
+      setCreateOpen(true)
+      if (onCreateConsumed) onCreateConsumed()
+    }
+  }, [createOnMount, createOpen, onCreateConsumed])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    let cancelled = false
+    const loadCity = async () => {
+      if (cancelled) return
+      let uid: string | null = null
+      try {
+        const raw = window.localStorage.getItem('hw-auth')
+        const auth = raw ? (JSON.parse(raw) as { uid?: string | null } | null) : null
+        const id = auth?.uid ?? null
+        uid = typeof id === 'string' && id.length > 0 ? id : null
+      } catch {
+        uid = null
+      }
+      if (!uid) {
+        if (!cancelled) setUserCity(null)
+        return
+      }
+      let nextCity: string | null = null
+      try {
+        const profRaw = window.localStorage.getItem('hw-profiles')
+        const profMap = profRaw
+          ? (JSON.parse(profRaw) as Record<string, { city?: string | null }>)
+          : {}
+        const localCity = profMap[uid]?.city
+        if (typeof localCity === 'string' && localCity.trim().length > 0) {
+          nextCity = localCity.trim()
+        }
+      } catch {
+      }
+      const client = getSupabase()
+      if (client && uid) {
+        try {
+          const { data } = await client
+            .from('profiles')
+            .select('city')
+            .eq('id', uid)
+            .maybeSingle()
+          const dbCity = (data?.city as string | null | undefined) ?? null
+          if (typeof dbCity === 'string' && dbCity.trim().length > 0) {
+            nextCity = dbCity.trim()
+          }
+        } catch {
+        }
+      }
+      if (!cancelled) {
+        setUserCity(nextCity)
+      }
+    }
+    loadCity()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -326,6 +413,8 @@ export default function Ads({
       }
     }
   }, [])
+
+  const searchPlaceholder = userCity ? `Поиск в ${toPrepositionalCity(userCity)}` : 'Поиск в Кадуе'
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const visibleItems =
@@ -393,7 +482,7 @@ export default function Ads({
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Поиск в Кадуе"
+                placeholder={searchPlaceholder}
                 className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
                 style={{
                   fontSize: 15,

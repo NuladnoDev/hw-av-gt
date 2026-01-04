@@ -242,7 +242,7 @@
   --feed-create-width: 154px;
   --feed-create-height: 56px;
   --feed-create-radius: 10px;
-  --feed-create-bg: linear-gradient(90deg, #4778AF 0%, #659CDB 100%);
+  --feed-create-bg: linear-gradient(90deg, #000000 0%, #000000 100%);
   --post-create-bg: linear-gradient(90deg, #6e9b7d 0%, #34975f 100%);
   --feed-create-chevron-size: 24px;
   --feed-create-text-size: 15px;

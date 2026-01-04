@@ -168,19 +168,21 @@ export default function InfoMe({ onClose }: InfoMeProps) {
         if (typeof ageFromDb === 'number') {
           const a = String(ageFromDb)
           setAge(a)
-        } else if (typeof ageFromDb === 'string') {
+        } else if (typeof ageFromDb === 'string' && ageFromDb.trim().length > 0) {
           setAge(ageFromDb)
-        } else {
-          setAge('')
         }
-        const g = typeof genderFromDb === 'string' ? genderFromDb : ''
-        setGender(g)
-        const c = typeof cityFromDb === 'string' ? cityFromDb : ''
-        setCity(c)
-        const p = typeof politicalFromDb === 'string' ? politicalFromDb : ''
-        setPolitical(p)
-        const h = typeof hobbiesFromDb === 'string' ? hobbiesFromDb : ''
-        setHobbies(h)
+        if (typeof genderFromDb === 'string' && genderFromDb.trim().length > 0) {
+          setGender(genderFromDb)
+        }
+        if (typeof cityFromDb === 'string' && cityFromDb.trim().length > 0) {
+          setCity(cityFromDb)
+        }
+        if (typeof politicalFromDb === 'string' && politicalFromDb.trim().length > 0) {
+          setPolitical(politicalFromDb)
+        }
+        if (typeof hobbiesFromDb === 'string' && hobbiesFromDb.trim().length > 0) {
+          setHobbies(hobbiesFromDb)
+        }
       } catch {
       }
     })()
