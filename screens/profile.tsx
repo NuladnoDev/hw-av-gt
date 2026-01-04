@@ -81,7 +81,9 @@ export default function Profile({
         delete next[key]
       }
       window.localStorage.setItem('hw-follows', JSON.stringify(next))
-    } catch {
+      console.log('writeLocalFollow:', { key, enabled, notif })
+    } catch (e) {
+      console.error('writeLocalFollow error:', e)
     }
   }
 
@@ -718,9 +720,22 @@ export default function Profile({
                     writeLocalFollow(viewerId, userId, nextSubscribed, nextNotifications)
 
                     const client = getSupabase()
+                    console.log('Follow action:', { 
+                      hasClient: !!client, 
+                      follower, 
+                      target, 
+                      nextSubscribed,
+                      viewerId,
+                      userId
+                    })
+
                     if (client && follower && target) {
                       if (nextSubscribed) {
                         try {
+                          // Try to ensure session is fresh before action
+                          const { data: { session } } = await client.auth.getSession()
+                          console.log('Session status before upsert:', !!session)
+
                           const { error } = await client.from('follows').upsert({
                             follower_id: follower,
                             target_id: target,
@@ -729,6 +744,7 @@ export default function Profile({
                           if (error) {
                             console.error('Failed to upsert follow in DB:', error)
                           } else {
+                            console.log('Successfully upserted follow to DB')
                             // Only try push subscription if DB sync was successful
                             try {
                               await ensurePushSubscription()
@@ -753,16 +769,18 @@ export default function Profile({
                             .eq('target_id', target)
                           if (error) {
                             console.error('Failed to delete follow from DB:', error)
+                          } else {
+                            console.log('Successfully deleted follow from DB')
                           }
                         } catch (err) {
                           console.error('Unexpected error during unfollow:', err)
                         }
                       }
                     } else {
-                      console.warn('Follow button: Skipping DB sync because IDs are not UUIDs or client is missing', { 
-                        hasClient: !!client, 
-                        follower, 
-                        target 
+                      console.warn('Follow button: Skipping DB sync. Reasons:', { 
+                        noClient: !client, 
+                        followerNotUuid: !follower, 
+                        targetNotUuid: !target 
                       })
                     }
                   }}
