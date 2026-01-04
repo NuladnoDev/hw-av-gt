@@ -348,11 +348,11 @@ export default function AdsCreate({
       const urls = await readFilesAsDataUrls(Array.from(files))
       const maxPhotos = 6
       setImages((prev) => {
-        const next = [...prev]
+        const unique = [...prev]
         for (const u of urls) {
-          if (!next.includes(u) && next.length < maxPhotos) next.push(u)
+          if (!unique.includes(u)) unique.push(u)
         }
-        return next
+        return unique.slice(0, maxPhotos)
       })
     } catch {
     }

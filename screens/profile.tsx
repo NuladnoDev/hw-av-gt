@@ -515,12 +515,15 @@ export default function Profile({
               <div className="w-full">
                 {userAds.length > 0 ? (
                   <div
-                    className="grid grid-cols-2 pb-8"
+                    className="grid grid-cols-2 pb-4"
                     style={{
                       columnGap: 6,
                       rowGap: 6,
-                      marginLeft: -12,
-                      marginRight: -12,
+                      paddingLeft: 4,
+                      paddingRight: 4,
+                      marginLeft: -24,
+                      marginRight: -24,
+                      width: 'calc(100% + 48px)',
                     }}
                   >
                   {userAds.map((ad) => (

@@ -177,11 +177,11 @@ export default function AdsEdit({
       const urls = await readFilesAsDataUrls(Array.from(files))
       const maxPhotos = 6
       setImages((prev) => {
-        const next = [...prev]
+        const unique = [...prev]
         for (const u of urls) {
-          if (!next.includes(u) && next.length < maxPhotos) next.push(u)
+          if (!unique.includes(u)) unique.push(u)
         }
-        return next
+        return unique.slice(0, maxPhotos)
       })
     } catch {
     }
@@ -387,7 +387,7 @@ export default function AdsEdit({
               <div className="text-[20px] leading-[1.2em] text-white font-ttc-bold mb-3">
                 Редактирование объявления
               </div>
-              <div className="flex gap-2 overflow-x-auto scrollbar-hidden py-1">
+              <div className="flex gap-3 overflow-x-auto scrollbar-hidden py-1.5">
                 {navItems.map((item) => {
                   const active = step === item.id
                   return (
@@ -395,13 +395,13 @@ export default function AdsEdit({
                       key={item.id}
                       type="button"
                       onClick={() => setStep(item.id)}
-                      className="relative flex items-center justify-center rounded-full px-4 py-1.5"
+                      className="relative flex items-center justify-center rounded-full px-5 py-2"
                       style={{
                         backgroundColor: active ? '#FFFFFF' : 'rgba(255,255,255,0.04)',
                       }}
                     >
                       <span
-                        className="text-[13px] font-sf-ui-medium"
+                        className="text-[14px] font-sf-ui-medium"
                         style={{
                           color: active ? '#000000' : '#FFFFFFB3',
                         }}
