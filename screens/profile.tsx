@@ -51,6 +51,35 @@ export default function Profile({
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [viewerId, setViewerId] = useState<string | null>(null)
 
+  const readLocalFollows = (): Record<string, { notificationsEnabled?: boolean | null }> => {
+    if (typeof window === 'undefined') return {}
+    try {
+      const raw = window.localStorage.getItem('hw-follows')
+      if (!raw) return {}
+      const parsed = JSON.parse(raw) as unknown
+      if (!parsed || typeof parsed !== 'object') return {}
+      return parsed as Record<string, { notificationsEnabled?: boolean | null }>
+    } catch {
+      return {}
+    }
+  }
+
+  const writeLocalFollow = (follower: string, target: string, enabled: boolean, notif: boolean): void => {
+    if (typeof window === 'undefined') return
+    try {
+      const key = `${follower}::${target}`
+      const map = readLocalFollows()
+      const next = { ...map }
+      if (enabled) {
+        next[key] = { notificationsEnabled: notif }
+      } else {
+        delete next[key]
+      }
+      window.localStorage.setItem('hw-follows', JSON.stringify(next))
+    } catch {
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
     const loadViewer = async () => {
@@ -161,7 +190,16 @@ export default function Profile({
     const loadFollow = async () => {
       if (!viewUserId || !viewerId) return
       const client = getSupabase()
-      if (!client) return
+      if (!client) {
+        const map = readLocalFollows()
+        const key = `${viewerId}::${viewUserId}`
+        const entry = map[key]
+        if (!entry) return
+        if (cancelled) return
+        setIsSubscribed(true)
+        setNotificationsEnabled(entry.notificationsEnabled ?? true)
+        return
+      }
       try {
         const { data, error } = await client
           .from('follows')
@@ -169,10 +207,34 @@ export default function Profile({
           .eq('follower_id', viewerId)
           .eq('target_id', viewUserId)
           .maybeSingle()
-        if (cancelled || error || !data) return
+        if (cancelled || error) {
+          const map = readLocalFollows()
+          const key = `${viewerId}::${viewUserId}`
+          const entry = map[key]
+          if (!entry || cancelled) return
+          setIsSubscribed(true)
+          setNotificationsEnabled(entry.notificationsEnabled ?? true)
+          return
+        }
+        if (!data) {
+          const map = readLocalFollows()
+          const key = `${viewerId}::${viewUserId}`
+          const entry = map[key]
+          if (!entry || cancelled) return
+          setIsSubscribed(true)
+          setNotificationsEnabled(entry.notificationsEnabled ?? true)
+          return
+        }
+        if (cancelled) return
         setIsSubscribed(true)
         setNotificationsEnabled((data as { notifications_enabled?: boolean | null }).notifications_enabled ?? true)
       } catch {
+        const map = readLocalFollows()
+        const key = `${viewerId}::${viewUserId}`
+        const entry = map[key]
+        if (!entry || cancelled) return
+        setIsSubscribed(true)
+        setNotificationsEnabled(entry.notificationsEnabled ?? true)
       }
     }
     loadFollow()
@@ -562,38 +624,47 @@ export default function Profile({
                     if (!viewerId || !userId) {
                       return
                     }
+                    const nextSubscribed = !isSubscribed
+                    const nextNotifications = nextSubscribed ? true : false
+                    setIsSubscribed(nextSubscribed)
+                    setNotificationsEnabled(nextNotifications)
                     const client = getSupabase()
-                    if (!client) {
-                      setIsSubscribed((v) => !v)
-                      if (!isSubscribed) {
-                        setNotificationsEnabled(true)
+                    if (client) {
+                      if (nextSubscribed) {
+                        try {
+                          await client.from('follows').upsert({
+                            follower_id: viewerId,
+                            target_id: userId,
+                            notifications_enabled: nextNotifications,
+                          })
+                          await ensurePushSubscription()
+                          try {
+                            await fetch('/api/push/new-follow', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                followerId: viewerId,
+                                targetId: userId,
+                              }),
+                            })
+                          } catch {
+                          }
+                        } catch {
+                        }
+                      } else {
+                        try {
+                          await client
+                            .from('follows')
+                            .delete()
+                            .eq('follower_id', viewerId)
+                            .eq('target_id', userId)
+                        } catch {
+                        }
                       }
-                      return
                     }
-                    if (isSubscribed) {
-                      setIsSubscribed(false)
-                      setNotificationsEnabled(false)
-                      try {
-                        await client
-                          .from('follows')
-                          .delete()
-                          .eq('follower_id', viewerId)
-                          .eq('target_id', userId)
-                      } catch {
-                      }
-                    } else {
-                      setIsSubscribed(true)
-                      setNotificationsEnabled(true)
-                      try {
-                        await client.from('follows').upsert({
-                          follower_id: viewerId,
-                          target_id: userId,
-                          notifications_enabled: true,
-                        })
-                        await ensurePushSubscription()
-                      } catch {
-                      }
-                    }
+                    writeLocalFollow(viewerId, userId, nextSubscribed, nextNotifications)
                   }}
                 >
                   {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
@@ -622,17 +693,19 @@ export default function Profile({
                       }
                       setNotificationsEnabled(next)
                       const client = getSupabase()
-                      if (!client) return
-                      try {
-                        await client
-                          .from('follows')
-                          .upsert({
-                            follower_id: viewerId,
-                            target_id: userId,
-                            notifications_enabled: next,
-                          })
-                      } catch {
+                      if (client) {
+                        try {
+                          await client
+                            .from('follows')
+                            .upsert({
+                              follower_id: viewerId,
+                              target_id: userId,
+                              notifications_enabled: next,
+                            })
+                        } catch {
+                        }
                       }
+                      writeLocalFollow(viewerId, userId, true, next)
                     }}
                   >
                     <motion.div
