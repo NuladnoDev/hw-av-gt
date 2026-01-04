@@ -16,11 +16,11 @@ import {
   CircleAlert,
 } from 'lucide-react'
 
-type AdsCategory = 'nicotine' | 'job' | 'service' | 'things' | 'other'
-type AdsCondition = 'new' | 'excellent' | 'good' | 'bad'
+export type AdsCategory = 'nicotine' | 'job' | 'service' | 'things' | 'other'
+export type AdsCondition = 'new' | 'excellent' | 'good' | 'bad'
 type AdsCreateStep = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
-const CATEGORY_CONFIGS: {
+export const CATEGORY_CONFIGS: {
   id: AdsCategory
   label: string
   color: string
@@ -58,7 +58,7 @@ const CATEGORY_CONFIGS: {
   },
 ]
 
-const CONDITION_OPTIONS: {
+export const CONDITION_OPTIONS: {
   id: AdsCondition
   label: string
   description: string
@@ -486,7 +486,7 @@ export default function AdsCreate({
             className={step === 1 ? 'ads-step-slide-up' : 'ads-step-slide-left'}
           >
             {step === 1 && (
-              <div className="pt-8">
+              <div className="pt-0">
                 <div className="mb-12">
                   <div className="mb-2 text-[24px] leading-[1.2em] text-white font-ttc-bold">
                     Тип объявления

@@ -569,26 +569,6 @@ export default function ProfileEdit({
                 <div className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)', color: 'var(--profile-action-text-color)' }}>Выйти</div>
               </button>
             </div>
-
-            <div className="mt-12 relative w-full h-full profile-switch-transition">
-              <img
-                src="/interface/glass.png"
-                alt="empty"
-                style={{
-                  position: 'absolute',
-                  top: 'var(--profile-empty-icon-top)',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 'var(--profile-empty-icon-size)',
-                  height: 'var(--profile-empty-icon-size)',
-                }}
-              />
-              <div
-                className="text-center text-[16px] leading-[1.4em] text-[#A1A1A1]"
-                style={{ position: 'absolute', left: 0, right: 0, bottom: 'var(--profile-empty-text-bottom)' }}
-              >
-              </div>
-            </div>
           </div>
         </div>
 

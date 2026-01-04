@@ -149,13 +149,6 @@ export default function Setting({
                 style={{ filter: 'brightness(0) invert(1)' }}
               />
             </button>
-            <button
-              type="button"
-              className="absolute right-6 top-0 flex h-full items-center"
-              disabled={!dirty}
-            >
-              <span className={`text-[16px] leading-[1em] ${dirty ? 'text-white' : 'text-white/60'} font-sf-ui-medium`}>Сохр.</span>
-            </button>
             <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
               <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
                 Настройки
@@ -226,7 +219,7 @@ export default function Setting({
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"
                   />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Аккаунт
                   </span>
                 </div>
@@ -250,7 +243,7 @@ export default function Setting({
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"
                   />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Основные
                   </span>
                 </div>
@@ -273,7 +266,7 @@ export default function Setting({
                     alt="Обо мне"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                   />
-                  <span className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Обо мне
                   </span>
                 </div>
@@ -297,7 +290,7 @@ export default function Setting({
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"
                   />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Персонализация
                   </span>
                 </div>
@@ -321,7 +314,7 @@ export default function Setting({
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"
                   />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Уведомления
                   </span>
                 </div>
@@ -345,7 +338,7 @@ export default function Setting({
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"
                   />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Просмотр публикаций
                   </span>
                 </div>
@@ -369,7 +362,7 @@ export default function Setting({
                     alt="Для"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                   />
-                  <span className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Для разработчиков 
                   </span>
                 </div>

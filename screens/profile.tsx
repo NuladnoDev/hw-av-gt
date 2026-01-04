@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 import { getSupabase } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 import { AdCard, loadAdsFromStorage, deleteAdById, StoredAd } from './ads'
+import AdsEdit from './Ads_Edit'
 
 export default function Profile({
   profileTab,
@@ -29,6 +30,7 @@ export default function Profile({
   const [political, setPolitical] = useState<string>('')
   const [hobbies, setHobbies] = useState<string>('')
   const [userAds, setUserAds] = useState<StoredAd[]>([])
+  const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -290,12 +292,13 @@ export default function Profile({
           '--profile-about-negative-margin': '12px',
           '--profile-switch-height': '52px',
           '--profile-switch-padding': '4px',
-          '--profile-switch-offset': '16px',
+          '--profile-switch-offset': '10px',
           '--profile-section-margin-top': '24px',
           '--profile-name-size': '28px',
-          '--profile-name-margin-top': '12px',
+          '--profile-name-margin-top': '6px',
           '--profile-avatar-size': '110px',
-          '--profile-cover-height': '140px',
+          '--profile-cover-height': '90px',
+          '--profile-avatar-top-offset': '0px',
         } as React.CSSProperties
       }
     >
@@ -310,7 +313,7 @@ export default function Profile({
         style={{
           width: 'var(--profile-avatar-size)',
           height: 'var(--profile-avatar-size)',
-          top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2))',
+          top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) + var(--profile-avatar-top-offset, 0px))',
           boxShadow: `0 0 var(--profile-avatar-glow-size) var(--profile-avatar-glow-color), 0 4px 18px rgba(0,0,0,0.35)`,
           background: avatarUrl ? '#0A0A0A' : gradient,
         }}
@@ -352,8 +355,8 @@ export default function Profile({
       <div
         className="absolute left-0 w-full px-6 overflow-y-auto pb-8"
         style={{
-          top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px)',
-          height: 'calc(812px - 88px - 56px - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - var(--home-header-offset) - 12px)',
+          top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px + var(--profile-avatar-top-offset, 0px))',
+          height: 'calc(812px - 88px - 56px - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - var(--home-header-offset) - 12px - var(--profile-avatar-top-offset, 0px))',
         }}
       >
         <div className="flex w-full flex-col items-center">
@@ -532,6 +535,7 @@ export default function Profile({
                       location={ad.location ?? undefined}
                       onDelete={() => deleteAdById(ad.id)}
                       isOwn
+                      onEdit={() => setEditingAd(ad)}
                     />
                   ))}
                   </div>
@@ -769,6 +773,12 @@ export default function Profile({
             ) : null}
           </motion.div>
         </div>
+        {editingAd && (
+          <AdsEdit
+            ad={editingAd}
+            onClose={() => setEditingAd(null)}
+          />
+        )}
       </div>
     </div>
   )
