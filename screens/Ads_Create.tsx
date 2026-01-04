@@ -285,6 +285,18 @@ export default function AdsCreate({
       if (typeof window !== 'undefined') {
         const ev = new CustomEvent('ads-updated', { detail: { type: 'created', row: data } })
         window.dispatchEvent(ev)
+        try {
+          if (data && typeof (data as any).id === 'string') {
+            await fetch('/api/push/new-ad', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ adId: (data as any).id as string }),
+            })
+          }
+        } catch {
+        }
       }
       return true
     } catch (e) {
@@ -364,6 +376,22 @@ export default function AdsCreate({
 
   const removeImageAt = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleNumericChange = (val: string, setter: (v: string) => void) => {
+    const onlyDigits = val.replace(/[^\d]/g, '')
+    setter(onlyDigits)
+  }
+
+  const handleDecimalChange = (val: string, setter: (v: string) => void) => {
+    // Разрешаем цифры, одну точку или запятую
+    let sanitized = val.replace(/,/g, '.')
+    sanitized = sanitized.replace(/[^\d.]/g, '')
+    const parts = sanitized.split('.')
+    if (parts.length > 2) {
+      sanitized = parts[0] + '.' + parts.slice(1).join('')
+    }
+    setter(sanitized)
   }
 
   const canGoNext =
@@ -751,8 +779,9 @@ export default function AdsCreate({
                         </div>
                         <input
                           value={nicotineTankVolume}
-                          onChange={(e) => setNicotineTankVolume(e.target.value)}
-                          placeholder="2, 5, 10"
+                          onChange={(e) => handleDecimalChange(e.target.value, setNicotineTankVolume)}
+                          inputMode="decimal"
+                          placeholder="2.5, 5, 10"
                           className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
@@ -762,7 +791,8 @@ export default function AdsCreate({
                         </div>
                         <input
                           value={nicotineBatteryCapacity}
-                          onChange={(e) => setNicotineBatteryCapacity(e.target.value)}
+                          onChange={(e) => handleNumericChange(e.target.value, setNicotineBatteryCapacity)}
+                          inputMode="numeric"
                           placeholder="400, 850, 1500"
                           className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
@@ -773,8 +803,9 @@ export default function AdsCreate({
                         </div>
                         <input
                           value={nicotineStrength}
-                          onChange={(e) => setNicotineStrength(e.target.value)}
-                          placeholder="20, 35, 50"
+                          onChange={(e) => handleDecimalChange(e.target.value, setNicotineStrength)}
+                          inputMode="decimal"
+                          placeholder="3, 20, 50"
                           className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
@@ -784,7 +815,8 @@ export default function AdsCreate({
                         </div>
                         <input
                           value={nicotinePuffs}
-                          onChange={(e) => setNicotinePuffs(e.target.value)}
+                          onChange={(e) => handleNumericChange(e.target.value, setNicotinePuffs)}
+                          inputMode="numeric"
                           placeholder="800, 1500, 2500"
                           className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
@@ -844,8 +876,9 @@ export default function AdsCreate({
                         </div>
                         <input
                           value={thingsMemory}
-                          onChange={(e) => setThingsMemory(e.target.value)}
-                          placeholder="128 ГБ, 512 ГБ"
+                          onChange={(e) => handleNumericChange(e.target.value, setThingsMemory)}
+                          inputMode="numeric"
+                          placeholder="128, 256, 512"
                           className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
@@ -855,8 +888,9 @@ export default function AdsCreate({
                         </div>
                         <input
                           value={thingsDiagonal}
-                          onChange={(e) => setThingsDiagonal(e.target.value)}
-                          placeholder='6.1", 55"'
+                          onChange={(e) => handleDecimalChange(e.target.value, setThingsDiagonal)}
+                          inputMode="decimal"
+                          placeholder='6.1, 13.3, 55'
                           className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
@@ -866,7 +900,8 @@ export default function AdsCreate({
                         </div>
                         <input
                           value={thingsYear}
-                          onChange={(e) => setThingsYear(e.target.value)}
+                          onChange={(e) => handleNumericChange(e.target.value, setThingsYear)}
+                          inputMode="numeric"
                           placeholder="2020, 2021"
                           className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
@@ -1124,8 +1159,8 @@ export default function AdsCreate({
                     <div className="relative w-full">
                       <input
                         value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        inputMode="decimal"
+                        onChange={(e) => handleNumericChange(e.target.value, setPrice)}
+                        inputMode="numeric"
                         placeholder="0"
                         className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-10 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                       />

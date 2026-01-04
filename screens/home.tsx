@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ShoppingBag, User } from 'lucide-react'
 import { motion } from 'motion/react'
 import Profile from './profile'
@@ -34,6 +35,10 @@ export default function HomeScreen() {
   })
   const [selectedAd, setSelectedAd] = useState<StoredAd | null>(null)
   const [adsCreateRequested, setAdsCreateRequested] = useState(false)
+  const [viewProfileMode, setViewProfileMode] = useState<'own' | 'foreign'>('own')
+  const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null)
+  const [profileReturnAd, setProfileReturnAd] = useState<StoredAd | null>(null)
+  const searchParams = useSearchParams()
 
   const openProfileMenu = () => {
     setProfileMenuClosing(false)
@@ -47,6 +52,30 @@ export default function HomeScreen() {
     }, 180)
   }
 
+  const handleBackFromForeignProfile = () => {
+    if (profileReturnAd) {
+      setSelectedAd(profileReturnAd)
+    }
+    setViewProfileMode('own')
+    setViewProfileUserId(null)
+    setProfileReturnAd(null)
+    setTab('ads')
+  }
+
+  useEffect(() => {
+    const sellerId = searchParams.get('sellerId')
+    const profileTabParam = searchParams.get('profileTab')
+    if (sellerId) {
+      setTab('profile')
+      setViewProfileMode('foreign')
+      setViewProfileUserId(sellerId)
+      if (profileTabParam === 'ads' || profileTabParam === 'about' || profileTabParam === 'friends') {
+        setProfileTab(profileTabParam)
+      } else {
+        setProfileTab('ads')
+      }
+    }
+  }, [searchParams])
   useEffect(() => {
     const client = getSupabase()
     if (!client) return
@@ -201,18 +230,33 @@ export default function HomeScreen() {
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
           >
             <div className="relative h-full w-full">
-              <button
-                type="button"
-                onClick={() => setProfileEdit((v) => !v)}
-                className="absolute left-6 top-0 flex h-full items-center"
-                aria-label="Редактировать профиль"
-              >
-                <img
-                  src="/interface/pencil-02.svg"
-                  alt="edit"
-                  className="h-[22px] w-[22px]"
-                />
-              </button>
+              {viewProfileMode === 'own' ? (
+                <button
+                  type="button"
+                  onClick={() => setProfileEdit((v) => !v)}
+                  className="absolute left-6 top-0 flex h-full items-center"
+                  aria-label="Редактировать профиль"
+                >
+                  <img
+                    src="/interface/pencil-02.svg"
+                    alt="edit"
+                    className="h-[22px] w-[22px]"
+                  />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleBackFromForeignProfile}
+                  className="absolute left-6 top-0 flex h-full items-center"
+                  aria-label="Назад к объявлению"
+                >
+                  <img
+                    src="/interface/chevron-left.svg"
+                    alt="back"
+                    className="h-[22px] w-[22px]"
+                  />
+                </button>
+              )}
               <div className="absolute right-6 top-0 flex h-full items-center">
                 <button
                   type="button"
@@ -245,7 +289,13 @@ export default function HomeScreen() {
             <Profile
               profileTab={profileTab}
               setProfileTab={setProfileTab}
-              userTag={currentTag ?? undefined}
+              userTag={
+                viewProfileMode === 'foreign'
+                  ? profileReturnAd?.userTag ?? undefined
+                  : currentTag ?? undefined
+              }
+              isOwnProfile={viewProfileMode === 'own'}
+              viewUserId={viewProfileMode === 'foreign' ? viewProfileUserId ?? undefined : undefined}
             />
             {profileMenuOpen && (
               <>
@@ -261,10 +311,10 @@ export default function HomeScreen() {
                     top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-menu-offset-y))',
                     zIndex: 80,
                   }}
-                >
-                  <div
-                    className={profileMenuClosing ? 'profile-menu-out' : 'profile-menu-in'}
-                    style={{
+                  >
+                    <div
+                      className={profileMenuClosing ? 'profile-menu-out' : 'profile-menu-in'}
+                      style={{
                       width: 'var(--profile-menu-width)',
                       borderRadius: 'var(--profile-menu-radius)',
                       transformOrigin: 'var(--profile-menu-transform-origin)',
@@ -280,125 +330,129 @@ export default function HomeScreen() {
                       paddingBottom: 'var(--profile-menu-padding-bottom)',
                       paddingLeft: 'var(--profile-menu-padding-x)',
                       paddingRight: 'var(--profile-menu-padding-x)',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeProfileMenu()
-                        setProfileEdit(true)
-                      }}
-                      className="flex w-full items-center"
-                      style={{
-                        height: 'var(--profile-menu-edit-height)',
-                        paddingLeft: 'var(--profile-menu-item-padding-x)',
-                        paddingRight: 'var(--profile-menu-item-padding-x)',
-                        background: 'var(--profile-menu-item-bg)',
                       }}
                     >
-                      <div
-                        className="flex w-full items-center"
-                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
-                      >
-                        <span
-                          className="font-sf-ui-light"
-                          style={{
-                            fontSize: 'var(--profile-menu-item-font-size)',
-                            color: 'var(--profile-menu-item-text-color)',
-                            lineHeight: 'var(--profile-menu-edit-line-height)',
-                            textAlign: 'left',
-                          }}
-                        >
-                          <span>Редактировать</span>
-                          <br />
-                          <span>профиль</span>
-                        </span>
-                        <div
-                          style={{
-                            marginLeft: 'auto',
-                            width: 'var(--profile-menu-item-icon-size)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                          }}
-                        >
-                          <img
-                            src="/interface/pencil-01.svg"
-                            alt=""
+                      {viewProfileMode === 'own' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeProfileMenu()
+                              setProfileEdit(true)
+                            }}
+                            className="flex w-full items-center"
                             style={{
-                              width: 'var(--profile-menu-item-icon-size)',
-                              height: 'var(--profile-menu-item-icon-size)',
-                              filter: 'var(--profile-menu-item-icon-filter)',
+                              height: 'var(--profile-menu-edit-height)',
+                              paddingLeft: 'var(--profile-menu-item-padding-x)',
+                              paddingRight: 'var(--profile-menu-item-padding-x)',
+                              background: 'var(--profile-menu-item-bg)',
+                            }}
+                          >
+                            <div
+                              className="flex w-full items-center"
+                              style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                            >
+                              <span
+                                className="font-sf-ui-light"
+                                style={{
+                                  fontSize: 'var(--profile-menu-item-font-size)',
+                                  color: 'var(--profile-menu-item-text-color)',
+                                  lineHeight: 'var(--profile-menu-edit-line-height)',
+                                  textAlign: 'left',
+                                }}
+                              >
+                                <span>Редактировать</span>
+                                <br />
+                                <span>профиль</span>
+                              </span>
+                              <div
+                                style={{
+                                  marginLeft: 'auto',
+                                  width: 'var(--profile-menu-item-icon-size)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'flex-end',
+                                }}
+                              >
+                                <img
+                                  src="/interface/pencil-01.svg"
+                                  alt=""
+                                  style={{
+                                    width: 'var(--profile-menu-item-icon-size)',
+                                    height: 'var(--profile-menu-item-icon-size)',
+                                    filter: 'var(--profile-menu-item-icon-filter)',
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </button>
+                          <div
+                            style={{
+                              height: 'var(--profile-menu-divider-thickness)',
+                              background: 'var(--profile-menu-divider-color)',
                             }}
                           />
-                        </div>
-                      </div>
-                    </button>
-                    <div
-                      style={{
-                        height: 'var(--profile-menu-divider-thickness)',
-                        background: 'var(--profile-menu-divider-color)',
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeProfileMenu()
-                        setSettingsOrigin('profile')
-                        setSettingsOpen(true)
-                      }}
-                      className="flex w-full items-center"
-                      style={{
-                        height: 'var(--profile-menu-item-height)',
-                        paddingLeft: 'var(--profile-menu-item-padding-x)',
-                        paddingRight: 'var(--profile-menu-item-padding-x)',
-                        background: 'var(--profile-menu-item-bg)',
-                      }}
-                    >
-                      <div
-                        className="flex w-full items-center"
-                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
-                      >
-                        <span
-                          className="font-sf-ui-light"
-                          style={{
-                            fontSize: 'var(--profile-menu-item-font-size)',
-                            color: 'var(--profile-menu-item-text-color)',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          Настройки
-                        </span>
-                        <div
-                          style={{
-                            marginLeft: 'auto',
-                            width: 'var(--profile-menu-item-icon-size)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                          }}
-                        >
-                          <img
-                            src="/setting/settings.svg"
-                            alt=""
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeProfileMenu()
+                              setSettingsOrigin('profile')
+                              setSettingsOpen(true)
+                            }}
+                            className="flex w-full items-center"
                             style={{
-                              width: 'var(--profile-menu-item-icon-size)',
-                              height: 'var(--profile-menu-item-icon-size)',
-                              filter: 'var(--profile-menu-item-icon-filter)',
+                              height: 'var(--profile-menu-item-height)',
+                              paddingLeft: 'var(--profile-menu-item-padding-x)',
+                              paddingRight: 'var(--profile-menu-item-padding-x)',
+                              background: 'var(--profile-menu-item-bg)',
+                            }}
+                          >
+                            <div
+                              className="flex w-full items-center"
+                              style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                            >
+                              <span
+                                className="font-sf-ui-light"
+                                style={{
+                                  fontSize: 'var(--profile-menu-item-font-size)',
+                                  color: 'var(--profile-menu-item-text-color)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                Настройки
+                              </span>
+                              <div
+                                style={{
+                                  marginLeft: 'auto',
+                                  width: 'var(--profile-menu-item-icon-size)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'flex-end',
+                                }}
+                              >
+                                <img
+                                  src="/setting/settings.svg"
+                                  alt=""
+                                  style={{
+                                    width: 'var(--profile-menu-item-icon-size)',
+                                    height: 'var(--profile-menu-item-icon-size)',
+                                    filter: 'var(--profile-menu-item-icon-filter)',
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </button>
+                          <div
+                            style={{
+                              height: 'var(--profile-menu-divider-thickness)',
+                              background: 'var(--profile-menu-divider-color)',
                             }}
                           />
-                        </div>
-                      </div>
-                    </button>
-                    <div
-                      style={{
-                        height: 'var(--profile-menu-divider-thickness)',
-                        background: 'var(--profile-menu-divider-color)',
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
                         closeProfileMenu()
                       }}
                       className="flex w-full items-center"
@@ -653,7 +707,12 @@ export default function HomeScreen() {
               <div className="relative flex items-center gap-1 p-1.5">
                 <button
                   type="button"
-                  onClick={() => setTab('ads')}
+                  onClick={() => {
+                    setTab('ads')
+                    setViewProfileMode('own')
+                    setViewProfileUserId(null)
+                    setProfileReturnAd(null)
+                  }}
                   className="relative flex-[7] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
                   style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
                 >
@@ -685,7 +744,12 @@ export default function HomeScreen() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTab('profile')}
+                  onClick={() => {
+                    setTab('profile')
+                    setViewProfileMode('own')
+                    setViewProfileUserId(null)
+                    setProfileReturnAd(null)
+                  }}
                   className="relative flex-[3] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
                   style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
                 >
@@ -723,7 +787,7 @@ export default function HomeScreen() {
           className="absolute left-0 w-full bg-[#0A0A0A]"
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
-        {profileEdit && tab === 'profile' && (
+        {profileEdit && tab === 'profile' && viewProfileMode === 'own' && (
           <ProfileEdit
             onClose={() => {
               setProfileEdit(false)
@@ -763,6 +827,16 @@ export default function HomeScreen() {
           <AdDetail
             ad={selectedAd}
             onClose={() => {
+              setSelectedAd(null)
+            }}
+            onOpenSellerProfile={(ad) => {
+              if (!ad.userId) return
+              setTab('profile')
+              setViewProfileMode('foreign')
+              setViewProfileUserId(ad.userId)
+              setProfileReturnAd(ad)
+              setProfileTab('ads')
+              setProfileEdit(false)
               setSelectedAd(null)
             }}
           />

@@ -286,12 +286,12 @@ export default function Setting({
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
                   <img
                     src="/setting/colors-01.svg"
-                    alt="Персонализация"
+                    alt="Улучшение аватара"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"
                   />
                   <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Персонализация
+                    Улучшение аватара
                   </span>
                 </div>
                 <img
@@ -339,7 +339,7 @@ export default function Setting({
                     className="opacity-60"
                   />
                   <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Просмотр публикаций
+                    Контакты
                   </span>
                 </div>
                 <img

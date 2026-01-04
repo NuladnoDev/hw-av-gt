@@ -26,12 +26,16 @@ const CATEGORY_LABELS: Record<string, string> = {
 export default function AdDetail({
   ad,
   onClose,
+  onOpenSellerProfile,
 }: {
   ad: StoredAd
   onClose: () => void
+  onOpenSellerProfile?: (ad: StoredAd) => void
 }) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [showAllSpecs, setShowAllSpecs] = useState(false)
+  const [showFullDescription, setShowFullDescription] = useState(false)
+  const [expandedSpecIndex, setExpandedSpecIndex] = useState<number | null>(null)
 
   const images =
     ad.imageUrls && ad.imageUrls.length > 0
@@ -198,14 +202,20 @@ export default function AdDetail({
                 >
                   {ad.price} ₽
                 </div>
-                <div className="flex items-center justify-center rounded-full bg-[#1f1f1f] px-3 py-1.5">
+                <button
+                  type="button"
+                  className="flex items-center justify-center rounded-full bg-[#1f1f1f] px-3 py-1.5"
+                  onClick={() => {
+                    if (onOpenSellerProfile) onOpenSellerProfile(ad)
+                  }}
+                >
                   <span
                     className="text-white"
                     style={{ fontSize: 'var(--ad-detail-tag-size, 12px)' }}
                   >
                     @{sellerTag}
                   </span>
-                </div>
+                </button>
               </div>
             </div>
 
@@ -257,24 +267,47 @@ export default function AdDetail({
                 Характеристики
               </h2>
               <div className="space-y-3">
-                {mainSpecs.map((spec) => (
-                  <div key={spec.label} className="flex items-center justify-between">
-                    <span
-                      className="text-gray-400"
-                      style={{
-                        fontSize: 'var(--ad-detail-label-size, 13px)',
-                      }}
+                {mainSpecs.map((spec, idx) => (
+                  <div key={spec.label} className="flex flex-col">
+                    <div
+                      className="flex items-start justify-between cursor-pointer py-1"
+                      onClick={() =>
+                        setExpandedSpecIndex(expandedSpecIndex === idx ? null : idx)
+                      }
                     >
-                      {spec.label}
-                    </span>
-                    <span
-                      className="text-white"
-                      style={{
-                        fontSize: 'var(--ad-detail-value-size, 13px)',
-                      }}
-                    >
-                      {spec.value}
-                    </span>
+                      <span
+                        className="text-gray-400 shrink-0 mr-4 mt-0.5"
+                        style={{
+                          fontSize: 'var(--ad-detail-label-size, 13px)',
+                        }}
+                      >
+                        {spec.label}
+                      </span>
+                      <div className="flex-1 min-w-0 text-right overflow-hidden">
+                        <motion.div
+                          initial={false}
+                          animate={{ height: 'auto' }}
+                          className="flex flex-col items-end"
+                        >
+                          <span
+                            className={`text-white transition-colors duration-300 ${
+                              expandedSpecIndex === idx
+                                ? 'whitespace-normal break-words'
+                                : 'truncate block w-full'
+                            }`}
+                            style={{
+                              fontSize: 'var(--ad-detail-value-size, 13px)',
+                              color:
+                                expandedSpecIndex !== idx && spec.value.length > 25
+                                  ? 'rgba(255, 255, 255, 0.9)'
+                                  : 'white',
+                            }}
+                          >
+                            {spec.value}
+                          </span>
+                        </motion.div>
+                      </div>
+                    </div>
                   </div>
                 ))}
                 {hasExtraSpecs && (
@@ -288,26 +321,54 @@ export default function AdDetail({
                     className="overflow-hidden"
                   >
                     <div className="space-y-3 pt-2">
-                      {extraSpecs.map((spec) => (
-                        <div key={spec.label} className="flex items-center justify-between">
-                          <span
-                            className="text-gray-400"
-                            style={{
-                              fontSize: 'var(--ad-detail-label-size, 13px)',
-                            }}
-                          >
-                            {spec.label}
-                          </span>
-                          <span
-                            className="text-white"
-                            style={{
-                              fontSize: 'var(--ad-detail-value-size, 13px)',
-                            }}
-                          >
-                            {spec.value}
-                          </span>
-                        </div>
-                      ))}
+                      {extraSpecs.map((spec, idx) => {
+                        const globalIdx = mainSpecs.length + idx
+                        return (
+                          <div key={spec.label} className="flex flex-col">
+                            <div
+                              className="flex items-start justify-between cursor-pointer py-1"
+                              onClick={() =>
+                                setExpandedSpecIndex(
+                                  expandedSpecIndex === globalIdx ? null : globalIdx
+                                )
+                              }
+                            >
+                              <span
+                                className="text-gray-400 shrink-0 mr-4 mt-0.5"
+                                style={{
+                                  fontSize: 'var(--ad-detail-label-size, 13px)',
+                                }}
+                              >
+                                {spec.label}
+                              </span>
+                              <div className="flex-1 min-w-0 text-right overflow-hidden">
+                                <motion.div
+                                  initial={false}
+                                  animate={{ height: 'auto' }}
+                                  className="flex flex-col items-end"
+                                >
+                                  <span
+                                    className={`text-white transition-colors duration-300 ${
+                                      expandedSpecIndex === globalIdx
+                                        ? 'whitespace-normal break-words'
+                                        : 'truncate block w-full'
+                                    }`}
+                                    style={{
+                                      fontSize: 'var(--ad-detail-value-size, 13px)',
+                                      color:
+                                        expandedSpecIndex !== globalIdx && spec.value.length > 25
+                                          ? 'rgba(255, 255, 255, 0.9)'
+                                          : 'white',
+                                    }}
+                                  >
+                                    {spec.value}
+                                  </span>
+                                </motion.div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </motion.div>
                 )}
@@ -343,14 +404,37 @@ export default function AdDetail({
                 >
                   Описание
                 </h2>
-                <p
-                  className="text-gray-300 leading-relaxed"
-                  style={{
-                    fontSize: 'var(--ad-detail-body-size, 14px)',
-                  }}
-                >
-                  {descriptionText}
-                </p>
+                <div className="relative">
+                  <p
+                    className={`text-gray-300 leading-relaxed transition-all duration-300 ${
+                      !showFullDescription ? 'line-clamp-3' : ''
+                    }`}
+                    style={{
+                      fontSize: 'var(--ad-detail-body-size, 14px)',
+                    }}
+                    onClick={() => setShowFullDescription(!showFullDescription)}
+                  >
+                    {descriptionText}
+                  </p>
+                  {!showFullDescription && descriptionText.length > 150 && (
+                    <button
+                      type="button"
+                      className="mt-1 text-blue-400 text-sm font-medium hover:text-blue-300 transition-colors"
+                      onClick={() => setShowFullDescription(true)}
+                    >
+                      Показать полностью
+                    </button>
+                  )}
+                  {showFullDescription && descriptionText.length > 150 && (
+                    <button
+                      type="button"
+                      className="mt-1 text-blue-400 text-sm font-medium hover:text-blue-300 transition-colors"
+                      onClick={() => setShowFullDescription(false)}
+                    >
+                      Скрыть
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
