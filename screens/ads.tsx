@@ -21,6 +21,11 @@ const ADS_SIDE_PADDING = 4
 const ADS_GRID_GAP = 6
 const ADS_TITLE_MAX_LENGTH = 40
 
+export type AdSpecItem = {
+  label: string
+  value: string
+}
+
 export type StoredAd = {
   id: string
   userId: string | null
@@ -33,6 +38,7 @@ export type StoredAd = {
   condition: string | null
   location: string | null
   category: string | null
+  specs?: AdSpecItem[]
   createdAt: number
 }
 
@@ -47,6 +53,7 @@ type AdsTableRow = {
   condition: string | null
   location: string | null
   category: string | null
+  specs: string | null
   created_at: string | null
 }
 
@@ -54,6 +61,7 @@ const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
   const created = row.created_at ? new Date(row.created_at).getTime() : Date.now()
   let imageUrl = ''
   let imageUrls: string[] | undefined
+  let specs: AdSpecItem[] | undefined
   const raw = row.image_url ?? ''
   if (raw) {
     try {
@@ -73,6 +81,27 @@ const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
       imageUrl = raw
     }
   }
+  const rawSpecs = row.specs
+  if (rawSpecs) {
+    try {
+      const parsed = JSON.parse(rawSpecs) as unknown
+      if (Array.isArray(parsed)) {
+        const items: AdSpecItem[] = []
+        for (const it of parsed) {
+          if (!it || typeof it !== 'object') continue
+          const label = (it as any).label
+          const value = (it as any).value
+          if (typeof label === 'string' && label.length > 0 && typeof value === 'string' && value.length > 0) {
+            items.push({ label, value })
+          }
+        }
+        if (items.length > 0) {
+          specs = items
+        }
+      }
+    } catch {
+    }
+  }
   return {
     id: row.id,
     userId: row.user_id ?? null,
@@ -85,6 +114,7 @@ const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
     condition: row.condition,
     location: row.location,
     category: row.category,
+    specs,
     createdAt: created,
   }
 }

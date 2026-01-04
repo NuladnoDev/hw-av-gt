@@ -150,6 +150,57 @@ export default function AdsCreate({
     return found?.label ?? null
   }
 
+  type SpecItem = { label: string; value: string }
+
+  const buildSpecs = (): SpecItem[] => {
+    const specs: SpecItem[] = []
+    const push = (label: string, raw: string) => {
+      const v = raw.trim()
+      if (v.length === 0) return
+      specs.push({ label, value: v })
+    }
+
+    if (category === 'nicotine') {
+      push('Бренд', brand)
+      push('Тип устройства', nicotineFormat)
+      push('Объем жидкости', nicotineTankVolume)
+      push('Емкость аккумулятора', nicotineBatteryCapacity)
+      push('Крепость никотина', nicotineStrength)
+      push('Количество затяжек', nicotinePuffs)
+      push('Вкус', nicotineFlavor)
+      push('Цвет', color)
+    } else if (category === 'things') {
+      push('Бренд', brand)
+      push('Модель', thingsModel)
+      push('Память', thingsMemory)
+      push('Диагональ', thingsDiagonal)
+      push('Год выпуска', thingsYear)
+      push('Гарантия', thingsWarranty)
+      push('Комплектация', thingsKit)
+      push('Цвет', color)
+    } else if (category === 'service') {
+      push('Вид услуги', serviceType)
+      push('Опыт работы', serviceExperience)
+      push('Формат работы', serviceFormat)
+      push('Стоимость', servicePrice)
+      push('Регион', serviceRegion)
+    } else if (category === 'job') {
+      push('Должность', jobPosition)
+      push('Зарплата', jobSalary)
+      push('Уровень занятости', jobEmploymentType)
+      push('График', jobSchedule)
+      push('Формат работы', jobFormat)
+      push('Требуемый опыт', jobExperience)
+    } else if (category === 'other') {
+      push('Тип товара', otherType)
+      push('Бренд', brand)
+      push('Цвет', color)
+      push('Дополнительно', otherDetails)
+    }
+
+    return specs
+  }
+
   const publishAd = async (): Promise<boolean> => {
     const titleTrim = title.trim()
     const descriptionTrim = description.trim()
@@ -160,6 +211,9 @@ export default function AdsCreate({
 
     const imageUrl = JSON.stringify(images)
     if (!imageUrl) return false
+
+    const specsList = buildSpecs()
+    const specsJson = specsList.length > 0 ? JSON.stringify(specsList) : null
 
     let uid: string | null = null
     let userTag: string | null = null
@@ -206,18 +260,19 @@ export default function AdsCreate({
     }
 
     try {
-      let payload: Record<string, unknown> = basePayload
+      const payload: Record<string, unknown> = { ...basePayload }
       if (descriptionTrim.length > 0) {
-        payload = { ...basePayload, description: descriptionTrim }
+        payload.description = descriptionTrim
+      }
+      if (specsJson) {
+        payload.specs = specsJson
       }
 
       let { data, error } = await client.from('ads').insert(payload).select('*').single()
 
-      if (error && descriptionTrim.length > 0) {
-        const message = typeof (error as any).message === 'string' ? (error as any).message : ''
-        if (message.toLowerCase().includes('description')) {
-          ;({ data, error } = await client.from('ads').insert(basePayload).select('*').single())
-        }
+      if (error && (descriptionTrim.length > 0 || specsJson)) {
+        const fallback: Record<string, unknown> = { ...basePayload }
+        ;({ data, error } = await client.from('ads').insert(fallback).select('*').single())
       }
 
       if (error) {

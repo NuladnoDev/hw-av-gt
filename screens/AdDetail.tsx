@@ -5,7 +5,7 @@ import { useState } from 'react'
 // @ts-ignore react-slick не имеет встроенных типов
 import Slider from 'react-slick'
 import { motion } from 'motion/react'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { StoredAd } from './ads'
 
 const CONDITION_COLORS: Record<string, string> = {
@@ -31,6 +31,7 @@ export default function AdDetail({
   onClose: () => void
 }) {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [showAllSpecs, setShowAllSpecs] = useState(false)
 
   const images =
     ad.imageUrls && ad.imageUrls.length > 0
@@ -105,6 +106,29 @@ export default function AdDetail({
 
   const descriptionText =
     ad.description && ad.description.trim().length > 0 ? ad.description : ad.title
+
+  const specs: { label: string; value: string }[] = []
+  if (categoryLabel) {
+    specs.push({ label: 'Категория', value: categoryLabel })
+  }
+  if (ad.condition) {
+    specs.push({ label: 'Состояние', value: ad.condition })
+  }
+  if (locationText) {
+    specs.push({ label: 'Город', value: locationText })
+  }
+  if (Array.isArray(ad.specs)) {
+    for (const s of ad.specs) {
+      if (!s || typeof s.label !== 'string' || typeof s.value !== 'string') continue
+      if (!s.label || !s.value) continue
+      specs.push({ label: s.label, value: s.value })
+    }
+  }
+
+  const mainSpecsCount = 5
+  const mainSpecs = specs.slice(0, mainSpecsCount)
+  const extraSpecs = specs.slice(mainSpecsCount)
+  const hasExtraSpecs = extraSpecs.length > 0
 
   return (
     <motion.div
@@ -233,15 +257,15 @@ export default function AdDetail({
                 Характеристики
               </h2>
               <div className="space-y-3">
-                {categoryLabel && (
-                  <div className="flex items-center justify-between">
+                {mainSpecs.map((spec) => (
+                  <div key={spec.label} className="flex items-center justify-between">
                     <span
                       className="text-gray-400"
                       style={{
                         fontSize: 'var(--ad-detail-label-size, 13px)',
                       }}
                     >
-                      Категория
+                      {spec.label}
                     </span>
                     <span
                       className="text-white"
@@ -249,48 +273,61 @@ export default function AdDetail({
                         fontSize: 'var(--ad-detail-value-size, 13px)',
                       }}
                     >
-                      {categoryLabel}
+                      {spec.value}
                     </span>
                   </div>
+                ))}
+                {hasExtraSpecs && (
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      height: showAllSpecs ? 'auto' : 0,
+                      opacity: showAllSpecs ? 1 : 0,
+                    }}
+                    transition={{ duration: 0.24, ease: 'easeOut' }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-3 pt-2">
+                      {extraSpecs.map((spec) => (
+                        <div key={spec.label} className="flex items-center justify-between">
+                          <span
+                            className="text-gray-400"
+                            style={{
+                              fontSize: 'var(--ad-detail-label-size, 13px)',
+                            }}
+                          >
+                            {spec.label}
+                          </span>
+                          <span
+                            className="text-white"
+                            style={{
+                              fontSize: 'var(--ad-detail-value-size, 13px)',
+                            }}
+                          >
+                            {spec.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
                 )}
-                {ad.condition && (
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="text-gray-400"
-                      style={{
-                        fontSize: 'var(--ad-detail-label-size, 13px)',
-                      }}
+                {hasExtraSpecs && (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-center gap-2 text-gray-400"
+                      style={{ fontSize: 'var(--ad-detail-meta-size, 12px)' }}
+                      onClick={() => setShowAllSpecs((v) => !v)}
                     >
-                      Состояние
-                    </span>
-                    <span
-                      className="text-white"
-                      style={{
-                        fontSize: 'var(--ad-detail-value-size, 13px)',
-                      }}
-                    >
-                      {ad.condition}
-                    </span>
-                  </div>
-                )}
-                {locationText && (
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="text-gray-400"
-                      style={{
-                        fontSize: 'var(--ad-detail-label-size, 13px)',
-                      }}
-                    >
-                      Город
-                    </span>
-                    <span
-                      className="text-white"
-                      style={{
-                        fontSize: 'var(--ad-detail-value-size, 13px)',
-                      }}
-                    >
-                      {locationText}
-                    </span>
+                      <span className="flex-1 h-px bg-[#2f2f2f]" />
+                      <span>{showAllSpecs ? 'Свернуть' : 'Показать ещё'}</span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${
+                          showAllSpecs ? 'rotate-180' : ''
+                        }`}
+                      />
+                      <span className="flex-1 h-px bg-[#2f2f2f]" />
+                    </button>
                   </div>
                 )}
               </div>
