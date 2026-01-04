@@ -14,7 +14,7 @@ import AdDetail from './AdDetail'
 export default function HomeScreen() {
   const [scale, setScale] = useState(1)
   const [tab, setTab] = useState<'ads' | 'profile'>('ads')
-  const [profileTab, setProfileTab] = useState<'ads' | 'posts' | 'about' | 'friends'>('posts')
+  const [profileTab, setProfileTab] = useState<'ads' | 'about' | 'friends'>('ads')
   const [profileEdit, setProfileEdit] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsOrigin, setSettingsOrigin] = useState<'profile' | 'edit' | null>(null)

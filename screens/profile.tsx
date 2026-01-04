@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
 import { getSupabase } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 import { AdCard, loadAdsFromStorage, deleteAdById, StoredAd } from './ads'
@@ -10,8 +11,8 @@ export default function Profile({
   userTag,
   editMode,
 }: {
-  profileTab: 'posts' | 'ads' | 'about' | 'friends'
-  setProfileTab: (t: 'posts' | 'ads' | 'about' | 'friends') => void
+  profileTab: 'ads' | 'about' | 'friends'
+  setProfileTab: (t: 'ads' | 'about' | 'friends') => void
   userTag?: string
   editMode?: boolean
 }) {
@@ -281,7 +282,23 @@ export default function Profile({
   }
 
   return (
-    <>
+    <div
+      style={
+        {
+          '--profile-max-width': '380px',
+          '--profile-switch-negative-margin': '12px',
+          '--profile-about-negative-margin': '12px',
+          '--profile-switch-height': '52px',
+          '--profile-switch-padding': '4px',
+          '--profile-switch-offset': '16px',
+          '--profile-section-margin-top': '24px',
+          '--profile-name-size': '28px',
+          '--profile-name-margin-top': '12px',
+          '--profile-avatar-size': '110px',
+          '--profile-cover-height': '140px',
+        } as React.CSSProperties
+      }
+    >
       <div
         className="absolute left-0 w-full"
         style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)', height: 'var(--profile-cover-height)' }}
@@ -419,87 +436,79 @@ export default function Profile({
               />
             </div>
           )}
-          <div className="flex w-full items-center justify-center" style={{ marginTop: 'var(--profile-switch-offset)' }}>
-            <div className="flex h-[45px] items-center justify-between rounded-[12px] border border-[#2B2B2B] bg-[#111111] px-2">
-              <button
-                type="button"
-                onClick={() => setProfileTab('posts')}
-                className={`h-[32px] rounded-[8px] px-3 text-[14px] ${profileTab === 'posts' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
-              >
-                Посты
-              </button>
+          <div 
+            className="flex w-full items-center justify-center" 
+            style={{ 
+              marginTop: 'var(--profile-switch-offset)',
+              marginLeft: 'calc(-1 * var(--profile-switch-negative-margin, 12px))',
+              marginRight: 'calc(-1 * var(--profile-switch-negative-margin, 12px))',
+              width: 'calc(100% + (2 * var(--profile-switch-negative-margin, 12px)))'
+            }}
+          >
+            <div
+              className="relative flex w-full items-center gap-1 rounded-[16px] border border-[#2B2B2B] bg-[#111111]"
+              style={{
+                height: 'var(--profile-switch-height, 52px)',
+                padding: 'var(--profile-switch-padding, 4px)',
+                maxWidth: 'var(--profile-max-width, 380px)',
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setProfileTab('ads')}
-                className={`h-[32px] rounded-[8px] px-3 text-[14px] ${profileTab === 'ads' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
+                className="relative flex-1 h-full rounded-[12px] px-3 text-[14px] overflow-hidden"
               >
-                Объявления
+                {profileTab === 'ads' && (
+                  <motion.div
+                    layoutId="profile-tabs-active"
+                    className="absolute inset-0 rounded-[12px] bg-[#222222]"
+                    transition={{
+                      type: 'spring',
+                      stiffness: 500,
+                      damping: 30,
+                      mass: 0.8,
+                    }}
+                  />
+                )}
+                <span className={`relative z-10 ${profileTab === 'ads' ? 'text-white' : 'text-white/70'}`}>Объявления</span>
               </button>
               <button
                 type="button"
                 onClick={() => setProfileTab('about')}
-                className={`h-[32px] rounded-[8px] px-3 text-[14px] ${profileTab === 'about' ? 'bg-[#222222] text-white' : 'text-white/70'}`}
+                className="relative flex-1 h-full rounded-[12px] px-3 text-[14px] overflow-hidden"
               >
-                О себе
+                {profileTab === 'about' && (
+                  <motion.div
+                    layoutId="profile-tabs-active"
+                    className="absolute inset-0 rounded-[12px] bg-[#222222]"
+                    transition={{
+                      type: 'spring',
+                      stiffness: 500,
+                      damping: 30,
+                      mass: 0.8,
+                    }}
+                  />
+                )}
+                <span className={`relative z-10 ${profileTab === 'about' ? 'text-white' : 'text-white/70'}`}>О себе</span>
               </button>
               <button
                 type="button"
                 aria-disabled="true"
-                className="h-[32px] rounded-[8px] px-3 text-[14px] text-white/40 cursor-not-allowed"
+                className="flex-1 h-full rounded-[12px] px-3 text-[14px] text-white/40 cursor-not-allowed"
               >
                 Скоро
               </button>
             </div>
           </div>
-          <div key={profileTab} className="mt-12 relative w-full h-full profile-switch-transition">
-            {profileTab === 'posts' ? (
-              <>
-                <img
-                  src="/interface/glass.png"
-                  alt="empty"
-                  style={{
-                    position: 'absolute',
-                    top: 'var(--profile-empty-icon-top)',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 'var(--profile-empty-icon-size)',
-                    height: 'var(--profile-empty-icon-size)',
-                  }}
-                />
-                <div
-                  className="text-center text-[16px] leading-[1.4em] text-[#A1A1A1]"
-                  style={{ position: 'absolute', left: 0, right: 0, bottom: 'var(--profile-empty-text-bottom)' }}
-                >
-                  У вас ещё нет публикаций
-                </div>
-                <button
-                  type="button"
-                  className="text-center rounded-[10px] bg-[#111111]"
-                  style={{
-                    position: 'absolute',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    bottom: 'var(--profile-empty-button-bottom)',
-                    width: 'var(--profile-empty-button-width)',
-                    height: 'var(--profile-empty-button-height)',
-                    borderRadius: 'var(--profile-empty-button-radius)',
-                    background: 'var(--profile-empty-button-bg)',
-                  }}
-                >
-                  <span
-                    className="inline-block font-vk-demi"
-                    style={{
-                      fontSize: 'var(--profile-empty-button-text-size)',
-                      color: 'var(--profile-empty-button-text-color)',
-                      lineHeight: '1.25em',
-                      letterSpacing: '0.015em',
-                    }}
-                  >
-                    Добавить
-                  </span>
-                </button>
-              </>
-            ) : profileTab === 'ads' ? (
+          <motion.div
+            key={profileTab}
+            className="relative w-full h-full profile-switch-transition"
+            style={{ marginTop: 'var(--profile-section-margin-top, 24px)' }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            {profileTab === 'ads' ? (
               <div className="w-full">
                 {userAds.length > 0 ? (
                   <div
@@ -576,112 +585,191 @@ export default function Profile({
                 )}
               </div>
             ) : profileTab === 'about' ? (
-                <>
-                <div style={{ marginLeft: '-24px', marginRight: '-24px' }}>
-                  <div className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '92%' }}>
-                    <div style={{ fontSize: 'var(--profile-public-title-size)' }} className="leading-[1.7em] text-white font-ttc-bold mb-2">Описание профиля</div>
+              <div
+                className="mx-auto w-full rounded-[16px] border border-[#2B2B2B] bg-[#111111]/80 p-4"
+                style={{ 
+                  maxWidth: 'var(--profile-max-width, 380px)',
+                  marginLeft: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
+                  marginRight: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
+                  width: 'calc(100% + (2 * var(--profile-about-negative-margin, 12px)))'
+                }}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <div
+                      className="mb-2 font-ttc-bold text-white"
+                      style={{ fontSize: 'var(--profile-public-title-size)' }}
+                    >
+                      Описание профиля
+                    </div>
                     {editMode ? (
                       <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         onBlur={() => saveDescription(description.trim())}
-                        className="w-full min-h-[80px] rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 py-2 leading-[1.6em] text-white outline-none"
+                        className="w-full min-h-[80px] rounded-[12px] border border-[#2B2B2B] bg-[#111111] px-3 py-2 leading-[1.6em] text-white outline-none"
                         style={{ fontSize: 'var(--profile-public-text-size)' }}
                       />
                     ) : (
-                      <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>
+                      <div
+                        className="rounded-[12px] bg-[#0D0D0D] px-3 py-2 leading-[1.6em] text-[#A1A1A1]"
+                        style={{ fontSize: 'var(--profile-public-text-size)' }}
+                      >
                         {description && description.trim().length > 0 ? description : 'Описание не заполнено'}
                       </div>
                     )}
                   </div>
-                  <div className="mx-auto mt-3 rounded-[12px] border border-[#2B2B2B] bg-[#111111]/80 p-4" style={{ width: '92%' }}>
-                    <div style={{ fontSize: 'var(--profile-public-title-size)' }} className="leading-[1.7em] text-white font-ttc-bold mb-2">О себе</div>
+                  <motion.div
+                    className="rounded-[14px] bg-[#101010] px-3 py-3"
+                    initial={false}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                  >
+                    <div
+                      className="mb-2 font-ttc-bold text-white"
+                      style={{ fontSize: 'var(--profile-public-title-size)' }}
+                    >
+                      О себе
+                    </div>
                     <div className="space-y-3">
-                      <div>
-                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Возраст</div>
-                        {editMode ? (
-                          <input
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            onBlur={() => saveAge(age.trim())}
-                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
-                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
-                          />
-                        ) : (
-                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{age && age.trim().length > 0 ? age : 'Не указан'}</div>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex-1 text-white/60"
+                          style={{ fontSize: 'var(--profile-public-text-size)' }}
+                        >
+                          Возраст
+                        </div>
+                        <div className="flex-[2]">
+                          {editMode ? (
+                            <input
+                              value={age}
+                              onChange={(e) => setAge(e.target.value)}
+                              onBlur={() => saveAge(age.trim())}
+                              className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-3 leading-[1.4em] text-white outline-none"
+                              style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                            />
+                          ) : (
+                            <div
+                              className="rounded-[10px] bg-[#151515] px-3 py-1.5 text-right text-[#E5E5E5]"
+                              style={{ fontSize: 'var(--profile-public-text-size)' }}
+                            >
+                              {age && age.trim().length > 0 ? age : 'Не указан'}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Место жительства</div>
-                        {editMode ? (
-                          <input
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
-                            onBlur={() => saveCity(city.trim())}
-                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
-                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
-                          />
-                        ) : (
-                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{city && city.trim().length > 0 ? city : 'Не указано'}</div>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex-1 text-white/60"
+                          style={{ fontSize: 'var(--profile-public-text-size)' }}
+                        >
+                          Город
+                        </div>
+                        <div className="flex-[2]">
+                          {editMode ? (
+                            <input
+                              value={city}
+                              onChange={(e) => setCity(e.target.value)}
+                              onBlur={() => saveCity(city.trim())}
+                              className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-3 leading-[1.4em] text-white outline-none"
+                              style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                            />
+                          ) : (
+                            <div
+                              className="rounded-[10px] bg-[#151515] px-3 py-1.5 text-right text-[#E5E5E5]"
+                              style={{ fontSize: 'var(--profile-public-text-size)' }}
+                            >
+                              {city && city.trim().length > 0 ? city : 'Не указано'}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Пол</div>
-                        {editMode ? (
-                          <input
-                            value={gender}
-                            onChange={(e) => setGender(e.target.value)}
-                            onBlur={() => saveGender(gender.trim())}
-                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
-                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
-                          />
-                        ) : (
-                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{gender && gender.trim().length > 0 ? gender : 'Не указан'}</div>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex-1 text-white/60"
+                          style={{ fontSize: 'var(--profile-public-text-size)' }}
+                        >
+                          Пол
+                        </div>
+                        <div className="flex-[2]">
+                          {editMode ? (
+                            <input
+                              value={gender}
+                              onChange={(e) => setGender(e.target.value)}
+                              onBlur={() => saveGender(gender.trim())}
+                              className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-3 leading-[1.4em] text-white outline-none"
+                              style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                            />
+                          ) : (
+                            <div
+                              className="rounded-[10px] bg-[#151515] px-3 py-1.5 text-right text-[#E5E5E5]"
+                              style={{ fontSize: 'var(--profile-public-text-size)' }}
+                            >
+                              {gender && gender.trim().length > 0 ? gender : 'Не указан'}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Политические взгляды</div>
-                        {editMode ? (
-                          <input
-                            value={political}
-                            onChange={(e) => setPolitical(e.target.value)}
-                            onBlur={() => savePolitical(political.trim())}
-                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
-                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
-                          />
-                        ) : (
-                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{political && political.trim().length > 0 ? political : 'Не указано'}</div>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex-1 text-white/60"
+                          style={{ fontSize: 'var(--profile-public-text-size)' }}
+                        >
+                          Взгляды
+                        </div>
+                        <div className="flex-[2]">
+                          {editMode ? (
+                            <input
+                              value={political}
+                              onChange={(e) => setPolitical(e.target.value)}
+                              onBlur={() => savePolitical(political.trim())}
+                              className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-3 leading-[1.4em] text-white outline-none"
+                              style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                            />
+                          ) : (
+                            <div
+                              className="rounded-[10px] bg-[#151515] px-3 py-1.5 text-right text-[#E5E5E5]"
+                              style={{ fontSize: 'var(--profile-public-text-size)' }}
+                            >
+                              {political && political.trim().length > 0 ? political : 'Не указано'}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="leading-[1.7em] text-white/80" style={{ fontSize: 'var(--profile-public-text-size)' }}>Увлечения</div>
-                        {editMode ? (
-                          <input
-                            value={hobbies}
-                            onChange={(e) => setHobbies(e.target.value)}
-                            onBlur={() => saveHobbies(hobbies.trim())}
-                            className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111]/80 px-3 leading-[1.4em] text-white outline-none"
-                            style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
-                          />
-                        ) : (
-                          <div className="leading-[1.7em] text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>{hobbies && hobbies.trim().length > 0 ? hobbies : 'Не указано'}</div>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex-1 text-white/60"
+                          style={{ fontSize: 'var(--profile-public-text-size)' }}
+                        >
+                          Увлечения
+                        </div>
+                        <div className="flex-[2]">
+                          {editMode ? (
+                            <input
+                              value={hobbies}
+                              onChange={(e) => setHobbies(e.target.value)}
+                              onBlur={() => saveHobbies(hobbies.trim())}
+                              className="w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-3 leading-[1.4em] text-white outline-none"
+                              style={{ height: 'var(--profile-public-input-height)', fontSize: 'var(--profile-public-text-size)' }}
+                            />
+                          ) : (
+                            <div
+                              className="rounded-[10px] bg-[#151515] px-3 py-1.5 text-right text-[#E5E5E5]"
+                              style={{ fontSize: 'var(--profile-public-text-size)' }}
+                            >
+                              {hobbies && hobbies.trim().length > 0 ? hobbies : 'Не указано'}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="mx-auto mt-3" style={{ width: '100%' }}>
-                    <div className="h-[24px] bg-[#0A0A0A]" />
-                  </div>
+                  </motion.div>
                 </div>
-              </>
-            ) : (
-              null
-            )}
-          </div>
+              </div>
+            ) : null}
+          </motion.div>
         </div>
       </div>
-
-      
-    </>
+    </div>
   )
 }
