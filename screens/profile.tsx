@@ -89,6 +89,8 @@ export default function Profile({
     let cancelled = false
     const loadViewer = async () => {
       if (typeof window === 'undefined') return
+      
+      // 1. Try to get real UUID from Supabase Auth
       const client = getSupabase()
       if (client) {
         try {
@@ -97,15 +99,33 @@ export default function Profile({
           const uid = data.user?.id ?? null
           if (typeof uid === 'string' && isUuid(uid)) {
             setViewerId(uid)
+            console.log('Profile: viewerId set from Supabase Auth:', uid)
             return
           }
-        } catch {
+        } catch (e) {
+          console.error('Profile: Supabase auth error:', e)
         }
       }
-      const auth = await loadLocalAuth()
-      if (cancelled) return
-      const id = auth?.uid ?? null
-      setViewerId(typeof id === 'string' && isUuid(id) ? id : null)
+      
+      // 2. Try to get UUID from hw-auth (which should store the real UUID in the 'uid' field)
+      try {
+        const auth = await loadLocalAuth()
+        if (cancelled) return
+        const id = auth?.uid ?? null
+        if (typeof id === 'string' && isUuid(id)) {
+          setViewerId(id)
+          console.log('Profile: viewerId set from local hw-auth UUID:', id)
+          return
+        }
+        
+        // 3. Fallback to whatever is in uid even if not UUID (e.g. hw-0001) for local UI
+        if (id) {
+          setViewerId(id)
+          console.warn('Profile: viewerId set from local hw-auth, but NOT a UUID:', id)
+        }
+      } catch (e) {
+        console.error('Profile: Local auth error:', e)
+      }
     }
     loadViewer()
     return () => {
@@ -144,6 +164,9 @@ export default function Profile({
       const authRaw = window.localStorage.getItem('hw-auth')
       const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
       idLocal = auth?.uid ?? null
+      
+      // If we're on our own profile and the localStorage 'uid' is a tag (hw-XXXX),
+      // we don't have the UUID yet. But it will be set by loadViewer soon.
     }
     setUserId(idLocal)
     const profRaw = window.localStorage.getItem('hw-profiles')
@@ -285,36 +308,78 @@ export default function Profile({
   const ensurePushSubscription = async (): Promise<boolean> => {
     try {
       if (typeof window === 'undefined') return false
-      if (!viewerId) return false
-      if (!('serviceWorker' in navigator)) return false
-      const perm = await Notification.requestPermission()
-      if (perm !== 'granted') return false
-      const reg = await navigator.serviceWorker.register('/sw.js')
-      let sub = await reg.pushManager.getSubscription()
-      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!sub) {
-        if (!publicKey || typeof publicKey !== 'string' || publicKey.length === 0) return false
-        const appServerKey = urlBase64ToArrayBuffer(publicKey)
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: appServerKey,
-        })
+      if (!viewerId) {
+        console.warn('ensurePushSubscription: No viewerId')
+        return false
       }
+      if (!('serviceWorker' in navigator)) {
+        console.warn('ensurePushSubscription: Service workers not supported')
+        return false
+      }
+
+      // Check for permission first
+      let perm = Notification.permission
+      if (perm === 'default') {
+        perm = await Notification.requestPermission()
+      }
+      if (perm !== 'granted') {
+        console.warn('ensurePushSubscription: Permission not granted:', perm)
+        return false
+      }
+
+      // Ensure service worker is registered and ready
+      let reg = await navigator.serviceWorker.getRegistration()
+      if (!reg) {
+        reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      }
+      
+      // Wait for service worker to be ready
+      const readyReg = await navigator.serviceWorker.ready
+      
+      let sub = await readyReg.pushManager.getSubscription()
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      
+      if (!sub) {
+        if (!publicKey || typeof publicKey !== 'string' || publicKey.length === 0) {
+          console.error('ensurePushSubscription: Missing VAPID public key')
+          return false
+        }
+        const appServerKey = urlBase64ToArrayBuffer(publicKey)
+        try {
+          sub = await readyReg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: appServerKey,
+          })
+        } catch (subErr) {
+          console.error('ensurePushSubscription: Failed to subscribe:', subErr)
+          return false
+        }
+      }
+
       if (!sub) return false
+
       if (isUuid(viewerId)) {
-        await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            subscription: sub.toJSON(),
-            userId: viewerId,
-          }),
-        })
+        try {
+          const res = await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscription: sub.toJSON(),
+              userId: viewerId,
+            }),
+          })
+          if (!res.ok) {
+            console.error('ensurePushSubscription: API failed:', await res.text())
+          }
+        } catch (fetchErr) {
+          console.error('ensurePushSubscription: Fetch error:', fetchErr)
+        }
+      } else {
+        console.warn('ensurePushSubscription: viewerId is not a UUID, skipping DB sync:', viewerId)
       }
       return true
-    } catch {
+    } catch (err) {
+      console.error('ensurePushSubscription: Unexpected error:', err)
       return false
     }
   }
@@ -639,51 +704,67 @@ export default function Profile({
                   whileTap={{ scale: 0.96 }}
                   onClick={async () => {
                     if (!viewerId || !userId) {
+                      console.warn('Follow button clicked but missing viewerId or userId:', { viewerId, userId })
                       return
                     }
                     const follower = isUuid(viewerId) ? viewerId : null
                     const target = isUuid(userId) ? userId : null
                     const nextSubscribed = !isSubscribed
                     const nextNotifications = nextSubscribed ? true : false
+                    
+                    // Update UI immediately
                     setIsSubscribed(nextSubscribed)
                     setNotificationsEnabled(nextNotifications)
+                    writeLocalFollow(viewerId, userId, nextSubscribed, nextNotifications)
+
                     const client = getSupabase()
                     if (client && follower && target) {
                       if (nextSubscribed) {
                         try {
-                          await client.from('follows').upsert({
+                          const { error } = await client.from('follows').upsert({
                             follower_id: follower,
                             target_id: target,
                             notifications_enabled: nextNotifications,
                           })
-                          await ensurePushSubscription()
-                          try {
-                            await fetch('/api/push/new-follow', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              body: JSON.stringify({
-                                followerId: follower,
-                                targetId: target,
-                              }),
-                            })
-                          } catch {
+                          if (error) {
+                            console.error('Failed to upsert follow in DB:', error)
+                          } else {
+                            // Only try push subscription if DB sync was successful
+                            try {
+                              await ensurePushSubscription()
+                              await fetch('/api/push/new-follow', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ followerId: follower, targetId: target }),
+                              })
+                            } catch (err) {
+                              console.error('Failed to handle push/notification logic:', err)
+                            }
                           }
-                        } catch {
+                        } catch (err) {
+                          console.error('Unexpected error during follow:', err)
                         }
                       } else {
                         try {
-                          await client
+                          const { error } = await client
                             .from('follows')
                             .delete()
                             .eq('follower_id', follower)
                             .eq('target_id', target)
-                        } catch {
+                          if (error) {
+                            console.error('Failed to delete follow from DB:', error)
+                          }
+                        } catch (err) {
+                          console.error('Unexpected error during unfollow:', err)
                         }
                       }
+                    } else {
+                      console.warn('Follow button: Skipping DB sync because IDs are not UUIDs or client is missing', { 
+                        hasClient: !!client, 
+                        follower, 
+                        target 
+                      })
                     }
-                    writeLocalFollow(viewerId, userId, nextSubscribed, nextNotifications)
                   }}
                 >
                   {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
@@ -706,13 +787,20 @@ export default function Profile({
                       const follower = isUuid(viewerId) ? viewerId : null
                       const target = isUuid(userId) ? userId : null
                       const next = !notificationsEnabled
+                      
+                      // Update UI immediately
+                      setNotificationsEnabled(next)
+                      writeLocalFollow(viewerId, userId, true, next)
+
                       if (next) {
-                        const ok = await ensurePushSubscription()
-                        if (!ok) {
-                          return
+                        // Attempt to ensure subscription but don't block if it fails
+                        try {
+                          await ensurePushSubscription()
+                        } catch (err) {
+                          console.error('Failed to ensure push subscription:', err)
                         }
                       }
-                      setNotificationsEnabled(next)
+                      
                       const client = getSupabase()
                       if (client && follower && target) {
                         try {
@@ -723,10 +811,10 @@ export default function Profile({
                               target_id: target,
                               notifications_enabled: next,
                             })
-                        } catch {
+                        } catch (err) {
+                          console.error('Failed to sync notification preference to DB:', err)
                         }
                       }
-                      writeLocalFollow(viewerId, userId, true, next)
                     }}
                   >
                     <motion.div
