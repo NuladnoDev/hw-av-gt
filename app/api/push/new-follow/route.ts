@@ -24,7 +24,7 @@ function getServerSupabase() {
 }
 
 function configureWebPush() {
-  const publicKey = process.env.VAPID_PUBLIC_KEY
+  const publicKey = process.env.VAPID_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   const privateKey = process.env.VAPID_PRIVATE_KEY
   if (!publicKey || !privateKey) return false
   webpush.setVapidDetails('mailto:example@example.com', publicKey, privateKey)
@@ -93,4 +93,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 500 })
   }
 }
-
