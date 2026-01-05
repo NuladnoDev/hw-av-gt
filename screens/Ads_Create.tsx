@@ -274,6 +274,9 @@ export default function AdsCreate({
 
       if (error && (descriptionTrim.length > 0 || specsJson)) {
         const fallback: Record<string, unknown> = { ...basePayload }
+        if (descriptionTrim.length > 0) {
+          fallback.description = descriptionTrim
+        }
         ;({ data, error } = await client.from('ads').insert(fallback).select('*').single())
       }
 

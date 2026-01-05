@@ -465,8 +465,15 @@ export default function Ads({
 
   useEffect(() => {
     if (createOnMount && !createOpen) {
-      setCreateOpen(true)
-      if (onCreateConsumed) onCreateConsumed()
+      void (async () => {
+        const ok = await checkHasContacts()
+        if (ok) {
+          setCreateOpen(true)
+        } else {
+          setContactWarningOpen(true)
+        }
+        if (onCreateConsumed) onCreateConsumed()
+      })()
     }
   }, [createOnMount, createOpen, onCreateConsumed])
 
