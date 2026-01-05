@@ -87,9 +87,14 @@ export async function POST(req: NextRequest) {
     if (!configureWebPush()) {
       return NextResponse.json({ ok: true, skipped: true })
     }
+    const userTagRaw = ad.user_tag ?? null
+    const userTag =
+      typeof userTagRaw === 'string' && userTagRaw.trim().length > 0
+        ? userTagRaw.replace(/^@/, '').trim()
+        : 'пользователь'
     const payload = {
-      title: 'Новое объявление',
-      body: `${ad.user_tag ?? 'пользователь'} выложил новое объявление`,
+      title: `${userTag} опубликовал объявление`,
+      body: `${userTag} опубликовал объявление`,
       url: `/?sellerId=${encodeURIComponent(ad.user_id)}&profileTab=ads`,
     }
     let sent = 0

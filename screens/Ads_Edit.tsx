@@ -76,7 +76,10 @@ export default function AdsEdit({
   const [otherDetails, setOtherDetails] = useState('')
 
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [savePhase, setSavePhase] = useState<'idle' | 'running' | 'full'>('idle')
+  const [showSaveAnimation, setShowSaveAnimation] = useState(false)
+  const [resultMode, setResultMode] = useState<'save' | 'delete'>('save')
 
   useEffect(() => {
     const baseW = 375
@@ -307,11 +310,37 @@ export default function AdsEdit({
     }
   }
 
+  const deleteAd = async (): Promise<boolean> => {
+    const client = getSupabase()
+    if (!client) return false
+    try {
+      const { error } = await client.from('ads').delete().eq('id', ad.id)
+      if (error) {
+        if (typeof window !== 'undefined') {
+          console.error('delete_ad_supabase_error', error)
+        }
+        return false
+      }
+      if (typeof window !== 'undefined') {
+        const ev = new CustomEvent('ads-updated', { detail: { type: 'deleted', id: ad.id } })
+        window.dispatchEvent(ev)
+      }
+      return true
+    } catch (e) {
+      if (typeof window !== 'undefined') {
+        console.error('failed_to_delete_ad', e)
+      }
+      return false
+    }
+  }
+
   const handleSaveClick = async () => {
-    if (!canSave || saving) return
-    const minDuration = 3500
+    if (!canSave || saving || deleting) return
+    const minDuration = 1800
+    setResultMode('save')
     setSaving(true)
     setSavePhase('running')
+    setShowSaveAnimation(true)
     const startedAt = Date.now()
     let phaseTimer: number | undefined
     if (typeof window !== 'undefined') {
@@ -326,7 +355,17 @@ export default function AdsEdit({
       }
       setSaving(false)
       setSavePhase('idle')
-      if (ok) {
+      if (!ok) {
+        setShowSaveAnimation(false)
+        return
+      }
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          setShowSaveAnimation(false)
+          onClose()
+        }, 250)
+      } else {
+        setShowSaveAnimation(false)
         onClose()
       }
     }
@@ -340,6 +379,84 @@ export default function AdsEdit({
     }
   }
 
+  const handleDeleteClick = async () => {
+    if (saving || deleting) return
+    const minDuration = 1800
+    setDeleting(true)
+    setResultMode('delete')
+    setSavePhase('running')
+    setShowSaveAnimation(true)
+    const startedAt = Date.now()
+    let phaseTimer: number | undefined
+    if (typeof window !== 'undefined') {
+      phaseTimer = window.setTimeout(() => {
+        setSavePhase('full')
+      }, minDuration)
+    }
+    const ok = await deleteAd()
+    const finish = () => {
+      if (typeof window !== 'undefined' && phaseTimer !== undefined) {
+        window.clearTimeout(phaseTimer)
+      }
+      setDeleting(false)
+      setSavePhase('idle')
+      if (!ok) {
+        setShowSaveAnimation(false)
+        return
+      }
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          setShowSaveAnimation(false)
+          onClose()
+        }, 250)
+      } else {
+        setShowSaveAnimation(false)
+        onClose()
+      }
+    }
+    const elapsed = Date.now() - startedAt
+    if (elapsed >= minDuration) {
+      finish()
+    } else if (typeof window !== 'undefined') {
+      window.setTimeout(finish, minDuration - elapsed)
+    } else {
+      finish()
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const detail = {
+      showNextInNav: true,
+      enabled: canSave && !saving && !deleting,
+      label: 'Сохранить',
+      mode: 'edit' as const,
+    }
+    const ev = new CustomEvent('ads-create-nav-state', { detail })
+    window.dispatchEvent(ev)
+  }, [canSave, saving, deleting])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const handler = () => {
+      void handleSaveClick()
+    }
+    window.addEventListener('ads-create-nav-next', handler)
+    return () => {
+      window.removeEventListener('ads-create-nav-next', handler)
+    }
+  }, [handleSaveClick, canSave, saving])
+
+  useEffect(() => {
+    return () => {
+      if (typeof window === 'undefined') return
+      const ev = new CustomEvent('ads-create-nav-state', {
+        detail: { showNextInNav: false, enabled: false, mode: null },
+      })
+      window.dispatchEvent(ev)
+    }
+  }, [])
+
   const navItems: { id: AdsEditStep; label: string }[] = [
     { id: 2, label: 'Фото' },
     { id: 3, label: 'Название' },
@@ -350,7 +467,7 @@ export default function AdsEdit({
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="fixed inset-0 z-[120] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
 
@@ -1011,16 +1128,16 @@ export default function AdsEdit({
           style={{ height: '88px', bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))' }}
         >
           <div className="absolute -top-[0.5px] left-0 w-full" style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }} />
-          <div className="flex h-full w-full items-center">
+          <div className="flex h-full w-full items-center gap-3">
             <button
               type="button"
               onClick={handleSaveClick}
-              disabled={!canSave || saving}
-              className="flex w-full items-center justify-center rounded-[10px] bg-white"
-              style={{ height: 52, opacity: canSave && !saving ? 1 : 0.5 }}
+              disabled={!canSave || saving || deleting}
+              className="flex w-1/2 items-center justify-center rounded-[10px] bg-white"
+              style={{ height: 52, opacity: canSave && !saving && !deleting ? 1 : 0.5 }}
             >
               {saving ? (
-                <div className="relative w-full max-w-[240px] h-[6px] rounded-full bg-white/40 overflow-hidden">
+                <div className="relative w-full max-w-[180px] h-[6px] rounded-full bg-white/40 overflow-hidden">
                   {savePhase === 'running' && <div className="ads-publish-progress-fill" />}
                   {savePhase === 'full' && (
                     <div
@@ -1030,10 +1147,21 @@ export default function AdsEdit({
                   )}
                 </div>
               ) : (
-                <span className="text-[18px] font-semibold leading-[1.25em] tracking-[0.015em] text-black font-vk-demi">
-                  Сохранить изменения
+                <span className="text-[16px] font-semibold leading-[1.25em] tracking-[0.015em] text-black font-vk-demi">
+                  Сохранить
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteClick}
+              disabled={saving || deleting}
+              className="flex w-1/2 items-center justify-center rounded-[10px] border border-red-500/70 bg-[#181818]"
+              style={{ height: 52, opacity: !saving && !deleting ? 1 : 0.5 }}
+            >
+              <span className="text-[16px] font-semibold leading-[1.25em] tracking-[0.015em] text-red-400 font-vk-demi">
+                Удалить
+              </span>
             </button>
           </div>
         </div>
@@ -1061,6 +1189,50 @@ export default function AdsEdit({
               />
             </div>
           </div>
+        )}
+        {showSaveAnimation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/95 flex items-center justify-center z-[70]"
+          >
+            <div className="flex flex-col items-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="relative w-40 h-40 mb-4"
+              >
+                <svg
+                  className="absolute inset-0 w-full h-full"
+                  viewBox="0 0 100 100"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <motion.path
+                    d="M 20 50 L 40 70 L 80 25"
+                    stroke="white"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.5, delay: 0.3, ease: 'easeInOut' }}
+                  />
+                </svg>
+              </motion.div>
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.5 }}
+                className="text-white text-[20px] font-ttc-bold"
+              >
+                {resultMode === 'delete' ? 'Объявление удалено' : 'Изменения сохранены'}
+              </motion.p>
+            </div>
+          </motion.div>
         )}
       </div>
     </div>

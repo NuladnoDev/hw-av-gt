@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronLeft, X } from 'lucide-react'
+import { motion } from 'motion/react'
 import { getSupabase } from '@/lib/supabaseClient'
 
 type InfoMeProps = {
@@ -263,7 +264,12 @@ export default function InfoMe({ onClose }: InfoMeProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in">
+    <motion.div
+      className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in"
+      initial={{ opacity: 0, x: -40 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
+    >
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
 
@@ -605,6 +611,6 @@ export default function InfoMe({ onClose }: InfoMeProps) {
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
       </div>
-    </div>
+    </motion.div>
   )
 }

@@ -5,7 +5,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --home-header-offset: 23px;
+  --home-header-offset: 10px;
   --nav-bottom-offset: 12px;
   --bottom-nav-height: 96px;
   --bottom-nav-pill-height: 64px;
@@ -96,6 +96,10 @@
   --profile-public-title-size: calc(18px * var(--profile-public-scale));
   --profile-public-text-size: calc(16px * var(--profile-public-scale));
   --profile-public-input-height: calc(36px * var(--profile-public-scale));
+  --profile-contact-avatar-size: 32px;
+  --profile-contact-row-gap: 10px;
+  --profile-contact-row-padding-y: 6px;
+  --profile-contact-label-size: 15px;
   --profile-edit-scale: 1;
   --profile-edit-title-size: calc(18px * var(--profile-edit-scale));
   --profile-edit-label-size: calc(14px * var(--profile-edit-scale));
@@ -256,7 +260,7 @@
   --profile-menu-padding-bottom: 0px;
   --profile-menu-padding-x: 0px;
   --profile-menu-offset-x: 0px;
-  --profile-menu-offset-y: 8px;
+  --profile-menu-offset-y: -57px;
   --profile-menu-item-height: 44px;
   --profile-menu-edit-height: 62px;
   --profile-menu-item-padding-x: 16px;
@@ -613,4 +617,17 @@ body {
 .scrollbar-hidden::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.6s infinite;
 }

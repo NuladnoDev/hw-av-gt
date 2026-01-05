@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
         ? followerTagRaw.replace(/^@/, '').trim()
         : 'пользователь'
     const payload = {
-      title: 'Новый подписчик',
-      body: `@${followerTag} подписался на вас`,
+      title: 'Новый подписчик!',
+      body: `@${followerTag} подписался на ваши объявления`,
       url: `/?sellerId=${encodeURIComponent(followerId)}&profileTab=ads`,
     }
     let sent = 0

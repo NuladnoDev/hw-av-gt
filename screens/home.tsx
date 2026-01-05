@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ShoppingBag, User } from 'lucide-react'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import Profile from './profile'
 import ProfileEdit from './profile_edit'
 import Setting from './Setting'
 import InfoMe from './info_me'
+import Links from './Links'
 import { getSupabase } from '@/lib/supabaseClient'
 import Ads, { type StoredAd } from './ads'
 import AdDetail from './AdDetail'
@@ -38,6 +39,12 @@ export default function HomeScreen() {
   const [viewProfileMode, setViewProfileMode] = useState<'own' | 'foreign'>('own')
   const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null)
   const [profileReturnAd, setProfileReturnAd] = useState<StoredAd | null>(null)
+  const [profileStack, setProfileStack] = useState<string[]>([])
+  const [linksOpen, setLinksOpen] = useState(false)
+  const [adsNavNextVisible, setAdsNavNextVisible] = useState(false)
+  const [adsNavNextEnabled, setAdsNavNextEnabled] = useState(false)
+  const [adsNavNextLabel, setAdsNavNextLabel] = useState('Далее')
+  const [adsNavNextMode, setAdsNavNextMode] = useState<'create' | 'detail' | 'edit' | null>(null)
   const searchParams = useSearchParams()
 
   const openProfileMenu = () => {
@@ -53,6 +60,23 @@ export default function HomeScreen() {
   }
 
   const handleBackFromForeignProfile = () => {
+    if (profileStack.length > 0) {
+      const last = profileStack[profileStack.length - 1]
+      const rest = profileStack.slice(0, -1)
+      setProfileStack(rest)
+      if (last === '__own__') {
+        setViewProfileMode('own')
+        setViewProfileUserId(null)
+        setProfileReturnAd(null)
+        setTab('profile')
+      } else {
+        setViewProfileMode('foreign')
+        setViewProfileUserId(last)
+        setProfileReturnAd(null)
+        setTab('profile')
+      }
+      return
+    }
     if (profileReturnAd) {
       setSelectedAd(profileReturnAd)
     }
@@ -76,6 +100,44 @@ export default function HomeScreen() {
       }
     }
   }, [searchParams])
+  useEffect(() => {
+    const handleNavState = (event: Event) => {
+      const anyEvent = event as CustomEvent<{
+        showNextInNav?: boolean
+        enabled?: boolean
+        label?: string
+        mode?: 'create' | 'detail' | 'edit' | null
+      }>
+      const detail = anyEvent.detail ?? {}
+      setAdsNavNextVisible(!!detail.showNextInNav)
+      setAdsNavNextEnabled(!!detail.enabled)
+      if (typeof detail.label === 'string' && detail.label.trim().length > 0) {
+        setAdsNavNextLabel(detail.label)
+      }
+      if (detail.mode === 'create' || detail.mode === 'detail' || detail.mode === 'edit') {
+        setAdsNavNextMode(detail.mode)
+      } else if (detail.showNextInNav === false) {
+        setAdsNavNextMode(null)
+      }
+    }
+    window.addEventListener('ads-create-nav-state', handleNavState as EventListener)
+    return () => {
+      window.removeEventListener('ads-create-nav-state', handleNavState as EventListener)
+    }
+  }, [])
+  useEffect(() => {
+    const handleOpenContacts = () => {
+      setTab('profile')
+      setProfileEdit(false)
+      setSettingsOpen(false)
+      setInfoMeOpen(false)
+      setLinksOpen(true)
+    }
+    window.addEventListener('open-contacts', handleOpenContacts)
+    return () => {
+      window.removeEventListener('open-contacts', handleOpenContacts)
+    }
+  }, [])
   useEffect(() => {
     const client = getSupabase()
     if (!client) return
@@ -285,7 +347,17 @@ export default function HomeScreen() {
         )}
 
         {tab === 'profile' && (
-          <>
+          <motion.div
+            key={`profile-screen-${viewProfileMode}-${viewProfileUserId ?? 'own'}`}
+            className="absolute left-0 w-full"
+            style={{
+              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
+              height: 'calc(812px - 88px - 56px - var(--home-header-offset))',
+            }}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
             <Profile
               profileTab={profileTab}
               setProfileTab={setProfileTab}
@@ -296,6 +368,24 @@ export default function HomeScreen() {
               }
               isOwnProfile={viewProfileMode === 'own'}
               viewUserId={viewProfileMode === 'foreign' ? viewProfileUserId ?? undefined : undefined}
+              onOpenProfileById={(id) => {
+                if (!id) return
+                setTab('profile')
+                setProfileEdit(false)
+                setSelectedAd(null)
+                setProfileReturnAd(null)
+                setProfileStack((prev) => {
+                  if (tab === 'profile') {
+                    const currentId = viewProfileMode === 'foreign' ? viewProfileUserId ?? null : null
+                    const marker = currentId ?? '__own__'
+                    return [...prev, marker]
+                  }
+                  return prev
+                })
+                setViewProfileMode('foreign')
+                setViewProfileUserId(id)
+                setProfileTab('ads')
+              }}
             />
             {profileMenuOpen && (
               <>
@@ -665,16 +755,20 @@ export default function HomeScreen() {
                 </div>
               </>
             )}
-          </>
+          </motion.div>
         )}
 
         {tab !== 'profile' && (
-          <div
+          <motion.div
+            key="ads-screen"
             className="absolute left-0 w-full"
             style={{
               top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
               height: 'calc(812px - 88px - 56px - var(--home-header-offset))',
             }}
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
           >
             {tab === 'ads' && (
               <Ads
@@ -685,13 +779,13 @@ export default function HomeScreen() {
                 onCreateConsumed={() => setAdsCreateRequested(false)}
               />
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* profile content moved to Profile component */}
 
         <div
-          className="absolute left-0 w-full bg-[#0A0A0A]"
+          className="absolute left-0 w-full bg-[#0A0A0A] z-[90]"
           style={{
             height: 'var(--bottom-nav-height, 96px)',
             bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))',
@@ -708,15 +802,31 @@ export default function HomeScreen() {
                 <button
                   type="button"
                   onClick={() => {
-                    setTab('ads')
+                    if (adsNavNextVisible) {
+                      if (!adsNavNextEnabled) return
+                      if (adsNavNextMode === 'detail') {
+                        const ev = new Event('ad-detail-purchase')
+                        window.dispatchEvent(ev)
+                      } else {
+                        const ev = new Event('ads-create-nav-next')
+                        window.dispatchEvent(ev)
+                      }
+                      return
+                    }
                     setViewProfileMode('own')
                     setViewProfileUserId(null)
                     setProfileReturnAd(null)
+                    setProfileStack([])
+                    if (tab === 'ads') {
+                      setAdsCreateRequested(true)
+                      return
+                    }
+                    setTab('ads')
                   }}
                   className="relative flex-[7] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
                   style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
                 >
-                  {tab === 'ads' && (
+                  {tab === 'ads' && adsNavNextMode !== 'edit' && (
                     <motion.div
                       layoutId="bottom-nav-active-tab"
                       className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
@@ -728,19 +838,59 @@ export default function HomeScreen() {
                       }}
                     />
                   )}
-                  <ShoppingBag
-                    className={`w-6 h-6 transition-all duration-200 relative z-10 ${
-                      tab === 'ads' ? 'text-black scale-110' : 'text-white/70'
-                    }`}
-                    strokeWidth={2.5}
-                  />
-                  <span
-                    className={`font-medium text-[12px] transition-all duration-200 relative z-10 ${
-                      tab === 'ads' ? 'text-black' : 'text-white/70'
-                    }`}
-                  >
-                    Объявления
-                  </span>
+                  <AnimatePresence mode="wait" initial={false}>
+                    {adsNavNextVisible ? (
+                      <motion.div
+                        key="ads-next"
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="relative z-10 flex items-center justify-center"
+                        style={{ opacity: adsNavNextEnabled ? 1 : 0.4 }}
+                      >
+                        <span
+                          className={`font-semibold text-[17.8px] ${
+                            adsNavNextMode === 'edit' ? 'text-white' : 'text-black'
+                          }`}
+                        >
+                          {adsNavNextLabel}
+                        </span>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="ads-default"
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 6 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="relative z-10 flex flex-col items-center justify-center gap-1"
+                      >
+                        {tab === 'ads' ? (
+                            <>
+                               <img
+                                 src="/interface/plus-02-black.svg"
+                                 alt=""
+                                 className="w-[24px] h-[24px] translate-y-[2px]"
+                               />
+                               <span className="font-semibold text-[13.5px] text-black">
+                                 Создать обьявление
+                               </span>
+                             </>
+                          ) : (
+                          <>
+                            <ShoppingBag
+                              className="w-6 h-6 transition-all duration-200 text-white/70"
+                              strokeWidth={2.5}
+                            />
+                            <span className="font-medium text-[12px] text-white/70">
+                              Объявления
+                            </span>
+                          </>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </button>
                 <button
                   type="button"
@@ -749,6 +899,7 @@ export default function HomeScreen() {
                     setViewProfileMode('own')
                     setViewProfileUserId(null)
                     setProfileReturnAd(null)
+                    setProfileStack([])
                   }}
                   className="relative flex-[3] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
                   style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
@@ -813,12 +964,25 @@ export default function HomeScreen() {
               setSettingsOpen(false)
               setInfoMeOpen(true)
             }}
+            onOpenContacts={() => {
+              setSettingsOpen(false)
+              setInfoMeOpen(false)
+              setLinksOpen(true)
+            }}
           />
         )}
         {infoMeOpen && (
           <InfoMe
             onClose={() => {
               setInfoMeOpen(false)
+              setSettingsOpen(true)
+            }}
+          />
+        )}
+        {linksOpen && (
+          <Links
+            onClose={() => {
+              setLinksOpen(false)
               setSettingsOpen(true)
             }}
           />

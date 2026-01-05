@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import {
   Smartphone,
@@ -144,6 +145,7 @@ export default function AdsCreate({
   const [otherDetails, setOtherDetails] = useState('')
   const [publishing, setPublishing] = useState(false)
   const [publishPhase, setPublishPhase] = useState<'idle' | 'running' | 'full'>('idle')
+  const [showPublishAnimation, setShowPublishAnimation] = useState(false)
 
   const getConditionLabel = (c: AdsCondition | null) => {
     const found = CONDITION_OPTIONS.find((o) => o.id === c)
@@ -384,7 +386,6 @@ export default function AdsCreate({
   }
 
   const handleDecimalChange = (val: string, setter: (v: string) => void) => {
-    // Разрешаем цифры, одну точку или запятую
     let sanitized = val.replace(/,/g, '.')
     sanitized = sanitized.replace(/[^\d.]/g, '')
     const parts = sanitized.split('.')
@@ -403,15 +404,50 @@ export default function AdsCreate({
     (step === 6 && description.trim().length > 0) ||
     (step === 7 && price.trim().length > 0 && images.length > 0)
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const label = step === 7 ? 'Опубликовать' : 'Далее'
+    const detail = {
+      showNextInNav: true,
+      enabled: canGoNext && !publishing,
+      label,
+      mode: 'create' as const,
+    }
+    const ev = new CustomEvent('ads-create-nav-state', { detail })
+    window.dispatchEvent(ev)
+  }, [step, canGoNext, publishing])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const handler = () => {
+      void goNext()
+    }
+    window.addEventListener('ads-create-nav-next', handler)
+    return () => {
+      window.removeEventListener('ads-create-nav-next', handler)
+    }
+  }, [step, canGoNext, publishing])
+
+  useEffect(() => {
+    return () => {
+      if (typeof window === 'undefined') return
+      const ev = new CustomEvent('ads-create-nav-state', {
+        detail: { showNextInNav: false, enabled: false, mode: null },
+      })
+      window.dispatchEvent(ev)
+    }
+  }, [])
+
   const goNext = async () => {
     if (!canGoNext || publishing) return
     if (step < 7) {
       setStep((s) => (s < 7 ? ((s + 1) as AdsCreateStep) : s))
       return
     }
-    const minDuration = 3500
+    const minDuration = 1800
     setPublishing(true)
     setPublishPhase('running')
+    setShowPublishAnimation(true)
     const startedAt = Date.now()
     let phaseTimer: number | undefined
     if (typeof window !== 'undefined') {
@@ -426,7 +462,17 @@ export default function AdsCreate({
       }
       setPublishing(false)
       setPublishPhase('idle')
-      if (ok) {
+      if (!ok) {
+        setShowPublishAnimation(false)
+        return
+      }
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          setShowPublishAnimation(false)
+          onClose()
+        }, 250)
+      } else {
+        setShowPublishAnimation(false)
         onClose()
       }
     }
@@ -447,8 +493,6 @@ export default function AdsCreate({
     }
     setStep((s) => (s > 1 ? ((s - 1) as AdsCreateStep) : s))
   }
-
-  const primaryButtonLabel = step === 7 ? 'Опубликовать' : 'Продолжить'
 
   return (
     <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
@@ -1176,37 +1220,6 @@ export default function AdsCreate({
         </div>
 
         <div
-          className="absolute left-0 w-full bg-[#0A0A0A] px-6"
-          style={{ height: '88px', bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))' }}
-        >
-          <div className="absolute -top-[0.5px] left-0 w-full" style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }} />
-          <div className="flex h-full w-full items-center">
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={!canGoNext || publishing}
-              className="flex w-full items-center justify-center rounded-[10px] bg-[#111111]"
-              style={{ height: 52, opacity: canGoNext && !publishing ? 1 : 0.5 }}
-            >
-              {step === 7 && publishing ? (
-                <div className="relative w-full max-w-[240px] h-[6px] rounded-full bg-white/10 overflow-hidden">
-                  {publishPhase === 'running' && <div className="ads-publish-progress-fill" />}
-                  {publishPhase === 'full' && (
-                    <div
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: 'linear-gradient(90deg, #6e9b7d 0%, #34975f 100%)' }}
-                    />
-                  )}
-                </div>
-              ) : (
-                <span className="text-[18px] font-semibold leading-[1.25em] tracking-[0.015em] text-white font-vk-demi">
-                  {primaryButtonLabel}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-        <div
           className="absolute left-0 w-full bg-[#0A0A0A]"
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
@@ -1230,6 +1243,50 @@ export default function AdsCreate({
               />
             </div>
           </div>
+        )}
+        {showPublishAnimation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/95 flex items-center justify-center z-[95]"
+          >
+            <div className="flex flex-col items-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="relative w-40 h-40 mb-4"
+              >
+                <svg
+                  className="absolute inset-0 w-full h-full"
+                  viewBox="0 0 100 100"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <motion.path
+                    d="M 20 50 L 40 70 L 80 25"
+                    stroke="white"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.5, delay: 0.3, ease: 'easeInOut' }}
+                  />
+                </svg>
+              </motion.div>
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.5 }}
+                className="text-white text-[20px] font-ttc-bold"
+              >
+                Объявление опубликовано
+              </motion.p>
+            </div>
+          </motion.div>
         )}
       </div>
     </div>

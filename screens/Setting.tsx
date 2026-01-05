@@ -1,4 +1,5 @@
 'use client'
+
 import { useEffect, useState } from 'react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
@@ -6,9 +7,11 @@ import { avatarGradients } from '@/lib/avatarGradients'
 export default function Setting({
   onClose,
   onOpenAbout,
+  onOpenContacts,
 }: {
   onClose?: () => void
   onOpenAbout?: () => void
+  onOpenContacts?: () => void
 }) {
   const [scale, setScale] = useState(1)
   const [dirty, setDirty] = useState(false)
@@ -113,6 +116,15 @@ export default function Setting({
     if (onOpenAbout) onOpenAbout()
     else {
       const ev = new Event('open-profile-edit')
+      window.dispatchEvent(ev)
+    }
+    close()
+  }
+
+  const openContacts = () => {
+    if (onOpenContacts) onOpenContacts()
+    else {
+      const ev = new Event('open-contacts')
       window.dispatchEvent(ev)
     }
     close()
@@ -329,16 +341,16 @@ export default function Setting({
                 type="button"
                 className="flex w-full items-center justify-between text-left bg-transparent"
                 style={{ height: 'var(--settings-item-height)' }}
-                disabled
+                onClick={openContacts}
               >
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
                   <img
-                    src="/setting/eye-closed.svg"
-                    alt="Просмотр публикаций"
+                    src="/setting/notification-box.svg"
+                    alt="Контакты"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"
                   />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Контакты
                   </span>
                 </div>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
-import { AdCard, loadAdsFromStorage, deleteAdById, StoredAd } from './ads'
+import { AdCard, AdCardSkeleton, loadAdsFromStorage, deleteAdById, StoredAd } from './ads'
 import AdsEdit from './Ads_Edit'
 
 function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
@@ -23,6 +23,30 @@ const isUuid = (value: string | null | undefined): boolean => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }
 
+type Contact = {
+  type: 'vk' | 'telegram'
+  url: string
+}
+
+const normalizeContacts = (items: unknown): Contact[] => {
+  if (!Array.isArray(items)) return []
+  return items
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null
+      const anyItem = item as { type?: string; url?: unknown }
+      const type = anyItem.type === 'vk' || anyItem.type === 'telegram' ? anyItem.type : null
+      const url = typeof anyItem.url === 'string' ? anyItem.url.trim() : ''
+      if (!type || !url) return null
+      return { type, url }
+    })
+    .filter((x): x is Contact => !!x)
+}
+
+const contactMethods: { id: string; label: string; type: Contact['type'] }[] = [
+  { id: 'vk', label: 'ВКонтакте', type: 'vk' },
+  { id: 'telegram', label: 'Telegram', type: 'telegram' },
+]
+
 export default function Profile({
   profileTab,
   setProfileTab,
@@ -30,6 +54,7 @@ export default function Profile({
   editMode,
   isOwnProfile = true,
   viewUserId,
+  onOpenProfileById,
 }: {
   profileTab: 'ads' | 'about' | 'friends'
   setProfileTab: (t: 'ads' | 'about' | 'friends') => void
@@ -37,6 +62,7 @@ export default function Profile({
   editMode?: boolean
   isOwnProfile?: boolean
   viewUserId?: string
+  onOpenProfileById?: (id: string) => void
 }) {
   const [tagText, setTagText] = useState<string>(typeof userTag === 'string' ? userTag.replace(/^@/, '') : '')
   const [tagEditing, setTagEditing] = useState(false)
@@ -51,11 +77,16 @@ export default function Profile({
   const [city, setCity] = useState<string>('')
   const [political, setPolitical] = useState<string>('')
   const [hobbies, setHobbies] = useState<string>('')
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [userAds, setUserAds] = useState<StoredAd[]>([])
+  const [userAdsLoading, setUserAdsLoading] = useState(true)
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [viewerId, setViewerId] = useState<string | null>(null)
+  const [subscriptions, setSubscriptions] = useState<{ id: string; tag: string; avatarUrl: string | null }[]>([])
+  const [subscriptionsLoading, setSubscriptionsLoading] = useState(false)
+  const [profileInfoLoading, setProfileInfoLoading] = useState(true)
 
   const readLocalFollows = (): Record<string, { notificationsEnabled?: boolean | null }> => {
     if (typeof window === 'undefined') return {}
@@ -149,8 +180,10 @@ export default function Profile({
     const load = async () => {
       if (!userId && !userAltId) {
         setUserAds([])
+        setUserAdsLoading(false)
         return
       }
+      setUserAdsLoading(true)
       const all = await loadAdsFromStorage()
       if (cancelled) return
       const filtered = all.filter((a) => {
@@ -159,6 +192,7 @@ export default function Profile({
         return false
       })
       setUserAds(filtered.sort((a, b) => b.createdAt - a.createdAt))
+      setUserAdsLoading(false)
     }
     load()
     const handler = () => {
@@ -173,6 +207,7 @@ export default function Profile({
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    setProfileInfoLoading(true)
     let idLocal: string | null = null
     let altLocal: string | null = null
     if (viewUserId) {
@@ -192,7 +227,17 @@ export default function Profile({
     const profMap = profRaw
       ? (JSON.parse(profRaw) as Record<
           string,
-          { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }
+          {
+            tag?: string
+            avatar_url?: string
+            description?: string
+            age?: string
+            gender?: string
+            city?: string
+            political?: string
+            hobbies?: string
+            contacts?: Contact[]
+          }
         >)
       : {}
     const p = idLocal ? profMap[idLocal] : undefined
@@ -206,13 +251,19 @@ export default function Profile({
     if (p?.city) setCity(p.city ?? '')
     if (p?.political) setPolitical(p.political)
     if (p?.hobbies) setHobbies(p.hobbies)
+    const contactsRaw = p?.contacts
+    const normalizedContacts = normalizeContacts(contactsRaw)
+    setContacts(normalizedContacts)
     const client = getSupabase()
-    if (!client || !idLocal) return
+    if (!client || !idLocal) {
+      setProfileInfoLoading(false)
+      return
+    }
     ;(async () => {
       try {
         const { data: prof, error: err } = await client
           .from('profiles')
-          .select('tag, avatar_url, description, age, gender, city, political, hobbies')
+          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts')
           .eq('id', idLocal)
           .maybeSingle()
         if (err || !prof) {
@@ -225,6 +276,7 @@ export default function Profile({
         const genderFromDb = (prof.gender as string | undefined) ?? undefined
         const politicalFromDb = (prof.political as string | undefined) ?? undefined
         const hobbiesFromDb = (prof.hobbies as string | undefined) ?? undefined
+        const contactsFromDb = (prof.contacts as unknown) ?? null
         if (typeof tagFromDb === 'string' && tagFromDb.trim().length > 0) {
           setTagText(tagFromDb.trim())
         } else if (typeof userTag === 'string' && userTag.trim().length > 0) {
@@ -240,7 +292,13 @@ export default function Profile({
         setCity(typeof (prof.city as string | undefined) === 'string' ? (prof.city as string) : '')
         setPolitical(typeof politicalFromDb === 'string' ? politicalFromDb : '')
         setHobbies(typeof hobbiesFromDb === 'string' ? hobbiesFromDb : '')
+        const normalizedFromDb = normalizeContacts(contactsFromDb)
+        if (normalizedFromDb.length > 0) {
+          setContacts(normalizedFromDb)
+        }
+        setProfileInfoLoading(false)
       } catch {
+        setProfileInfoLoading(false)
       }
     })()
   }, [userTag, viewUserId])
@@ -299,9 +357,127 @@ export default function Profile({
       cancelled = true
     }
   }, [viewUserId, viewerId])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadSubscriptions = async () => {
+      if (profileTab !== 'friends') return
+      if (typeof window === 'undefined') return
+      const ownerId = viewUserId ?? userId
+      if (!ownerId) {
+        setSubscriptions([])
+        return
+      }
+      const client = getSupabase()
+      if (!client || !isUuid(ownerId)) {
+        if (!client && ownerId === viewerId) {
+          try {
+            const map = readLocalFollows()
+            const prefix = `${ownerId}::`
+            const keys = Object.keys(map).filter((k) => k.startsWith(prefix))
+            if (keys.length === 0) {
+              setSubscriptions([])
+              return
+            }
+            const targets = Array.from(
+              new Set(
+                keys
+                  .map((k) => k.slice(prefix.length))
+                  .filter((v) => typeof v === 'string' && v.length > 0),
+              ),
+            )
+            const profRaw = window.localStorage.getItem('hw-profiles')
+            const profMap = profRaw
+              ? (JSON.parse(profRaw) as Record<
+                  string,
+                  { tag?: string; avatar_url?: string | null }
+                >)
+              : {}
+            const items = targets
+              .map((tid) => {
+                const p = profMap[tid]
+                if (!p) return null
+                const tagRaw = p.tag ?? null
+                const tag =
+                  typeof tagRaw === 'string' && tagRaw.trim().length > 0
+                    ? tagRaw.replace(/^@/, '').trim()
+                    : 'user'
+                const avatar = typeof p.avatar_url === 'string' ? p.avatar_url : null
+                return { id: tid, tag, avatarUrl: avatar }
+              })
+              .filter((x): x is { id: string; tag: string; avatarUrl: string | null } => !!x)
+            setSubscriptions(items)
+          } catch {
+            setSubscriptions([])
+          }
+        }
+        return
+      }
+      setSubscriptionsLoading(true)
+      try {
+        const { data: follows, error: followsError } = await client
+          .from('follows')
+          .select('target_id')
+          .eq('follower_id', ownerId)
+        if (cancelled || followsError || !follows || follows.length === 0) {
+          if (!cancelled) {
+            setSubscriptions([])
+          }
+          return
+        }
+        const targetIds = Array.from(
+          new Set(
+            (follows as { target_id: string | null }[])
+              .map((f) => f.target_id)
+              .filter((v): v is string => typeof v === 'string' && v.length > 0),
+          ),
+        )
+        if (targetIds.length === 0) {
+          setSubscriptions([])
+          return
+        }
+        const { data: profiles, error: profilesError } = await client
+          .from('profiles')
+          .select('id, tag, avatar_url')
+          .in('id', targetIds)
+        if (cancelled || profilesError || !profiles) {
+          if (!cancelled) {
+            setSubscriptions([])
+          }
+          return
+        }
+        const items = targetIds
+          .map((tid) => {
+            const p = (profiles as { id: string; tag: string | null; avatar_url: string | null }[]).find(
+              (pr) => pr.id === tid,
+            )
+            if (!p) return null
+            const rawTag = p.tag ?? null
+            const tag =
+              typeof rawTag === 'string' && rawTag.trim().length > 0
+                ? rawTag.replace(/^@/, '').trim()
+                : 'user'
+            const avatar = typeof p.avatar_url === 'string' ? p.avatar_url : null
+            return { id: p.id, tag, avatarUrl: avatar }
+          })
+          .filter((x): x is { id: string; tag: string; avatarUrl: string | null } => !!x)
+        if (!cancelled) {
+          setSubscriptions(items)
+        }
+      } finally {
+        if (!cancelled) {
+          setSubscriptionsLoading(false)
+        }
+      }
+    }
+    loadSubscriptions()
+    return () => {
+      cancelled = true
+    }
+  }, [profileTab, userId, viewUserId, viewerId])
   useEffect(() => {
     const handleUpdated = (e: Event) => {
-      const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>
+      const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string; contacts?: Contact[] }>
       if (typeof ev.detail?.tag === 'string') setTagText(ev.detail.tag)
       if (typeof ev.detail?.avatar_url === 'string') setAvatarUrl(ev.detail.avatar_url)
       if (typeof ev.detail?.description === 'string') setDescription(ev.detail.description)
@@ -310,6 +486,10 @@ export default function Profile({
       if (typeof ev.detail?.city === 'string') setCity(ev.detail.city)
       if (typeof ev.detail?.political === 'string') setPolitical(ev.detail.political)
       if (typeof ev.detail?.hobbies === 'string') setHobbies(ev.detail.hobbies)
+      if (ev.detail && 'contacts' in ev.detail) {
+        const normalized = normalizeContacts(ev.detail.contacts)
+        setContacts(normalized)
+      }
     }
     window.addEventListener('profile-updated', handleUpdated as EventListener)
     return () => window.removeEventListener('profile-updated', handleUpdated as EventListener)
@@ -577,6 +757,7 @@ export default function Profile({
 
   return (
     <div
+      className="h-full w-full relative"
       style={
         {
           '--profile-max-width': '380px',
@@ -598,7 +779,7 @@ export default function Profile({
     >
       <div
         className="absolute left-0 w-full"
-        style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)', height: 'var(--profile-cover-height)' }}
+        style={{ top: '0px', height: 'var(--profile-cover-height)' }}
       >
         <div className="h-full w-full" style={{ background: '#0A0A0A' }} />
       </div>
@@ -607,7 +788,7 @@ export default function Profile({
         style={{
           width: 'var(--profile-avatar-size)',
           height: 'var(--profile-avatar-size)',
-          top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) + var(--profile-avatar-top-offset, 0px))',
+          top: 'calc(var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) + var(--profile-avatar-top-offset, 0px))',
           boxShadow: `0 0 var(--profile-avatar-glow-size) var(--profile-avatar-glow-color), 0 4px 18px rgba(0,0,0,0.35)`,
           background: avatarUrl ? '#0A0A0A' : gradient,
         }}
@@ -649,8 +830,8 @@ export default function Profile({
       <div
         className="absolute left-0 w-full px-6 overflow-y-auto pb-8"
         style={{
-          top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px + var(--profile-avatar-top-offset, 0px))',
-          height: 'calc(812px - 88px - 56px - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - var(--home-header-offset) - 12px - var(--profile-avatar-top-offset, 0px))',
+          top: 'calc(var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px + var(--profile-avatar-top-offset, 0px))',
+          height: 'calc(100% - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - 12px - var(--profile-avatar-top-offset, 0px))',
         }}
       >
         <div className="flex w-full flex-col items-center">
@@ -969,11 +1150,24 @@ export default function Profile({
               </button>
               <button
                 type="button"
-                aria-disabled="true"
-                className="flex-1 h-full px-3 text-[14px] text-white/40 cursor-not-allowed"
+                onClick={() => setProfileTab('friends')}
+                className="relative flex-1 h-full px-3 text-[14px] overflow-hidden"
                 style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
               >
-                Скоро
+                {profileTab === 'friends' && (
+                  <motion.div
+                    layoutId="profile-tabs-active"
+                    className="absolute inset-0 bg-[#222222]"
+                    style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 500,
+                      damping: 30,
+                      mass: 0.8,
+                    }}
+                  />
+                )}
+                <span className={`relative z-10 ${profileTab === 'friends' ? 'text-white' : 'text-white/70'}`}>Подписки</span>
               </button>
             </div>
           </div>
@@ -987,7 +1181,24 @@ export default function Profile({
           >
             {profileTab === 'ads' ? (
               <div className="w-full">
-                {userAds.length > 0 ? (
+                {userAdsLoading ? (
+                  <div
+                    className="grid grid-cols-2 pb-4"
+                    style={{
+                      columnGap: 6,
+                      rowGap: 6,
+                      paddingLeft: 4,
+                      paddingRight: 4,
+                      marginLeft: -24,
+                      marginRight: -24,
+                      width: 'calc(100% + 48px)',
+                    }}
+                  >
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <AdCardSkeleton key={index} />
+                    ))}
+                  </div>
+                ) : userAds.length > 0 ? (
                   <div
                     className="grid grid-cols-2 pb-4"
                     style={{
@@ -1010,9 +1221,11 @@ export default function Profile({
                       username={(ad.userTag ?? 'user').replace(/^@/, '')}
                       condition={ad.condition ?? undefined}
                       location={ad.location ?? undefined}
+                      createdAt={ad.createdAt}
                       onDelete={isOwnProfile ? () => deleteAdById(ad.id) : undefined}
                       isOwn={isOwnProfile}
                       onEdit={isOwnProfile ? () => setEditingAd(ad) : undefined}
+                      showEditLabel={isOwnProfile}
                     />
                   ))}
                   </div>
@@ -1099,12 +1312,31 @@ export default function Profile({
                         style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
                       />
                     ) : (
-                      <div
-                        className="bg-[#0D0D0D] px-3 py-2 leading-[1.6em] text-[#A1A1A1]"
-                        style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                      >
-                        {description && description.trim().length > 0 ? description : 'Описание не заполнено'}
-                      </div>
+                      profileInfoLoading ? (
+                        <div
+                          className="bg-[#0D0D0D] px-3 py-3"
+                          style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                        >
+                          <div className="space-y-2">
+                            <div className="relative h-3 w-4/5 rounded bg-[#222222] overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                            </div>
+                            <div className="relative h-3 w-full rounded bg-[#222222] overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                            </div>
+                            <div className="relative h-3 w-2/3 rounded bg-[#222222] overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className="bg-[#0D0D0D] px-3 py-2 leading-[1.6em] text-[#A1A1A1]"
+                          style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                        >
+                          {description && description.trim().length > 0 ? description : 'Описание не заполнено'}
+                        </div>
+                      )
                     )}
                   </div>
                   <motion.div
@@ -1288,7 +1520,192 @@ export default function Profile({
                       </div>
                     </div>
                   </motion.div>
+                  <div className="flex justify-center my-2">
+                    <div
+                      style={{
+                        width: '50%',
+                        height: 1,
+                        background: 'rgba(255,255,255,0.12)',
+                      }}
+                    />
+                  </div>
+                  <motion.div
+                    className="bg-[#101010] px-3 py-3"
+                    style={{ borderRadius: 'calc(var(--profile-border-radius) - 2px)' }}
+                    initial={false}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                  >
+                    <div
+                      className="mb-2 font-vk-demi text-white"
+                      style={{ fontSize: 'var(--profile-public-title-size)' }}
+                    >
+                      Способы связи
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      {contactMethods.map((method) => {
+                        const contact = contacts.find((c) => c.type === method.type)
+                        return (
+                          <div
+                            key={method.id}
+                            className="flex items-center"
+                            style={{
+                              paddingTop: 'var(--profile-contact-row-padding-y, 6px)',
+                              paddingBottom: 'var(--profile-contact-row-padding-y, 6px)',
+                              columnGap: 'var(--profile-contact-row-gap, 10px)',
+                            }}
+                          >
+                            <div
+                              className="flex items-center justify-center overflow-hidden"
+                              style={{
+                                width: 'var(--profile-contact-avatar-size, 32px)',
+                                height: 'var(--profile-contact-avatar-size, 32px)',
+                              }}
+                            >
+                              <img
+                                src={method.type === 'telegram' ? '/interface/telegram.svg' : '/interface/vk.svg'}
+                                alt={method.label}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div className="flex flex-col">
+                              <span
+                                className="text-white font-sf-ui-light"
+                                style={{ fontSize: 'var(--profile-contact-label-size, 15px)' }}
+                              >
+                                {method.label}
+                              </span>
+                              {contact && (
+                                <span
+                                  className="text-white/50 text-xs"
+                                  style={{ marginTop: 2 }}
+                                >
+                                  {contact.url}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
                 </div>
+              </div>
+            ) : profileTab === 'friends' ? (
+              <div
+                className="mx-auto w-full border border-[#2B2B2B] bg-[#111111]/80 p-4"
+                style={{
+                  maxWidth: 'var(--profile-max-width, 380px)',
+                  marginLeft: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
+                  marginRight: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
+                  width: 'calc(100% + (2 * var(--profile-about-negative-margin, 12px)))',
+                  borderRadius: 'var(--profile-border-radius)',
+                }}
+              >
+                {subscriptionsLoading ? (
+                  <div className="flex flex-col gap-2 py-2">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 w-full px-2.5 py-2"
+                        style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                      >
+                        <div
+                          className="relative overflow-hidden"
+                          style={{
+                            borderRadius: '999px',
+                            background: '#151515',
+                            width: 'var(--profile-subscription-avatar-size, 48px)',
+                            height: 'var(--profile-subscription-avatar-size, 48px)',
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                        </div>
+                        <div className="flex flex-col flex-1 gap-2">
+                          <div className="relative h-4 w-32 rounded bg-[#222222] overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                          </div>
+                          <div className="relative h-3 w-24 rounded bg-[#222222] overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : subscriptions.length === 0 ? (
+                  <div className="py-8 text-center text-[#A1A1A1]" style={{ fontSize: 'var(--profile-public-text-size)' }}>
+                    Пока ни на кого не подписан
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {subscriptions.map((sub) => {
+                      const base = sub.id || sub.tag || 'user'
+                      let sum = 0
+                      for (let i = 0; i < base.length; i += 1) sum += base.charCodeAt(i)
+                      const idx = sum % avatarGradients.length
+                      const grad = avatarGradients[idx]
+                      const letter = sub.tag && sub.tag.length > 0 ? sub.tag.charAt(0).toUpperCase() : 'U'
+                      return (
+                        <motion.button
+                          key={sub.id}
+                          type="button"
+                          className="flex items-center gap-3 w-full px-2.5 py-2"
+                          style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => {
+                            if (onOpenProfileById) {
+                              onOpenProfileById(sub.id)
+                            } else if (typeof window !== 'undefined') {
+                              const url = new URL(window.location.href)
+                              url.searchParams.set('sellerId', sub.id)
+                              url.searchParams.set('profileTab', 'ads')
+                              window.location.href = url.toString()
+                            }
+                          }}
+                        >
+                          <div
+                            className="flex items-center justify-center text-white"
+                            style={{
+                              borderRadius: '999px',
+                              background: grad,
+                              width: 'var(--profile-subscription-avatar-size, 48px)',
+                              height: 'var(--profile-subscription-avatar-size, 48px)',
+                            }}
+                          >
+                            {sub.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={sub.avatarUrl}
+                                alt={sub.tag}
+                                className="object-cover"
+                                style={{
+                                  borderRadius: '999px',
+                                  width: 'var(--profile-subscription-avatar-size, 48px)',
+                                  height: 'var(--profile-subscription-avatar-size, 48px)',
+                                }}
+                              />
+                            ) : (
+                              <span
+                                className="font-ttc-bold"
+                                style={{ fontSize: 'var(--profile-subscription-avatar-letter-size, 18px)' }}
+                              >
+                                {letter}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-start">
+                            <span
+                              className="text-white font-vk-demi"
+                              style={{ fontSize: 'var(--profile-subscription-tag-size, 18px)' }}
+                            >
+                              @{sub.tag}
+                            </span>
+                          </div>
+                        </motion.button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             ) : null}
           </motion.div>

@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore react-slick не имеет встроенных типов
 import Slider from 'react-slick'
 import { motion } from 'motion/react'
 import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { getSupabase } from '@/lib/supabaseClient'
 import type { StoredAd } from './ads'
 
 const CONDITION_COLORS: Record<string, string> = {
@@ -23,6 +24,33 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: 'Другое',
 }
 
+type Contact = {
+  type: 'vk' | 'telegram'
+  url: string
+}
+
+const normalizeContacts = (items: unknown): Contact[] => {
+  if (!Array.isArray(items)) return []
+  return items
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null
+      const anyItem = item as { type?: string; url?: unknown }
+      const type = anyItem.type === 'vk' || anyItem.type === 'telegram' ? anyItem.type : null
+      const url = typeof anyItem.url === 'string' ? anyItem.url.trim() : ''
+      if (!type || !url) return null
+      return { type, url }
+    })
+    .filter((x): x is Contact => !!x)
+}
+
+const getShortUrl = (url: string): string => {
+  const trimmed = url.trim()
+  if (!trimmed) return ''
+  const withoutProtocol = trimmed.replace(/^https?:\/\//i, '').replace(/^www\./i, '')
+  if (withoutProtocol.length <= 32) return withoutProtocol
+  return `${withoutProtocol.slice(0, 20)}…${withoutProtocol.slice(-7)}`
+}
+
 export default function AdDetail({
   ad,
   onClose,
@@ -36,6 +64,10 @@ export default function AdDetail({
   const [showAllSpecs, setShowAllSpecs] = useState(false)
   const [showFullDescription, setShowFullDescription] = useState(false)
   const [expandedSpecIndex, setExpandedSpecIndex] = useState<number | null>(null)
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [contactsVisible, setContactsVisible] = useState(false)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const contactsRef = useRef<HTMLDivElement | null>(null)
 
   const images =
     ad.imageUrls && ad.imageUrls.length > 0
@@ -111,6 +143,109 @@ export default function AdDetail({
   const descriptionText =
     ad.description && ad.description.trim().length > 0 ? ad.description : ad.title
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const detail = {
+      showNextInNav: true,
+      enabled: true,
+      label: 'Приобрести',
+      mode: 'detail' as const,
+    }
+    const ev = new CustomEvent('ads-create-nav-state', { detail })
+    window.dispatchEvent(ev)
+
+    const handlePurchase = () => {
+      setContactsVisible((prev) => {
+        if (prev) {
+          const container = scrollRef.current
+          const section = contactsRef.current
+          if (!container || !section) return prev
+          const containerRect = container.getBoundingClientRect()
+          const sectionRect = section.getBoundingClientRect()
+          const offset = sectionRect.top - containerRect.top
+          container.scrollTo({
+            top: container.scrollTop + offset - 16,
+            behavior: 'smooth',
+          })
+          return prev
+        }
+        return true
+      })
+    }
+
+    window.addEventListener('ad-detail-purchase', handlePurchase)
+
+    return () => {
+      window.removeEventListener('ad-detail-purchase', handlePurchase)
+      const resetEv = new CustomEvent('ads-create-nav-state', {
+        detail: { showNextInNav: false, enabled: false, mode: null },
+      })
+      window.dispatchEvent(resetEv)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!contactsVisible) return
+    if (typeof window === 'undefined') return
+    const container = scrollRef.current
+    const section = contactsRef.current
+    if (!container || !section) return
+    const containerRect = container.getBoundingClientRect()
+    const sectionRect = section.getBoundingClientRect()
+    const offset = sectionRect.top - containerRect.top
+    container.scrollTo({
+      top: container.scrollTop + offset - 16,
+      behavior: 'smooth',
+    })
+  }, [contactsVisible])
+
+  useEffect(() => {
+    const userId = ad.userId
+    if (!userId) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        if (typeof window === 'undefined') return
+        let next: Contact[] = []
+        try {
+          const raw = window.localStorage.getItem('hw-profiles')
+          const map = raw
+            ? (JSON.parse(raw) as Record<string, { contacts?: unknown }>)
+            : {}
+          const localContacts = normalizeContacts(map[userId]?.contacts)
+          if (localContacts.length > 0) {
+            next = localContacts
+          }
+        } catch {
+        }
+        const client = getSupabase()
+        if (client) {
+          const { data, error } = await client
+            .from('profiles')
+            .select('contacts')
+            .eq('id', userId)
+            .maybeSingle()
+          if (!error && data) {
+            const dbContacts = normalizeContacts(
+              (data as { contacts?: unknown }).contacts,
+            )
+            if (dbContacts.length > 0) {
+              next = dbContacts
+            }
+          }
+        }
+        if (!cancelled) {
+          setContacts(next)
+        }
+      } catch {
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [ad.userId])
+
   const specs: { label: string; value: string }[] = []
   if (categoryLabel) {
     specs.push({ label: 'Категория', value: categoryLabel })
@@ -160,7 +295,7 @@ export default function AdDetail({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto scrollbar-hidden">
+        <div className="flex-1 overflow-y-auto scrollbar-hidden" ref={scrollRef}>
           <div className="pt-2">
             <div className="relative">
               {images.length > 0 ? (
@@ -436,6 +571,84 @@ export default function AdDetail({
                   )}
                 </div>
               </div>
+            )}
+            {contactsVisible && (
+              <motion.div
+                ref={contactsRef}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="py-5 border-t"
+                style={{
+                  borderColor: 'var(--ad-detail-divider-color, #2f2f2f)',
+                }}
+              >
+                <h2
+                  className="mb-4 font-semibold"
+                  style={{
+                    fontSize: 'var(--ad-detail-section-title-size, 16px)',
+                  }}
+                >
+                  Способы связи
+                </h2>
+                {contacts.length > 0 ? (
+                  <div className="space-y-3">
+                    {contacts.map((contact) => {
+                      const key = `${contact.type}-${contact.url}`
+                      const label =
+                        contact.type === 'vk' ? 'ВКонтакте' : 'Telegram'
+                      const iconSrc =
+                        contact.type === 'vk'
+                          ? '/interface/vk.svg'
+                          : '/interface/telegram.svg'
+                      const short = getShortUrl(contact.url)
+                      return (
+                        <a
+                          key={key}
+                          href={contact.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-between rounded-xl bg-[#111111] px-4 py-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="flex items-center justify-center overflow-hidden"
+                              style={{
+                                width:
+                                  'var(--ad-detail-contact-avatar-size, 32px)',
+                                height:
+                                  'var(--ad-detail-contact-avatar-size, 32px)',
+                              }}
+                            >
+                              <img
+                                src={iconSrc}
+                                alt={label}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                            <span
+                              className="text-white font-sf-ui-light"
+                              style={{
+                                fontSize:
+                                  'var(--ad-detail-contact-label-size, 15px)',
+                              }}
+                            >
+                              {label}
+                            </span>
+                          </div>
+                          <span className="max-w-[160px] truncate text-right text-xs text-white/60">
+                            {short}
+                          </span>
+                        </a>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-gray-400">
+                    У продавца пока нет указанных способов связи.
+                  </p>
+                )}
+              </motion.div>
             )}
           </div>
         </div>
