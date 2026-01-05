@@ -27,7 +27,7 @@ export async function loadLocalAuth(): Promise<LocalAuthInfo> {
     if (typeof window === 'undefined') return null
     const raw = window.localStorage.getItem('hw-auth')
     if (!raw) return null
-    const parsed = JSON.parse(raw) as { tag?: string; uid?: string; email?: string } | null
+    const parsed = JSON.parse(raw) as { tag?: string; uid?: string; uuid?: string; email?: string } | null
     if (!parsed || typeof parsed !== 'object') return null
     return parsed
   } catch {

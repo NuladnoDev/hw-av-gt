@@ -99,7 +99,7 @@ export default function HomeScreen() {
         if (tagFromEmail && tagFromEmail.trim().length > 0) {
           await client.from('profiles').upsert({ id, tag: tagFromEmail.trim() })
           setCurrentTag(tagFromEmail.trim())
-          window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail.trim(), uid: id, email }))
+          window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail.trim(), uid: id, uuid: id, email }))
           window.dispatchEvent(new Event('local-auth-changed'))
         } else {
           setCurrentTag(null)

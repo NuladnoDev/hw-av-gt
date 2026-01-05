@@ -44,6 +44,7 @@ export default function Profile({
   const [avatarLoading, setAvatarLoading] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const [userAltId, setUserAltId] = useState<string | null>(null)
   const [description, setDescription] = useState<string>('')
   const [age, setAge] = useState<string>('')
   const [gender, setGender] = useState<string>('')
@@ -146,13 +147,18 @@ export default function Profile({
   useEffect(() => {
     let cancelled = false
     const load = async () => {
-      if (!userId) {
+      if (!userId && !userAltId) {
         setUserAds([])
         return
       }
       const all = await loadAdsFromStorage()
       if (cancelled) return
-      setUserAds(all.filter((a) => a.userId === userId).sort((a, b) => b.createdAt - a.createdAt))
+      const filtered = all.filter((a) => {
+        if (userId && a.userId === userId) return true
+        if (userAltId && a.userId === userAltId) return true
+        return false
+      })
+      setUserAds(filtered.sort((a, b) => b.createdAt - a.createdAt))
     }
     load()
     const handler = () => {
@@ -163,22 +169,25 @@ export default function Profile({
       cancelled = true
       window.removeEventListener('ads-updated', handler as EventListener)
     }
-  }, [userId])
+  }, [userId, userAltId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     let idLocal: string | null = null
+    let altLocal: string | null = null
     if (viewUserId) {
       idLocal = viewUserId
+      altLocal = null
     } else {
       const authRaw = window.localStorage.getItem('hw-auth')
       const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; uuid?: string; email?: string }) : null
-      idLocal = auth?.uuid ?? auth?.uid ?? null
-      
-      // If we're on our own profile and the localStorage 'uid' is a tag (hw-XXXX),
-      // we don't have the UUID yet. But it will be set by loadViewer soon.
+      const uuid = auth?.uuid ?? null
+      const uid = auth?.uid ?? null
+      idLocal = uuid ?? uid ?? null
+      altLocal = uuid && uid && uuid !== uid ? uid : null
     }
     setUserId(idLocal)
+    setUserAltId(altLocal)
     const profRaw = window.localStorage.getItem('hw-profiles')
     const profMap = profRaw
       ? (JSON.parse(profRaw) as Record<
@@ -385,7 +394,29 @@ export default function Profile({
           console.error('ensurePushSubscription: Fetch error:', fetchErr)
         }
       } else {
-        console.warn('ensurePushSubscription: viewerId is not a UUID, skipping DB sync:', viewerId)
+        // Fallback: try to get real UUID from storage if current viewerId is "pretty" (hw-****)
+        try {
+          const auth = await loadLocalAuth()
+          const realUuid = auth?.uuid
+          if (realUuid && isUuid(realUuid)) {
+            console.log('ensurePushSubscription: using fallback UUID from storage:', realUuid)
+            const res = await fetch('/api/push/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                subscription: sub.toJSON(),
+                userId: realUuid,
+              }),
+            })
+            if (!res.ok) {
+              console.error('ensurePushSubscription: API failed (fallback):', await res.text())
+            }
+          } else {
+            console.warn('ensurePushSubscription: viewerId is not a UUID and no fallback UUID found:', viewerId)
+          }
+        } catch (e) {
+          console.warn('ensurePushSubscription: fallback failed:', e)
+        }
       }
       return true
     } catch (err) {

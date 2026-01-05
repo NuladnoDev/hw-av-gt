@@ -300,6 +300,7 @@ export default function Ads({
   const [createOpen, setCreateOpen] = useState(false)
   const [items, setItems] = useState<StoredAd[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserAltId, setCurrentUserAltId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
 
@@ -371,11 +372,16 @@ export default function Ads({
     if (typeof window === 'undefined') return
     try {
       const raw = window.localStorage.getItem('hw-auth')
-      const auth = raw ? (JSON.parse(raw) as { uid?: string | null } | null) : null
+      const auth = raw ? (JSON.parse(raw) as { uid?: string | null; uuid?: string | null } | null) : null
+      const uuid = auth?.uuid ?? null
       const uid = auth?.uid ?? null
-      setCurrentUserId(typeof uid === 'string' && uid.length > 0 ? uid : null)
+      const main = uuid ?? uid ?? null
+      const alt = uuid && uid && uuid !== uid ? uid : null
+      setCurrentUserId(typeof main === 'string' && main.length > 0 ? main : null)
+      setCurrentUserAltId(typeof alt === 'string' && alt.length > 0 ? alt : null)
     } catch {
       setCurrentUserId(null)
+      setCurrentUserAltId(null)
     }
   }, [])
 
@@ -539,7 +545,9 @@ export default function Ads({
             }}
           >
             {visibleItems.map((ad) => {
-              const isOwn = currentUserId !== null && ad.userId === currentUserId
+              const isOwn =
+                (currentUserId !== null && ad.userId === currentUserId) ||
+                (currentUserAltId !== null && ad.userId === currentUserAltId)
               return (
                 <AdCard
                   key={ad.id}
