@@ -1196,7 +1196,7 @@ export default function AdsEdit({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/95 flex items-center justify-center z-[70]"
+            className="fixed inset-[-100px] bg-black/95 flex items-center justify-center z-[9999]"
           >
             <div className="flex flex-col items-center">
               <motion.div
