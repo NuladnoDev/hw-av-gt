@@ -35,7 +35,7 @@ export default function Setting({
     ;(async () => {
       try {
         const saved = await loadLocalAuth()
-        const localId = saved?.uid ?? null
+        const localId = saved?.uuid ?? saved?.uid ?? null
         if (localId) setUserId(localId)
 
         let email: string | null = null

@@ -221,7 +221,7 @@ export default function AdsCreate({
 
     try {
       const auth = await loadLocalAuth()
-      uid = auth?.uid ?? null
+      uid = auth?.uuid ?? auth?.uid ?? null
       userTag = auth?.tag ?? null
     } catch {
       uid = null

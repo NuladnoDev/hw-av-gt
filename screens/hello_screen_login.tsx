@@ -231,7 +231,7 @@ export default function HelloScreenLogin({
                     uid = (prof?.uid as string).trim()
                   }
                 }
-                await saveLocalAuth({ tag, uid, email })
+                await saveLocalAuth({ tag, uid, email, uuid: userId })
                 window.dispatchEvent(new Event('local-auth-changed'))
               }
             }}

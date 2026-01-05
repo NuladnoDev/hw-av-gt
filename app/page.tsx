@@ -156,7 +156,7 @@ export default function Home() {
         window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
       } catch {
       }
-      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid: userId, email }))
+      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid: userId, uuid: userId, email }))
       window.dispatchEvent(new Event('local-auth-changed'))
     }
   }

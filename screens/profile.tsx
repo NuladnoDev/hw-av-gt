@@ -113,6 +113,14 @@ export default function Profile({
       try {
         const auth = await loadLocalAuth()
         if (cancelled) return
+
+        const uuid = auth?.uuid ?? null
+        if (typeof uuid === 'string' && isUuid(uuid)) {
+          setViewerId(uuid)
+          console.log('Profile: viewerId set from local hw-auth UUID field:', uuid)
+          return
+        }
+
         const id = auth?.uid ?? null
         if (typeof id === 'string' && isUuid(id)) {
           setViewerId(id)
@@ -164,8 +172,8 @@ export default function Profile({
       idLocal = viewUserId
     } else {
       const authRaw = window.localStorage.getItem('hw-auth')
-      const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
-      idLocal = auth?.uid ?? null
+      const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; uuid?: string; email?: string }) : null
+      idLocal = auth?.uuid ?? auth?.uid ?? null
       
       // If we're on our own profile and the localStorage 'uid' is a tag (hw-XXXX),
       // we don't have the UUID yet. But it will be set by loadViewer soon.

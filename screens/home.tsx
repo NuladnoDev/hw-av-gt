@@ -128,7 +128,7 @@ export default function HomeScreen() {
       const email = session?.user?.email ?? null
       const tagFromEmail = typeof email === 'string' ? email.split('@')[0] : null
       if (uid && tagFromEmail && tagFromEmail.trim().length > 0) {
-        window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail.trim(), uid, email }))
+        window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail.trim(), uid, uuid: uid, email }))
         setCurrentTag(tagFromEmail.trim())
       }
       if (event === 'SIGNED_OUT') {

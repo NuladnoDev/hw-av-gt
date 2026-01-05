@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 export type LocalAuthInfo = {
   tag?: string
   uid?: string
+  uuid?: string
   email?: string
 } | null
 
@@ -42,12 +43,13 @@ export async function clearLocalAuth(): Promise<void> {
   }
 }
 
-export async function saveLocalAuth(info: { tag: string; uid: string; email: string }): Promise<void> {
+export async function saveLocalAuth(info: { tag: string; uid: string; uuid?: string; email: string }): Promise<void> {
   try {
     if (typeof window === 'undefined') return
     const payload = {
       tag: info.tag,
       uid: info.uid,
+      uuid: info.uuid,
       email: info.email,
     }
     window.localStorage.setItem('hw-auth', JSON.stringify(payload))

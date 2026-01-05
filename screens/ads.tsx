@@ -320,8 +320,8 @@ export default function Ads({
       let uid: string | null = null
       try {
         const raw = window.localStorage.getItem('hw-auth')
-        const auth = raw ? (JSON.parse(raw) as { uid?: string | null } | null) : null
-        const id = auth?.uid ?? null
+        const auth = raw ? (JSON.parse(raw) as { uid?: string | null; uuid?: string | null } | null) : null
+        const id = auth?.uuid ?? auth?.uid ?? null
         uid = typeof id === 'string' && id.length > 0 ? id : null
       } catch {
         uid = null
