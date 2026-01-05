@@ -394,6 +394,12 @@ export default function Profile({
     }
   }
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && viewerId && isUuid(viewerId)) {
+      ensurePushSubscription().catch((err) => console.error('Auto ensurePushSubscription failed', err))
+    }
+  }, [viewerId])
+
   const handleAvatarFile = async (files: FileList | null) => {
     const f = files && files[0]
     if (!f || !userId) return
