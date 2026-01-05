@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { getSupabase, clearLocalAuth } from '@/lib/supabaseClient'
+import { getSupabase, clearLocalAuth, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 
 export default function ProfileEdit({
@@ -98,19 +98,50 @@ export default function ProfileEdit({
   useEffect(() => {
     const client = getSupabase()
     ;(async () => {
-      const authRaw = window.localStorage.getItem('hw-auth')
-      const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string; uid?: string; email?: string }) : null
-      const id = auth?.uid ?? null
+      let mainId: string | null = null
+      let altId: string | null = null
+      let authTag: string | undefined
+      let authEmail: string | undefined
+      try {
+        const auth = await loadLocalAuth()
+        mainId = auth?.uuid ?? auth?.uid ?? null
+        altId =
+          auth?.uuid && auth?.uid && auth.uuid !== auth.uid ? auth.uid : null
+        authTag = auth?.tag
+        authEmail = auth?.email
+      } catch {
+        mainId = null
+        altId = null
+        authTag = undefined
+        authEmail = undefined
+      }
+      const id = mainId ?? altId
       setUserId(id)
       const profRaw = window.localStorage.getItem('hw-profiles')
       const profMap = profRaw
-        ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>)
+        ? (JSON.parse(profRaw) as Record<
+            string,
+            {
+              tag?: string
+              avatar_url?: string
+              description?: string
+              age?: string
+              gender?: string
+              city?: string
+              political?: string
+              hobbies?: string
+            }
+          >)
         : {}
-      const localProf = id ? profMap[id] : undefined
+      let localProf = id ? profMap[id] : undefined
+      if (!localProf && altId && altId !== id) {
+        localProf = profMap[altId]
+      }
       const baseTag =
         localProf?.tag ??
-        auth?.tag ??
+        authTag ??
         (typeof initialTagProp === 'string' ? initialTagProp.replace(/^@/, '') : '') ??
+        (authEmail && authEmail.includes('@') ? authEmail.split('@')[0] : '') ??
         ''
       setTagText(baseTag)
       setOriginalTag(baseTag)
@@ -134,12 +165,13 @@ export default function ProfileEdit({
       setHobbies(hb)
       setOriginalHobbies(hb)
 
-      if (!client || !id) return
+      const dbId = mainId ?? altId
+      if (!client || !dbId) return
       try {
         const { data: prof, error: profError } = await client
           .from('profiles')
           .select('tag, avatar_url, description, age, gender, city, political, hobbies')
-          .eq('id', id)
+          .eq('id', dbId)
           .maybeSingle()
         if (profError || !prof) return
         const tagFromDb = (prof.tag as string | undefined) ?? undefined
@@ -298,10 +330,22 @@ export default function ProfileEdit({
   }
 
   const saveAbout = async () => {
-    if (!userId) return
     const client = getSupabase()
+    let mainId: string | null = null
+    let altId: string | null = null
+    try {
+      const auth = await loadLocalAuth()
+      mainId = auth?.uuid ?? auth?.uid ?? null
+      altId =
+        auth?.uuid && auth?.uid && auth.uuid !== auth.uid ? auth.uid : null
+    } catch {
+      mainId = null
+      altId = null
+    }
+    const id = mainId ?? altId
+    if (!id) return
     const payload: Record<string, unknown> = {
-      id: userId,
+      id,
       description: description ?? '',
       age: (age ?? '').trim(),
       gender: (gender ?? '').trim(),
@@ -309,37 +353,62 @@ export default function ProfileEdit({
       political: (political ?? '').trim(),
       hobbies: (hobbies ?? '').trim(),
     }
-    if (client) {
-      const { error } = await client.from('profiles').upsert(payload)
-      if (error) {
-        const profRaw = window.localStorage.getItem('hw-profiles')
-        const profMap = profRaw ? JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }> : {}
-        const prev = profMap[userId] ?? {}
-        profMap[userId] = {
+    const updateLocal = () => {
+      const profRaw = window.localStorage.getItem('hw-profiles')
+      const profMap = profRaw
+        ? (JSON.parse(profRaw) as Record<
+            string,
+            {
+              tag?: string
+              avatar_url?: string
+              description?: string
+              age?: string
+              gender?: string
+              city?: string
+              political?: string
+              hobbies?: string
+            }
+          >)
+        : {}
+      if (mainId) {
+        const prev = profMap[mainId] ?? {}
+        profMap[mainId] = {
           ...prev,
           description: payload.description as string,
-          age: typeof payload.age === 'number' ? String(payload.age) : (payload.age as string | null) ?? '',
+          age:
+            typeof payload.age === 'number'
+              ? String(payload.age)
+              : (payload.age as string | null) ?? '',
           gender: (payload.gender as string | null) ?? '',
           city: (payload.city as string | null) ?? '',
           political: (payload.political as string | null) ?? '',
           hobbies: (payload.hobbies as string | null) ?? '',
         }
-        window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
       }
-    } else {
-      const profRaw = window.localStorage.getItem('hw-profiles')
-      const profMap = profRaw ? JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }> : {}
-      const prev = profMap[userId] ?? {}
-      profMap[userId] = {
-        ...prev,
-        description: payload.description as string,
-        age: typeof payload.age === 'number' ? String(payload.age) : (payload.age as string | null) ?? '',
-        gender: (payload.gender as string | null) ?? '',
-        city: (payload.city as string | null) ?? '',
-        political: (payload.political as string | null) ?? '',
-        hobbies: (payload.hobbies as string | null) ?? '',
+      if (altId && altId !== mainId) {
+        const prevAlt = profMap[altId] ?? {}
+        profMap[altId] = {
+          ...prevAlt,
+          description: payload.description as string,
+          age:
+            typeof payload.age === 'number'
+              ? String(payload.age)
+              : (payload.age as string | null) ?? '',
+          gender: (payload.gender as string | null) ?? '',
+          city: (payload.city as string | null) ?? '',
+          political: (payload.political as string | null) ?? '',
+          hobbies: (payload.hobbies as string | null) ?? '',
+        }
       }
       window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+    }
+    if (client) {
+      const { error } = await client.from('profiles').upsert(payload)
+      if (error) {
+        updateLocal()
+      }
+    } else {
+      updateLocal()
     }
     const event = new CustomEvent('profile-updated', {
       detail: {
@@ -356,21 +425,49 @@ export default function ProfileEdit({
 
   const saveDescription = async () => {
     const client = getSupabase()
-    if (!userId) return
+    let mainId: string | null = null
+    let altId: string | null = null
+    try {
+      const auth = await loadLocalAuth()
+      mainId = auth?.uuid ?? auth?.uid ?? null
+      altId =
+        auth?.uuid && auth?.uid && auth.uuid !== auth.uid ? auth.uid : null
+    } catch {
+      mainId = null
+      altId = null
+    }
+    const id = mainId ?? altId
+    if (!id) return
     const next = description ?? ''
+    const updateLocal = () => {
+      const profRaw = window.localStorage.getItem('hw-profiles')
+      const profMap = profRaw
+        ? (JSON.parse(profRaw) as Record<
+            string,
+            { tag?: string; avatar_url?: string; description?: string }
+          >)
+        : {}
+      if (mainId) {
+        const prev = profMap[mainId] ?? {}
+        profMap[mainId] = { ...prev, description: next }
+      }
+      if (altId && altId !== mainId) {
+        const prevAlt = profMap[altId] ?? {}
+        profMap[altId] = { ...prevAlt, description: next }
+      }
+      window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+    }
     if (client) {
-      const { error } = await client.from('profiles').upsert({ id: userId, description: next })
+      const { error } = await client
+        .from('profiles')
+        .upsert({ id, description: next })
       if (error) {
         const event = new CustomEvent('profile-updated', { detail: { description: next } })
         window.dispatchEvent(event)
         return
       }
     } else {
-      const profRaw = window.localStorage.getItem('hw-profiles')
-      const profMap = profRaw ? JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string }> : {}
-      const prev = profMap[userId] ?? {}
-      profMap[userId] = { ...prev, description: next }
-      window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+      updateLocal()
     }
     const event = new CustomEvent('profile-updated', { detail: { description: next } })
     window.dispatchEvent(event)

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
-import { getSupabase } from '@/lib/supabaseClient'
+import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 
 type ContactType = 'vk' | 'telegram'
 
@@ -75,24 +75,36 @@ export default function Links({ onClose }: LinksProps) {
     let cancelled = false
     const load = async () => {
       try {
-        const authRaw = window.localStorage.getItem('hw-auth')
-        const auth = authRaw ? (JSON.parse(authRaw) as { uid?: string | null }) : null
-        const userId = auth?.uid ?? null
-        if (!userId) return
+        const auth = await loadLocalAuth()
+        if (cancelled) return
+        const mainId = auth?.uuid ?? auth?.uid ?? null
+        const altId =
+          auth?.uuid && auth?.uid && auth.uuid !== auth.uid ? auth.uid : null
+        if (!mainId && !altId) return
         const profRaw = window.localStorage.getItem('hw-profiles')
         const profMap = profRaw
           ? (JSON.parse(profRaw) as Record<string, { contacts?: Contact[] }>)
           : {}
-        const localContacts = normalizeContacts(profMap[userId]?.contacts)
+        let localContacts: Contact[] = []
+        if (mainId && profMap[mainId]?.contacts) {
+          localContacts = normalizeContacts(profMap[mainId]?.contacts)
+        }
+        if (
+          localContacts.length === 0 &&
+          altId &&
+          profMap[altId]?.contacts
+        ) {
+          localContacts = normalizeContacts(profMap[altId]?.contacts)
+        }
         if (!cancelled && localContacts.length > 0) {
           setContacts(localContacts)
         }
         const client = getSupabase()
-        if (!client) return
+        if (!client || !mainId) return
         const { data: prof, error } = await client
           .from('profiles')
           .select('contacts')
-          .eq('id', userId)
+          .eq('id', mainId)
           .maybeSingle()
         if (cancelled || error || !prof) return
         const fromDb = normalizeContacts((prof as { contacts?: unknown }).contacts)
@@ -111,22 +123,29 @@ export default function Links({ onClose }: LinksProps) {
   const saveContacts = async (next: Contact[]) => {
     if (typeof window === 'undefined') return
     try {
-      const authRaw = window.localStorage.getItem('hw-auth')
-      const auth = authRaw ? (JSON.parse(authRaw) as { uid?: string | null }) : null
-      const userId = auth?.uid ?? null
-      if (!userId) return
+      const auth = await loadLocalAuth()
+      const mainId = auth?.uuid ?? auth?.uid ?? null
+      const altId =
+        auth?.uuid && auth?.uid && auth.uuid !== auth.uid ? auth.uid : null
+      if (!mainId && !altId) return
       const profRaw = window.localStorage.getItem('hw-profiles')
       const profMap = profRaw
         ? (JSON.parse(profRaw) as Record<string, { contacts?: Contact[] }>)
         : {}
-      const prev = profMap[userId] ?? {}
-      profMap[userId] = { ...prev, contacts: next }
+      if (mainId) {
+        const prev = profMap[mainId] ?? {}
+        profMap[mainId] = { ...prev, contacts: next }
+      }
+      if (altId) {
+        const prevAlt = profMap[altId] ?? {}
+        profMap[altId] = { ...prevAlt, contacts: next }
+      }
       window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
       const client = getSupabase()
-      if (client) {
+      if (client && mainId) {
         await client
           .from('profiles')
-          .upsert({ id: userId, contacts: next })
+          .upsert({ id: mainId, contacts: next })
       }
       const event = new CustomEvent('profile-updated', {
         detail: { contacts: next },

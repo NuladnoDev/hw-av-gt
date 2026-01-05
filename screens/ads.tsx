@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { getSupabase } from '@/lib/supabaseClient'
+import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import AdsCreate, { CONDITION_OPTIONS } from './Ads_Create'
 import AdsEdit from './Ads_Edit'
 
@@ -415,12 +415,13 @@ export default function Ads({
   const checkHasContacts = async (): Promise<boolean> => {
     if (typeof window === 'undefined') return true
     try {
-      const authRaw = window.localStorage.getItem('hw-auth')
-      const auth = authRaw ? (JSON.parse(authRaw) as { uid?: string | null } | null) : null
-      const userId = auth?.uid ?? null
+      const auth = await loadLocalAuth()
+      const userId = auth?.uuid ?? auth?.uid ?? null
       if (!userId) return false
       const profRaw = window.localStorage.getItem('hw-profiles')
-      const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { contacts?: unknown }>) : {}
+      const profMap = profRaw
+        ? (JSON.parse(profRaw) as Record<string, { contacts?: unknown }>)
+        : {}
       const localContacts = normalizeContacts(profMap[userId]?.contacts)
       if (localContacts.length > 0) return true
       const client = getSupabase()
@@ -431,7 +432,9 @@ export default function Ads({
         .eq('id', userId)
         .maybeSingle()
       if (error || !data) return false
-      const dbContacts = normalizeContacts((data as { contacts?: unknown }).contacts)
+      const dbContacts = normalizeContacts(
+        (data as { contacts?: unknown }).contacts,
+      )
       return dbContacts.length > 0
     } catch {
       return false
