@@ -385,6 +385,9 @@ export function AdCardSkeleton() {
           <div className="mt-2 h-5 w-24 rounded bg-[#222222] overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
           </div>
+          
+          {/* Category Carousel */}
+
         </div>
       </div>
     </div>
@@ -405,6 +408,7 @@ export default function Ads({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserAltId, setCurrentUserAltId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
   const [contactWarningOpen, setContactWarningOpen] = useState(false)
   const [contactWarningLocked, setContactWarningLocked] = useState(false)
@@ -661,13 +665,69 @@ export default function Ads({
               </span>
             </button>
           </div>
+
+          {/* Category Carousel */}
+          <div className="mt-3 w-full relative">
+            {/* Left fade gradient */}
+            <div 
+              className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to right, #000000, transparent)',
+                width: 32,
+              }}
+            />
+            {/* Right fade gradient */}
+            <div 
+              className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to left, #000000, transparent)',
+                width: 32,
+              }}
+            />
+            <div 
+              className="flex overflow-x-auto scrollbar-hidden category-carousel px-1" 
+              style={{ width: 355, margin: '0 auto' }}
+            >
+              <div className="flex gap-2 py-1">
+                {[
+                  { name: 'Новые', color: '#FF6B6B' },
+                  { name: 'Подтверждённые', color: '#4ECDC4' },
+                  { name: 'Популярные', color: '#45B7D1' },
+                  { name: 'Скидки', color: '#F9CA24' },
+                  { name: 'Бесплатно', color: '#6C5CE7' },
+                  { name: 'Обмен', color: '#A29BFE' },
+                  { name: 'Аукцион', color: '#FD79A8' }
+                ].map((category, index) => (
+                  <motion.button
+                    key={category.name}
+                    type="button"
+                    className={`flex-shrink-0 px-4 py-2 rounded-full font-sf-ui-medium text-sm transition-all duration-200 ${selectedCategory === category.name ? 'scale-105' : 'hover:scale-105'} active:scale-95`}
+                    style={{
+                      backgroundColor: selectedCategory === category.name ? category.color + '40' : category.color + '20',
+                      border: `1px solid ${selectedCategory === category.name ? category.color : category.color + '40'}`,
+                      color: selectedCategory === category.name ? '#FFFFFF' : category.color,
+                      boxShadow: selectedCategory === category.name ? `0 4px 12px ${category.color}30` : `0 2px 8px ${category.color}20`,
+                    }}
+                    whileHover={{ scale: selectedCategory === category.name ? 1.05 : 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSelectedCategory(selectedCategory === category.name ? null : category.name)
+                      console.log('Category clicked:', category.name)
+                    }}
+                  >
+                    {category.name}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div
         className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hidden"
         style={{
-          top: 'calc(var(--feed-controls-top) + 70px)',
+          top: 'calc(var(--feed-controls-top) + 70px + 60px)', // Added extra space for carousel
           paddingLeft: ADS_SIDE_PADDING,
           paddingRight: ADS_SIDE_PADDING,
           paddingBottom: 16,

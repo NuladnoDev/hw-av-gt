@@ -2,6 +2,43 @@
 @import "slick-carousel/slick/slick.css";
 @import "slick-carousel/slick/slick-theme.css";
 
+/* Prevent zoom on mobile devices */
+html, body {
+  touch-action: manipulation;
+  touch-action: pan-x pan-y;
+  -webkit-user-scalable: none;
+  -moz-user-scalable: none;
+  -ms-user-scalable: none;
+  user-scalable: none;
+}
+
+/* Hide scrollbar for category carousel */
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth scrolling for category carousel */
+.category-carousel {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent zoom on interactive elements */
+button, input, textarea, select, a, img, div {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent double-tap zoom */
+* {
+  -webkit-touch-callout: none;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -397,7 +434,27 @@ body {
   inset: 0;
   width: 60%;
   background: linear-gradient(90deg, #6e9b7d 0%, #34975f 100%);
-  animation: adsPublishProgress 900ms ease-in-out infinite;
+}
+
+/* Ensure proper drag behavior */
+.draggable-image {
+  user-select: none;
+  -webkit-user-drag: element;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: move;
+  touch-action: none; /* Prevent scrolling during drag */
+}
+
+.draggable-image:active {
+  cursor: grabbing;
+}
+
+.draggable-image.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  z-index: 1000;
 }
 
 @keyframes revealText {

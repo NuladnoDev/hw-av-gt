@@ -113,6 +113,10 @@ export default function AdsCreate({
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragData, setDragData] = useState<{startX: number, startY: number, isDragging: boolean} | null>(null)
+  const [touchStartPos, setTouchStartPos] = useState<{x: number, y: number, index: number | null} | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
 
   const [nicotineFormat, setNicotineFormat] = useState('')
   const [nicotineTankVolume, setNicotineTankVolume] = useState('')
@@ -383,6 +387,85 @@ export default function AdsCreate({
     setImages((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.dataTransfer.effectAllowed = 'move'
+    // Use both setData methods for better compatibility
+    e.dataTransfer.setData('text/plain', index.toString())
+    e.dataTransfer.setData('index', index.toString())
+    setDraggedIndex(index)
+    console.log('Drag started:', index)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+    console.log('Drag ended')
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const swapImages = (fromIndex: number, toIndex: number) => {
+    setImages((prev) => {
+      const newImages = [...prev]
+      const temp = newImages[fromIndex]
+      newImages[fromIndex] = newImages[toIndex]
+      newImages[toIndex] = temp
+      return newImages
+    })
+  }
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>, index: number) => {
+    const touch = e.touches[0]
+    setTouchStartPos({
+      x: touch.clientX,
+      y: touch.clientY,
+      index: index
+    })
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartPos || touchStartPos.index === null) return
+    
+    const touch = e.touches[0]
+    const deltaX = Math.abs(touch.clientX - touchStartPos.x)
+    const deltaY = Math.abs(touch.clientY - touchStartPos.y)
+    
+    // If moved more than 10 pixels, consider it a drag
+    if (deltaX > 10 || deltaY > 10) {
+      setDraggedIndex(touchStartPos.index)
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartPos || touchStartPos.index === null) return
+    
+    const touch = e.changedTouches[0]
+    const element = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement
+    
+    if (element) {
+      const dropTarget = element.closest('[data-image-index]') as HTMLElement
+      if (dropTarget) {
+        const dropIndex = parseInt(dropTarget.dataset.imageIndex!, 10)
+        const dragIndex = touchStartPos.index
+        
+        if (!isNaN(dropIndex) && dragIndex !== dropIndex) {
+          setImages((prev) => {
+            const newImages = [...prev]
+            const draggedImage = newImages[dragIndex]
+            newImages.splice(dragIndex, 1)
+            newImages.splice(dropIndex, 0, draggedImage)
+            return newImages
+          })
+        }
+      }
+    }
+    
+    setTouchStartPos(null)
+    setDraggedIndex(null)
+  }
+
   const handleNumericChange = (val: string, setter: (v: string) => void) => {
     const onlyDigits = val.replace(/[^\d]/g, '')
     setter(onlyDigits)
@@ -641,6 +724,11 @@ export default function AdsCreate({
                     )
                   })}
                 </div>
+                <div className="mt-6 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4">
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light text-center">
+                    Выбор типа влияет на то, какие характеристики будут представлены покупателю
+                  </div>
+                </div>
               </div>
             )}
 
@@ -651,34 +739,96 @@ export default function AdsCreate({
                     Внешний вид
                   </div>
                   <div className="mt-1 text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
-                    Первое фото будет обложкой объявления
+                    Первое фото будет обложкой объявления. Выберите лучшее фото из всех.
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4" ref={gridRef}>
                   {images.map((src, index) => (
-                    <div key={src} className="relative w-full overflow-hidden rounded-2xl" style={{ aspectRatio: '1 / 1' }}>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewImage(src)}
-                        className="block h-full w-full active:opacity-80 transition-opacity"
-                      >
-                        <img src={src} alt="preview" className="h-full w-full object-cover" />
-                      </button>
-                      {index === 0 && (
-                        <div className="absolute left-3 top-3 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-sm pointer-events-none">
-                          <span className="text-xs text-white font-sf-ui-light">
-                            Обложка
-                          </span>
+                    <motion.div 
+                      key={`${src}-${index}`}
+                      data-image-index={index}
+                      className={`draggable-image relative w-full overflow-hidden rounded-2xl group ${
+                        draggedIndex === index ? 'opacity-50 scale-95' : ''
+                      } ${
+                        draggedIndex !== null && draggedIndex !== index ? 'hover:scale-105' : ''
+                      }`}
+                      style={{ aspectRatio: '1 / 1' }}
+                      layout
+                       drag
+                       dragConstraints={gridRef}
+                       dragElastic={0.2}
+                       dragMomentum={false}
+                       dragSnapToOrigin={true}
+                       onDragEnd={(event, info) => {
+                         const threshold = 50
+                         const dragIndex = index
+                         const absX = Math.abs(info.offset.x)
+                         const absY = Math.abs(info.offset.y)
+                         const axis = absX >= absY ? 'x' : 'y'
+                         
+                         if (axis === 'x' && absX > threshold) {
+                           const direction = info.offset.x > 0 ? 'right' : 'left'
+                           let targetIndex = dragIndex
+                           if (direction === 'left' && dragIndex % 2 === 1) {
+                             targetIndex = dragIndex - 1
+                           } else if (direction === 'right' && dragIndex % 2 === 0) {
+                             targetIndex = dragIndex + 1
+                           }
+                           if (targetIndex !== dragIndex && targetIndex >= 0 && targetIndex < images.length) {
+                             swapImages(dragIndex, targetIndex)
+                           }
+                         }
+                         
+                         if (axis === 'y' && absY > threshold) {
+                           const direction = info.offset.y > 0 ? 'down' : 'up'
+                           let targetIndex = dragIndex
+                           if (direction === 'up' && dragIndex - 2 >= 0) {
+                             targetIndex = dragIndex - 2
+                           } else if (direction === 'down' && dragIndex + 2 < images.length) {
+                             targetIndex = dragIndex + 2
+                           }
+                           if (targetIndex !== dragIndex && targetIndex >= 0 && targetIndex < images.length) {
+                             swapImages(dragIndex, targetIndex)
+                           }
+                         }
+                       }}
+                       whileDrag={{ scale: 1.05, zIndex: 1000 }}
+                       transition={{ layout: { type: 'spring', stiffness: 500, damping: 40 } }}
+                      onTouchStart={(e) => handleTouchStart(e, index)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                    >
+                      <div className="relative h-full w-full">
+                        <div
+                          onClick={() => setPreviewImage(src)}
+                          className="block h-full w-full cursor-pointer active:opacity-80 transition-opacity"
+                        >
+                          <img src={src} alt="preview" className="h-full w-full object-cover" />
                         </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeImageAt(index)}
-                        className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-red-500/90 shadow-lg backdrop-blur-sm active:scale-90 transition-transform"
-                      >
-                        <X size={16} className="text-white" />
-                      </button>
-                    </div>
+                        {index === 0 && (
+                          <div className="absolute left-3 top-3 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-sm pointer-events-none">
+                            <span className="text-xs text-white font-sf-ui-light">
+                              Обложка
+                            </span>
+                          </div>
+                        )}
+                        <div className="absolute left-3 bottom-3 rounded-lg bg-black/70 px-2 py-1 backdrop-blur-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                          <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                          </svg>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeImageAt(index)
+                          }}
+                          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-red-500/90 shadow-lg backdrop-blur-sm active:scale-90 transition-transform z-10"
+                        >
+                          <X size={16} className="text-white" />
+                        </button>
+                      </div>
+                    </motion.div>
                   ))}
                   {images.length < 6 && (
                     <button
@@ -701,6 +851,18 @@ export default function AdsCreate({
                   <span className="text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
                     {images.length} / 6 фото
                   </span>
+                </div>
+                {images.length > 1 && (
+                  <div className="mt-2 text-center">
+                    <span className="text-[12px] leading-[1.4em] text-white/30 font-sf-ui-light">
+                      Свайпните фото в сторону, чтобы изменить порядок
+                    </span>
+                  </div>
+                )}
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4">
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light text-center">
+                    Фото — первое, на что смотрит покупатель. Хорошие фото помогают быстрее продать товар
+                  </div>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -1188,6 +1350,11 @@ export default function AdsCreate({
                   placeholder="Расскажите о товаре: его особенности, история покупки, причина продажи..."
                   className="h-[160px] w-full resize-none rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                 />
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4">
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light text-center">
+                    Подробное описание помогает покупателю принять решение. Укажите важные детали и особенности товара
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1215,6 +1382,11 @@ export default function AdsCreate({
                         ₽
                       </div>
                     </div>
+                  </div>
+                </div>
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4">
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light text-center">
+                    Укажите реальную цену. Слишком высокая цена может отпугнуть покупателей, слишком низкая вызовет подозрения
                   </div>
                 </div>
               </div>
