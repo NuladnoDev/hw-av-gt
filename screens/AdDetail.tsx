@@ -271,7 +271,7 @@ export default function AdDetail({
 
   return (
     <motion.div
-      className="absolute inset-0 z-50 flex flex-col bg-[#0a0a0a] text-white"
+      className="absolute inset-0 z-40 flex flex-col bg-[#0a0a0a] text-white"
       initial={{ opacity: 0, scale: 0.9, borderRadius: 24 }}
       animate={{ opacity: 1, scale: 1, borderRadius: 0 }}
       exit={{ opacity: 0, scale: 0.9, borderRadius: 24 }}

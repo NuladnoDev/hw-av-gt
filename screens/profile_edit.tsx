@@ -483,12 +483,22 @@ export default function ProfileEdit({
     (hobbies ?? '') !== (originalHobbies ?? '')
 
   return (
-    <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in">
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
+    <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
+      <div className="relative h-[812px] w-[375px]" style={{ 
+        transform: `scale(${scale})`,
+        '--profile-cover-height': '90px',
+        '--profile-avatar-size': '110px',
+        '--profile-avatar-top-offset': '0px',
+        '--profile-avatar-glow-size': '20px',
+        '--profile-avatar-glow-color': 'rgba(255,255,255,0.1)',
+        '--profile-edit-bottom-height': '80px',
+        '--profile-name-size': '28px',
+        '--profile-name-margin-top': '6px',
+      } as React.CSSProperties}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
 
         <div
-          className="absolute left-0 w-full bg-[#0A0A0A]"
+          className="absolute left-0 w-full bg-[#0A0A0A] z-10"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
         >
           <div className="relative h-full w-full">
@@ -533,7 +543,7 @@ export default function ProfileEdit({
               className="absolute right-6 top-0 flex h-full items-center"
               disabled={!dirty}
             >
-              <span className={`text-[16px] leading-[1em] ${dirty ? 'text-white' : 'text-white/60'} font-sf-ui-medium`}>Сохр.</span>
+              <span className={`text-[16px] leading-[1em] ${dirty ? 'text-white' : 'text-white/60'} font-sf-ui-light`}>Сохр.</span>
             </button>
             <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
               <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
@@ -561,7 +571,7 @@ export default function ProfileEdit({
             style={{
               width: 'var(--profile-avatar-size)',
               height: 'var(--profile-avatar-size)',
-              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2))',
+              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) + var(--profile-avatar-top-offset, 0px))',
               boxShadow: `0 0 var(--profile-avatar-glow-size) var(--profile-avatar-glow-color), 0 4px 18px rgba(0,0,0,0.35)`,
               background: avatarUrl ? '#0A0A0A' : gradient,
             }}
@@ -583,8 +593,8 @@ export default function ProfileEdit({
         <div
           className="absolute left-0 w-full px-6 overflow-y-auto"
           style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px)',
-            height: 'calc(812px - var(--profile-edit-bottom-height) - 56px - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - var(--home-header-offset) - 12px)',
+            top: 'calc(56px + var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px + var(--profile-avatar-top-offset, 0px))',
+            height: 'calc(812px - var(--profile-edit-bottom-height) - 56px - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - 12px - var(--profile-avatar-top-offset, 0px))',
           }}
         >
           <div className="flex w-full flex-col items-center">
@@ -605,7 +615,7 @@ export default function ProfileEdit({
               </button>
             </div>
 
-            <div className="mt-8 w-full" style={{ marginLeft: '-24px', marginRight: '-24px' }}>
+            <div className="mt-3 w-full" style={{ marginLeft: '-24px', marginRight: '-24px' }}>
               <div
                 className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4"
                 style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}

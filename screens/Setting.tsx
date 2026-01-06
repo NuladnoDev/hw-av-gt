@@ -8,10 +8,14 @@ export default function Setting({
   onClose,
   onOpenAbout,
   onOpenContacts,
+  onOpenProject,
+  onOpenPhone,
 }: {
   onClose?: () => void
   onOpenAbout?: () => void
   onOpenContacts?: () => void
+  onOpenProject?: () => void
+  onOpenPhone?: () => void
 }) {
   const [scale, setScale] = useState(1)
   const [dirty, setDirty] = useState(false)
@@ -130,6 +134,15 @@ export default function Setting({
     close()
   }
 
+  const openProject = () => {
+    if (onOpenProject) onOpenProject()
+    else {
+      const ev = new Event('open-project-version')
+      window.dispatchEvent(ev)
+    }
+    close()
+  }
+
   const requestDelete = () => {
     const ev = new Event('profile-delete-request')
     window.dispatchEvent(ev)
@@ -222,54 +235,6 @@ export default function Setting({
                 type="button"
                 className="flex w-full items-center justify-between text-left bg-transparent"
                 style={{ height: 'var(--settings-item-height)' }}
-                disabled
-              >
-                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
-                  <img
-                    src="/setting/user-profile-03.svg"
-                    alt="Аккаунт"
-                    style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                    className="opacity-60"
-                  />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Аккаунт
-                  </span>
-                </div>
-                <img
-                  src="/interface/chevron-right 1.svg"
-                  alt=""
-                  className="h-[20px] w-[20px]"
-                  style={{ filter: 'var(--settings-chevron-filter)' }}
-                />
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent"
-                style={{ height: 'var(--settings-item-height)' }}
-                disabled
-              >
-                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
-                  <img
-                    src="/setting/settings.svg"
-                    alt="Основные"
-                    style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                    className="opacity-60"
-                  />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Основные
-                  </span>
-                </div>
-                <img
-                  src="/interface/chevron-right 1.svg"
-                  alt=""
-                  className="h-[20px] w-[20px]"
-                  style={{ filter: 'var(--settings-chevron-filter)' }}
-                />
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent"
-                style={{ height: 'var(--settings-item-height)' }}
                 onClick={openAbout}
               >
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
@@ -293,17 +258,16 @@ export default function Setting({
                 type="button"
                 className="flex w-full items-center justify-between text-left bg-transparent"
                 style={{ height: 'var(--settings-item-height)' }}
-                disabled
+                onClick={onOpenPhone}
               >
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
                   <img
                     src="/setting/colors-01.svg"
-                    alt="Улучшение аватара"
+                    alt="Устройства"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                    className="opacity-60"
                   />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Улучшение аватара
+                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                    Устройства
                   </span>
                 </div>
                 <img
@@ -345,7 +309,7 @@ export default function Setting({
               >
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
                   <img
-                    src="/setting/notification-box.svg"
+                    src="/interface/address.svg"
                     alt="Контакты"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                     className="opacity-60"
@@ -361,21 +325,20 @@ export default function Setting({
                   style={{ filter: 'var(--settings-chevron-filter)' }}
                 />
               </button>
-            </div>
-            <div className="absolute left-0 w-full" style={{ bottom: 'var(--settings-app-bottom-offset)' }}>
               <button
                 type="button"
                 className="flex w-full items-center justify-between text-left bg-transparent"
                 style={{ height: 'var(--settings-item-height)' }}
+                onClick={openProject}
               >
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
                   <img
                     src="/setting/brackets.svg"
-                    alt="Для"
+                    alt="О проекте..."
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
                   />
                   <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Для разработчиков 
+                    О проекте...
                   </span>
                 </div>
                 <img

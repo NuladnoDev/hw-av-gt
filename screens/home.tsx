@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ShoppingBag, User } from 'lucide-react'
+import { RefreshCcw, ShoppingBag, User } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import Profile from './profile'
 import ProfileEdit from './profile_edit'
 import Setting from './Setting'
 import InfoMe from './info_me'
 import Links from './Links'
+import ProjectVersion from './project_version'
+import UserSearch from './UserSearch'
+import Phone from './Phone'
 import { getSupabase } from '@/lib/supabaseClient'
 import Ads, { type StoredAd } from './ads'
 import AdDetail from './AdDetail'
@@ -41,6 +44,12 @@ export default function HomeScreen() {
   const [profileReturnAd, setProfileReturnAd] = useState<StoredAd | null>(null)
   const [profileStack, setProfileStack] = useState<string[]>([])
   const [linksOpen, setLinksOpen] = useState(false)
+  const [projectInfoOpen, setProjectInfoOpen] = useState(false)
+  const [userSearchOpen, setUserSearchOpen] = useState(false)
+  const [userSearchQuery, setUserSearchQuery] = useState('')
+  const [userSearchResults, setUserSearchResults] = useState<Array<{id: string, tag: string, avatarUrl: string | null}>>([])
+  const [userSearchLoading, setUserSearchLoading] = useState(false)
+  const [phoneOpen, setPhoneOpen] = useState(false)
   const [adsNavNextVisible, setAdsNavNextVisible] = useState(false)
   const [adsNavNextEnabled, setAdsNavNextEnabled] = useState(false)
   const [adsNavNextLabel, setAdsNavNextLabel] = useState('Далее')
@@ -59,7 +68,115 @@ export default function HomeScreen() {
     }, 180)
   }
 
+  const openUserSearch = () => {
+    setUserSearchOpen(true)
+  }
+  
+  const closeUserSearch = () => {
+    setUserSearchOpen(false)
+    setUserSearchQuery('')
+    setUserSearchResults([])
+  }
+
+  const closeAllWindows = () => {
+    setSettingsOpen(false)
+    setProfileEdit(false)
+    setInfoMeOpen(false)
+    setProfileMenuOpen(false)
+    setUserSearchOpen(false)
+    setUserSearchQuery('')
+    setUserSearchResults([])
+    setPhoneOpen(false)
+    setSelectedAd(null)
+  }
+
+  const searchUsers = async (query: string) => {
+    if (!query.trim()) {
+      setUserSearchResults([])
+      return
+    }
+    
+    // Require at least 2 characters for search (to avoid single letter searches)
+    if (query.trim().length < 2) {
+      setUserSearchResults([])
+      return
+    }
+    
+    setUserSearchLoading(true)
+    try {
+      const client = getSupabase()
+      if (!client) {
+        setUserSearchResults([])
+        return
+      }
+      
+      // Поиск пользователей по тегу с 80% совпадением
+      const { data, error } = await client
+        .from('profiles')
+        .select('id, tag, avatar_url')
+        .ilike('tag', `%${query}%`)
+        .limit(10)
+      
+      if (error) {
+        console.error('Ошибка поиска пользователей:', error)
+        // Handle JWT expired error
+        if (error.code === 'PGRST303') {
+          console.log('JWT expired, attempting to refresh...')
+          // Try to refresh the session
+          try {
+            const { data: { session } } = await client.auth.getSession()
+            if (!session) {
+              // Session is invalid, clear results and potentially redirect to login
+              setUserSearchResults([])
+              return
+            }
+            // Session refreshed, retry the search
+            const retryResult = await client
+              .from('profiles')
+              .select('id, tag, avatar_url')
+              .ilike('tag', `%${query}%`)
+              .limit(10)
+            
+            if (retryResult.error) {
+              setUserSearchResults([])
+              return
+            }
+            
+            const retryResults = (retryResult.data || []).map(user => ({
+              id: user.id,
+              tag: user.tag || 'user',
+              avatarUrl: user.avatar_url && user.avatar_url.startsWith('http') ? user.avatar_url : null
+            }))
+            
+            setUserSearchResults(retryResults)
+            return
+          } catch (refreshError) {
+            console.error('Failed to refresh session:', refreshError)
+            setUserSearchResults([])
+            return
+          }
+        }
+        setUserSearchResults([])
+        return
+      }
+      
+      const results = (data || []).map(user => ({
+        id: user.id,
+        tag: user.tag || 'user',
+        avatarUrl: user.avatar_url && user.avatar_url.startsWith('http') ? user.avatar_url : null
+      }))
+      
+      setUserSearchResults(results)
+    } catch (error) {
+      console.error('Ошибка при поиске пользователей:', error)
+      setUserSearchResults([])
+    } finally {
+      setUserSearchLoading(false)
+    }
+  }
+
   const handleBackFromForeignProfile = () => {
+    closeAllWindows()
     if (profileStack.length > 0) {
       const last = profileStack[profileStack.length - 1]
       const rest = profileStack.slice(0, -1)
@@ -90,6 +207,7 @@ export default function HomeScreen() {
     const sellerId = searchParams.get('sellerId')
     const profileTabParam = searchParams.get('profileTab')
     if (sellerId) {
+      closeAllWindows()
       setTab('profile')
       setViewProfileMode('foreign')
       setViewProfileUserId(sellerId)
@@ -171,6 +289,7 @@ export default function HomeScreen() {
   }, [])
   useEffect(() => {
     const handleProfileEmptyAdd = () => {
+      closeAllWindows()
       setTab('ads')
       setProfileTab('ads')
       setTimeout(() => {
@@ -235,17 +354,29 @@ export default function HomeScreen() {
       setInfoMeOpen(false)
       setSettingsOpen(true)
     }
+    const openPhone = () => {
+      setSettingsOpen(false)
+      setPhoneOpen(true)
+    }
+    const closePhone = () => {
+      setPhoneOpen(false)
+      setSettingsOpen(true)
+    }
     window.addEventListener('open-settings', openSettings)
     window.addEventListener('close-settings', closeSettings)
     window.addEventListener('open-profile-edit', openProfileEdit)
     window.addEventListener('open-info-me', openInfoMe)
     window.addEventListener('close-info-me', closeInfoMe)
+    window.addEventListener('open-phone', openPhone)
+    window.addEventListener('close-phone', closePhone)
     return () => {
       window.removeEventListener('open-settings', openSettings)
       window.removeEventListener('close-settings', closeSettings)
       window.removeEventListener('open-profile-edit', openProfileEdit)
       window.removeEventListener('open-info-me', openInfoMe)
       window.removeEventListener('close-info-me', closeInfoMe)
+      window.removeEventListener('open-phone', openPhone)
+      window.removeEventListener('close-phone', closePhone)
     }
   }, [])
 
@@ -279,11 +410,18 @@ export default function HomeScreen() {
               {tab === 'ads' ? 'Объявления' : 'Профиль'}
             </div>
             <div className="flex items-center gap-4">
-              <img
-                src="/interface/info-square-01-contained.svg"
-                alt="info"
-                className="h-[24px] w-[24px]"
-              />
+              <button
+                type="button"
+                onClick={openUserSearch}
+                className="flex h-full items-center"
+                aria-label="Поиск пользователей"
+              >
+                <img
+                  src="/interface/search-02.svg"
+                  alt="search"
+                  className="h-[24px] w-[24px]"
+                />
+              </button>
             </div>
           </div>
         ) : (
@@ -319,7 +457,7 @@ export default function HomeScreen() {
                   />
                 </button>
               )}
-              <div className="absolute right-6 top-0 flex h-full items-center">
+              <div className="absolute right-6 top-0 flex h-full items-center gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -370,6 +508,7 @@ export default function HomeScreen() {
               viewUserId={viewProfileMode === 'foreign' ? viewProfileUserId ?? undefined : undefined}
               onOpenProfileById={(id) => {
                 if (!id) return
+                closeAllWindows()
                 setTab('profile')
                 setProfileEdit(false)
                 setSelectedAd(null)
@@ -802,6 +941,11 @@ export default function HomeScreen() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (projectInfoOpen) {
+                      const ev = new Event('project-check-updates')
+                      window.dispatchEvent(ev)
+                      return
+                    }
                     if (adsNavNextVisible) {
                       if (!adsNavNextEnabled) return
                       if (adsNavNextMode === 'detail') {
@@ -813,6 +957,7 @@ export default function HomeScreen() {
                       }
                       return
                     }
+                    closeAllWindows()
                     setViewProfileMode('own')
                     setViewProfileUserId(null)
                     setProfileReturnAd(null)
@@ -823,7 +968,7 @@ export default function HomeScreen() {
                     }
                     setTab('ads')
                   }}
-                  className="relative flex-[7] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
+                  className="relative flex-[7] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-50"
                   style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
                 >
                   {tab === 'ads' && adsNavNextMode !== 'edit' && (
@@ -867,17 +1012,27 @@ export default function HomeScreen() {
                         className="relative z-10 flex flex-col items-center justify-center gap-1"
                       >
                         {tab === 'ads' ? (
-                            <>
-                               <img
-                                 src="/interface/plus-02-black.svg"
-                                 alt=""
-                                 className="w-[24px] h-[24px] translate-y-[2px]"
-                               />
-                               <span className="font-semibold text-[13.5px] text-black">
-                                 Создать обьявление
-                               </span>
-                             </>
-                          ) : (
+                          <>
+                            <img
+                              src="/interface/plus-02-black.svg"
+                              alt=""
+                              className="w-[24px] h-[24px] translate-y-[2px]"
+                            />
+                            <span className="font-semibold text-[13.5px] text-black">
+                              Создать обьявление
+                            </span>
+                          </>
+                        ) : projectInfoOpen ? (
+                          <>
+                            <RefreshCcw
+                              className="w-6 h-6 transition-all duration-200 text-white/70"
+                              strokeWidth={2.5}
+                            />
+                            <span className="font-medium text-[12px] text-white/70">
+                              Проверить обновления
+                            </span>
+                          </>
+                        ) : (
                           <>
                             <ShoppingBag
                               className="w-6 h-6 transition-all duration-200 text-white/70"
@@ -895,13 +1050,14 @@ export default function HomeScreen() {
                 <button
                   type="button"
                   onClick={() => {
+                    closeAllWindows()
                     setTab('profile')
                     setViewProfileMode('own')
                     setViewProfileUserId(null)
                     setProfileReturnAd(null)
                     setProfileStack([])
                   }}
-                  className="relative flex-[3] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-10"
+                  className="relative flex-[3] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-50"
                   style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
                 >
                   {tab === 'profile' && (
@@ -969,6 +1125,16 @@ export default function HomeScreen() {
               setInfoMeOpen(false)
               setLinksOpen(true)
             }}
+            onOpenProject={() => {
+              setSettingsOpen(false)
+              setInfoMeOpen(false)
+              setLinksOpen(false)
+              setProjectInfoOpen(true)
+            }}
+            onOpenPhone={() => {
+              setSettingsOpen(false)
+              setPhoneOpen(true)
+            }}
           />
         )}
         {infoMeOpen && (
@@ -987,6 +1153,14 @@ export default function HomeScreen() {
             }}
           />
         )}
+        {projectInfoOpen && (
+          <ProjectVersion
+            onClose={() => {
+              setProjectInfoOpen(false)
+              setSettingsOpen(true)
+            }}
+          />
+        )}
         {selectedAd && (
           <AdDetail
             ad={selectedAd}
@@ -995,6 +1169,7 @@ export default function HomeScreen() {
             }}
             onOpenSellerProfile={(ad) => {
               if (!ad.userId) return
+              closeAllWindows()
               setTab('profile')
               setViewProfileMode('foreign')
               setViewProfileUserId(ad.userId)
@@ -1002,6 +1177,33 @@ export default function HomeScreen() {
               setProfileTab('ads')
               setProfileEdit(false)
               setSelectedAd(null)
+            }}
+          />
+        )}
+        {userSearchOpen && (
+          <UserSearch
+            onClose={closeUserSearch}
+            onSelectUser={(userId) => {
+              closeAllWindows()
+              setTab('profile')
+              setViewProfileMode('foreign')
+              setViewProfileUserId(userId)
+              setProfileReturnAd(null)
+              setProfileTab('ads')
+              setProfileEdit(false)
+            }}
+            searchQuery={userSearchQuery}
+            setSearchQuery={setUserSearchQuery}
+            searchResults={userSearchResults}
+            searchLoading={userSearchLoading}
+            onSearch={searchUsers}
+          />
+        )}
+        {phoneOpen && (
+          <Phone
+            onClose={() => {
+              setPhoneOpen(false)
+              setSettingsOpen(true)
             }}
           />
         )}
