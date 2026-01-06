@@ -606,18 +606,22 @@ export default function Ads({
           className="flex w-full flex-col items-center"
         >
           <div
-            className="flex justify-between"
-            style={{ width: 355, height: 54 }}
+            className="flex justify-between w-full"
+            style={{ 
+              paddingLeft: 10,
+              paddingRight: 10,
+              height: 54 
+            }}
           >
             <div
-              className="flex items-center"
+              className="flex items-center flex-1"
               style={{
-                width: 209.21,
                 height: 53.86,
                 borderRadius: 10,
                 background: 'linear-gradient(90deg, #111111 0%, #1A1A1A 100%)',
                 paddingLeft: 16,
                 paddingRight: 16,
+                marginRight: 8,
               }}
             >
               <img
@@ -642,7 +646,7 @@ export default function Ads({
               type="button"
               className="flex items-center justify-center"
               style={{
-                width: 135,
+                width: 110,
                 height: 54,
                 borderRadius: 10,
                 background: 'linear-gradient(180deg, #111111 0%, #1A1A1A 100%)',
@@ -651,12 +655,12 @@ export default function Ads({
               <img
                 src="/interface/filter.svg"
                 alt=""
-                style={{ width: 24, height: 24, marginRight: 8 }}
+                style={{ width: 20, height: 20, marginRight: 6 }}
               />
               <span
                 className="font-vk-demi"
                 style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   lineHeight: '19.68px',
                   color: '#FFFFFF',
                 }}
@@ -667,26 +671,10 @@ export default function Ads({
           </div>
 
           {/* Category Carousel */}
-          <div className="mt-3 w-full relative">
-            {/* Left fade gradient */}
+          <div className="mt-3 w-full relative overflow-hidden">
             <div 
-              className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
-              style={{
-                background: 'linear-gradient(to right, #000000, transparent)',
-                width: 32,
-              }}
-            />
-            {/* Right fade gradient */}
-            <div 
-              className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
-              style={{
-                background: 'linear-gradient(to left, #000000, transparent)',
-                width: 32,
-              }}
-            />
-            <div 
-              className="flex overflow-x-auto scrollbar-hidden category-carousel px-1" 
-              style={{ width: 355, margin: '0 auto' }}
+              className="flex overflow-x-auto scrollbar-hidden category-carousel px-4" 
+              style={{ width: '100%' }}
             >
               <div className="flex gap-2 py-1">
                 {[
@@ -720,6 +708,25 @@ export default function Ads({
                 ))}
               </div>
             </div>
+            
+            {/* Left fade gradient */}
+            <div 
+              className="absolute left-0 top-0 bottom-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to right, #000000 0%, transparent 100%)',
+                width: 20,
+                zIndex: 10,
+              }}
+            />
+            {/* Right fade gradient */}
+            <div 
+              className="absolute right-0 top-0 bottom-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to left, #000000 0%, transparent 100%)',
+                width: 20,
+                zIndex: 10,
+              }}
+            />
           </div>
         </div>
       </div>
