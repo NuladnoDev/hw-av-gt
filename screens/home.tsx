@@ -1135,6 +1135,12 @@ export default function HomeScreen() {
               setSettingsOpen(false)
               setPhoneOpen(true)
             }}
+            onOpenProfile={() => {
+              setSettingsOpen(false)
+              setTab('profile')
+              setViewProfileMode('own')
+              setViewProfileUserId(null)
+            }}
           />
         )}
         {infoMeOpen && (

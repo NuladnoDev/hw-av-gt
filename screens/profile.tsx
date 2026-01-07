@@ -92,6 +92,29 @@ export default function Profile({
   const [isVerified, setIsVerified] = useState(false)
   const [isQuality, setIsQuality] = useState(false)
 
+  const renderTextWithLinks = (text: string) => {
+    if (!text) return text
+    const urlRegex = /(https?:\/\/[^\s]+)/g
+    const parts = text.split(urlRegex)
+    return parts.map((part, i) => {
+      if (part.match(urlRegex)) {
+        return (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#007AFF] hover:underline break-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        )
+      }
+      return part
+    })
+  }
+
   const readLocalFollows = (): Record<string, { notificationsEnabled?: boolean | null }> => {
     if (typeof window === 'undefined') return {}
     try {
@@ -1350,10 +1373,10 @@ export default function Profile({
                         </div>
                       ) : (
                         <div
-                          className="bg-[#0D0D0D] px-3 py-2 leading-[1.6em] text-[#A1A1A1]"
+                          className="bg-[#0D0D0D] px-3 py-2 leading-[1.6em] text-[#A1A1A1] whitespace-pre-wrap"
                           style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
                         >
-                          {description && description.trim().length > 0 ? description : 'Описание не заполнено'}
+                          {description && description.trim().length > 0 ? renderTextWithLinks(description) : 'Описание не заполнено'}
                         </div>
                       )
                     )}

@@ -404,6 +404,7 @@ export default function Ads({
   const [currentUserAltId, setCurrentUserAltId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [isSearchActive, setIsSearchActive] = useState(false)
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
   const [contactWarningOpen, setContactWarningOpen] = useState(false)
   const [contactWarningLocked, setContactWarningLocked] = useState(false)
@@ -601,64 +602,86 @@ export default function Ads({
           className="flex w-full flex-col items-center"
         >
           <div
-            className="flex justify-between"
+            className="flex items-stretch"
             style={{ width: 355, height: 54 }}
           >
-            <div
-              className="flex items-center"
+            <motion.div
+              className="flex h-full items-center"
               style={{
-                width: 209.21,
-                height: 53.86,
+                width: 355,
                 borderRadius: 10,
                 background: 'linear-gradient(90deg, #111111 0%, #1A1A1A 100%)',
                 paddingLeft: 16,
-                paddingRight: 16,
+                paddingRight: 0,
+                overflow: 'hidden',
               }}
             >
-              <img
-                src="/interface/search-02.svg"
-                alt=""
-                style={{ width: 22, height: 22, marginRight: 8 }}
-              />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
+              <motion.div
+                className="flex h-full items-center"
                 style={{
-                  fontSize: 15,
-                  lineHeight: '18px',
-                  color: '#A8A8A8',
+                  width: 209.21,
+                  paddingRight: 16,
                 }}
-              />
-            </div>
-
-            <button
-              type="button"
-              className="flex items-center justify-center"
-              style={{
-                width: 135,
-                height: 54,
-                borderRadius: 10,
-                background: 'linear-gradient(180deg, #111111 0%, #1A1A1A 100%)',
-              }}
-            >
-              <img
-                src="/interface/filter.svg"
-                alt=""
-                style={{ width: 24, height: 24, marginRight: 8 }}
-              />
-              <span
-                className="font-vk-demi"
-                style={{
-                  fontSize: 15,
-                  lineHeight: '19.68px',
-                  color: '#FFFFFF',
+                animate={{
+                  width: isSearchActive ? 355 : 209.21,
                 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
               >
-                Фильтры
-              </span>
-            </button>
+                <img
+                  src="/interface/search-02.svg"
+                  alt=""
+                  style={{ width: 22, height: 22, marginRight: 8 }}
+                />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
+                  style={{
+                    fontSize: 15,
+                    lineHeight: '18px',
+                    color: '#A8A8A8',
+                  }}
+                  onFocus={() => setIsSearchActive(true)}
+                  onBlur={() => setIsSearchActive(false)}
+                />
+              </motion.div>
+              <AnimatePresence>
+                {!isSearchActive && (
+                  <motion.button
+                    type="button"
+                    className="flex h-full items-center justify-center"
+                    style={{
+                      width: 135,
+                      height: 54,
+                        borderRadius: 0,
+                        borderLeft: '1px solid rgba(255,255,255,0.05)',
+                        backgroundColor: 'rgba(0,0,0,0.02)',
+                      }}
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 40 }}
+                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                  >
+                    <img
+                      src="/interface/filter.svg"
+                      alt=""
+                      style={{ width: 24, height: 24, marginRight: 8 }}
+                    />
+                    <span
+                      className="font-vk-demi"
+                      style={{
+                        fontSize: 15,
+                        lineHeight: '19.68px',
+                        color: '#FFFFFF',
+                      }}
+                    >
+                      Фильтры
+                    </span>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </motion.div>
           </div>
 
           {/* Category Carousel */}

@@ -2,7 +2,7 @@
 @import "slick-carousel/slick/slick.css";
 @import "slick-carousel/slick/slick-theme.css";
 
-/* Prevent zoom on mobile devices */
+/* Prevent zoom on mobile devices и заливаем фон по всей области */
 html, body {
   touch-action: manipulation;
   touch-action: pan-x pan-y;
@@ -10,6 +10,11 @@ html, body {
   -moz-user-scalable: none;
   -ms-user-scalable: none;
   user-scalable: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #0A0A0A;
 }
 
 /* Hide scrollbar for category carousel */

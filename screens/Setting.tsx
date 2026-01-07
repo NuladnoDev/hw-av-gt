@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 
@@ -10,16 +11,20 @@ export default function Setting({
   onOpenContacts,
   onOpenProject,
   onOpenPhone,
+  onOpenProfile,
 }: {
   onClose?: () => void
   onOpenAbout?: () => void
   onOpenContacts?: () => void
   onOpenProject?: () => void
   onOpenPhone?: () => void
+  onOpenProfile?: () => void
 }) {
   const [scale, setScale] = useState(1)
   const [dirty, setDirty] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [prettyId, setPrettyId] = useState<string | null>(null)
+  const [showRealId, setShowRealId] = useState(false)
   const [tagText, setTagText] = useState<string>('user')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
@@ -42,8 +47,9 @@ export default function Setting({
     ;(async () => {
       try {
         const saved = await loadLocalAuth()
+        if (saved?.uuid) setUserId(saved.uuid)
+        if (saved?.uid) setPrettyId(saved.uid)
         const localId = saved?.uuid ?? saved?.uid ?? null
-        if (localId) setUserId(localId)
 
         let email: string | null = null
         let tagFromDb: string | undefined
@@ -190,11 +196,13 @@ export default function Setting({
           }}
         >
           <div className="relative w-full">
-            <div
-              className="flex w-full items-center justify-between px-0"
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-0 text-left bg-transparent"
               style={{ height: 'calc(var(--settings-user-block-height) * var(--settings-scale))', marginTop: 'var(--settings-list-top-margin)' }}
+              onClick={onOpenProfile}
             >
-              <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
+              <div className="flex items-center flex-1 min-w-0" style={{ gap: 'var(--settings-icon-gap)' }}>
                 <div
                   className="rounded-full overflow-hidden flex items-center justify-center"
                   style={{
@@ -213,13 +221,33 @@ export default function Setting({
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col">
-                  <span className="leading-[1.5em] text-white font-sf-ui-medium" style={{ fontSize: 'calc(var(--settings-user-title-size) * var(--settings-scale))' }}>
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="leading-[1.5em] text-white font-sf-ui-medium truncate" style={{ fontSize: 'calc(var(--settings-user-title-size) * var(--settings-scale))' }}>
                     {tagText && tagText.trim().length > 0 ? tagText.trim() : 'user'}
                   </span>
-                  <span className="leading-[1.3em] text-[#A1A1A1] font-sf-ui-light" style={{ fontSize: 'calc(var(--settings-user-subtitle-size) * var(--settings-scale))' }}>
-                    {userId ?? 'id пользователя'}
-                  </span>
+                  <div 
+                    className="cursor-pointer flex items-center" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRealId(!showRealId);
+                    }}
+                  >
+                    <div className="relative w-full min-h-[1.3em]">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={showRealId ? 'real' : 'pretty'}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          transition={{ duration: 0.15, ease: 'easeOut' }}
+                          className="leading-[1.3em] text-[#A1A1A1] font-sf-ui-light break-all pr-2"
+                          style={{ fontSize: 'calc(var(--settings-user-subtitle-size) * var(--settings-scale))' }}
+                        >
+                          {showRealId ? (userId ?? 'id пользователя') : (prettyId ?? 'id пользователя')}
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                  </div>
                 </div>
               </div>
               <img
@@ -228,7 +256,7 @@ export default function Setting({
                 className="h-[20px] w-[20px]"
                 style={{ filter: 'var(--settings-chevron-filter)' }}
               />
-            </div>
+            </button>
             <div className="w-full" style={{ height: '0.3px', background: 'rgba(255,255,255,0.1)' }} />
             <div style={{ marginTop: 'var(--settings-categories-top-margin)' }}>
               <button
