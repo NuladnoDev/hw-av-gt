@@ -104,7 +104,7 @@ export default function UserSearchScreen({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder=""
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all"
+              className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all"
               autoFocus
             />
             {searchQuery && (
@@ -150,7 +150,7 @@ export default function UserSearchScreen({
                   key={user.id}
                   type="button"
                   onClick={() => onSelectUser(user.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all active:scale-95"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/3 hover:bg-white/10 transition-all active:scale-95"
                   whileTap={{ scale: 0.98 }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}

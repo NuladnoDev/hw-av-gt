@@ -304,7 +304,7 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
         >
           <div className="py-4">
             {/* Security Info */}
-            <div className="mb-6 p-4 bg-white/5 rounded-xl border border-white/10">
+            <div className="mb-6 p-4 bg-white/3 rounded-xl border border-white/10">
               <div className="flex items-center gap-3 mb-2">
                 <Shield className="w-5 h-5 text-green-400" />
                 <div className="text-white font-medium">Безопасность</div>
@@ -354,7 +354,7 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
                         }}
                       />
                       <motion.div
-                        className="relative p-4 bg-white/5 rounded-xl border border-white/10"
+                        className="relative p-4 bg-white/3 rounded-xl border border-white/10"
                         drag={!device.isCurrent ? "x" : undefined}
                         dragConstraints={{ left: -120, right: 0 }}
                         dragElastic={0.2}
@@ -427,7 +427,7 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
             )}
 
             {/* Info */}
-            <div className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
+            <div className="mt-6 p-4 bg-white/3 rounded-xl border border-white/10">
               <div className="text-white/60 text-sm mb-2">
                 Здесь отображаются устройства, на которых вы вошли в аккаунт.
               </div>

@@ -274,7 +274,7 @@ export default function Links({ onClose }: LinksProps) {
                         addContact()
                       }
                     }}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-28 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all"
+                    className="w-full bg-white/3 border border-white/10 rounded-xl pl-4 pr-28 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all"
                     placeholder="https://vk.com/username или https://t.me/username"
                   />
                   <div className="absolute inset-y-0 right-3 flex items-center gap-2" style={{ zIndex: 1 }}>

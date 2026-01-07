@@ -357,7 +357,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
                     inputMode="numeric"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all"
+                    className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all"
                     placeholder="Введите возраст"
                   />
                   {age.trim().length > 0 && (
@@ -380,7 +380,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                 <button
                   type="button"
                   onClick={() => setPoliticalOpen((v) => !v)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light flex items-center justify-between hover:bg-white/10 transition-all text-left"
+                  className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light flex items-center justify-between hover:bg-white/10 transition-all text-left"
                 >
                   <span className={political ? '' : 'text-white/50'}>
                     {political || 'Выбери один из вариантов'}
@@ -435,7 +435,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                 <button
                   type="button"
                   onClick={openCitySelector}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light flex items-center justify-between hover:bg-white/10 transition-all text-left"
+                  className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light flex items-center justify-between hover:bg-white/10 transition-all text-left"
                 >
                   <span className={city ? '' : 'text-white/50'}>
                     {city || 'Выберите город'}
@@ -453,7 +453,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                     value={hobbies}
                     onChange={(e) => setHobbies(e.target.value)}
                     placeholder="Программист, дизайнер, художник"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all placeholder:text-white/50"
+                    className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all placeholder:text-white/50"
                   />
                   {hobbies.trim().length > 0 && (
                     <button
@@ -581,7 +581,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                     className="h-full w-full pl-9 pr-9 leading-[22px] outline-none font-sf-ui-light placeholder:text-[#818C99]"
                     style={{
                       borderRadius: 'var(--city-search-radius, 10px)',
-                      backgroundColor: 'var(--city-search-bg, #101010)',
+                      backgroundColor: 'var(--city-search-bg, rgba(255, 255, 255, 0.03))',
                       fontSize: 'var(--city-search-text-size, 17px)',
                       color: 'var(--city-search-text-color, #ffffff)',
                     }}

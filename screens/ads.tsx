@@ -296,10 +296,10 @@ export function AdCard({
           className="relative flex flex-col justify-between bg-gradient-to-b from-[#121212]/95 to-[#121212] p-3"
           style={{ height: 'var(--ad-card-info-height, 80px)' }}
         >
-          <div style={{ marginBottom: 'var(--ad-card-title-price-gap, 4px)' }}>
+          <div style={{ marginBottom: -2 }}>
             <h3
-              className="line-clamp-1 text-white font-['SF_UI_Text:Medium',sans-serif]"
-              style={{ fontSize: 'var(--ad-card-title-size, 15px)' }}
+              className="line-clamp-1 text-white font-sf-ui-medium"
+              style={{ fontSize: 17, lineHeight: '20px' }}
             >
               {displayTitle}
             </h3>
@@ -307,32 +307,27 @@ export function AdCard({
 
           <div>
             <div
-              className="flex items-center gap-2 text-white/50"
+              className="flex items-center gap-1.5 text-white/50"
               style={{
-                fontSize: 'var(--ad-card-meta-size, 14px)',
-                marginBottom: 'var(--ad-card-meta-price-gap, 2px)',
+                fontSize: 13,
+                marginBottom: 2,
               }}
             >
-              {condition && (
-                <span className="flex items-center gap-1">
-                  {conditionConfig && (
-                    <span
-                      className="inline-flex items-center justify-center rounded-full"
-                      style={{
-                        width: 18,
-                        height: 18,
-                        backgroundColor: `${conditionConfig.color}26`,
-                        color: conditionConfig.color,
-                      }}
-                    >
-                      {conditionConfig.icon}
-                    </span>
-                  )}
-                  <span>{condition}</span>
+              {condition && conditionConfig && (
+                <span
+                  className="inline-flex items-center justify-center rounded-full"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    backgroundColor: `${conditionConfig.color}26`,
+                    color: conditionConfig.color,
+                  }}
+                >
+                  {conditionConfig.icon}
                 </span>
               )}
-              {condition && location && <span>•</span>}
-              {location && <span>{location}</span>}
+              {condition && location && <span className="text-[10px] opacity-50">•</span>}
+              {location && <span className="line-clamp-1">{location}</span>}
             </div>
             <p className="text-lg text-white font-vk-demi">
               {price} ₽
@@ -606,22 +601,18 @@ export default function Ads({
           className="flex w-full flex-col items-center"
         >
           <div
-            className="flex justify-between w-full"
-            style={{ 
-              paddingLeft: 10,
-              paddingRight: 10,
-              height: 54 
-            }}
+            className="flex justify-between"
+            style={{ width: 355, height: 54 }}
           >
             <div
-              className="flex items-center flex-1"
+              className="flex items-center"
               style={{
+                width: 209.21,
                 height: 53.86,
                 borderRadius: 10,
                 background: 'linear-gradient(90deg, #111111 0%, #1A1A1A 100%)',
                 paddingLeft: 16,
                 paddingRight: 16,
-                marginRight: 8,
               }}
             >
               <img
@@ -646,7 +637,7 @@ export default function Ads({
               type="button"
               className="flex items-center justify-center"
               style={{
-                width: 110,
+                width: 135,
                 height: 54,
                 borderRadius: 10,
                 background: 'linear-gradient(180deg, #111111 0%, #1A1A1A 100%)',
@@ -655,12 +646,12 @@ export default function Ads({
               <img
                 src="/interface/filter.svg"
                 alt=""
-                style={{ width: 20, height: 20, marginRight: 6 }}
+                style={{ width: 24, height: 24, marginRight: 8 }}
               />
               <span
                 className="font-vk-demi"
                 style={{
-                  fontSize: 14,
+                  fontSize: 15,
                   lineHeight: '19.68px',
                   color: '#FFFFFF',
                 }}
@@ -671,34 +662,59 @@ export default function Ads({
           </div>
 
           {/* Category Carousel */}
-          <div className="mt-3 w-full relative overflow-hidden">
+          <div className="mt-3 w-full relative">
+            {/* Left fade gradient */}
             <div 
-              className="flex overflow-x-auto scrollbar-hidden category-carousel px-4" 
-              style={{ width: '100%' }}
+              className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to right, #000000, transparent)',
+                width: 32,
+              }}
+            />
+            {/* Right fade gradient */}
+            <div 
+              className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to left, #000000, transparent)',
+                width: 32,
+              }}
+            />
+            <div 
+              className="flex overflow-x-auto scrollbar-hidden category-carousel px-1" 
+              style={{ width: 355, margin: '0 auto' }}
             >
               <div className="flex gap-2 py-1">
                 {[
                   { name: 'Новые', color: '#FF6B6B' },
-                  { name: 'Подтверждённые', color: '#4ECDC4' },
-                  { name: 'Популярные', color: '#45B7D1' },
-                  { name: 'Скидки', color: '#F9CA24' },
+                  { name: 'Подтверждённые', color: '#F9CA24' },
+                  { name: 'Популярные', color: '#32CD32' },
                   { name: 'Бесплатно', color: '#6C5CE7' },
                   { name: 'Обмен', color: '#A29BFE' },
-                  { name: 'Аукцион', color: '#FD79A8' }
+                  { name: 'Аукцион', color: '#FD79A8', disabled: true }
                 ].map((category, index) => (
                   <motion.button
                     key={category.name}
                     type="button"
-                    className={`flex-shrink-0 px-4 py-2 rounded-full font-sf-ui-medium text-sm transition-all duration-200 ${selectedCategory === category.name ? 'scale-105' : 'hover:scale-105'} active:scale-95`}
+                    disabled={category.disabled}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full font-sf-ui-medium text-sm transition-all duration-200 ${category.disabled ? 'opacity-40 grayscale cursor-not-allowed' : selectedCategory === category.name ? 'scale-105' : 'hover:scale-105'} active:scale-95`}
                     style={{
-                      backgroundColor: selectedCategory === category.name ? category.color + '40' : category.color + '20',
-                      border: `1px solid ${selectedCategory === category.name ? category.color : category.color + '40'}`,
-                      color: selectedCategory === category.name ? '#FFFFFF' : category.color,
-                      boxShadow: selectedCategory === category.name ? `0 4px 12px ${category.color}30` : `0 2px 8px ${category.color}20`,
+                      backgroundColor: category.disabled 
+                        ? 'rgba(255,255,255,0.05)' 
+                        : selectedCategory === category.name ? category.color + '40' : category.color + '20',
+                      border: `1px solid ${category.disabled 
+                        ? 'rgba(255,255,255,0.1)' 
+                        : selectedCategory === category.name ? category.color : category.color + '40'}`,
+                      color: category.disabled 
+                        ? 'rgba(255,255,255,0.3)' 
+                        : selectedCategory === category.name ? '#FFFFFF' : category.color,
+                      boxShadow: category.disabled 
+                        ? 'none' 
+                        : selectedCategory === category.name ? `0 4px 12px ${category.color}30` : `0 2px 8px ${category.color}20`,
                     }}
-                    whileHover={{ scale: selectedCategory === category.name ? 1.05 : 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={category.disabled ? {} : { scale: selectedCategory === category.name ? 1.05 : 1.05 }}
+                    whileTap={category.disabled ? {} : { scale: 0.95 }}
                     onClick={() => {
+                      if (category.disabled) return
                       setSelectedCategory(selectedCategory === category.name ? null : category.name)
                       console.log('Category clicked:', category.name)
                     }}
@@ -708,25 +724,6 @@ export default function Ads({
                 ))}
               </div>
             </div>
-            
-            {/* Left fade gradient */}
-            <div 
-              className="absolute left-0 top-0 bottom-0 pointer-events-none"
-              style={{
-                background: 'linear-gradient(to right, #000000 0%, transparent 100%)',
-                width: 20,
-                zIndex: 10,
-              }}
-            />
-            {/* Right fade gradient */}
-            <div 
-              className="absolute right-0 top-0 bottom-0 pointer-events-none"
-              style={{
-                background: 'linear-gradient(to left, #000000 0%, transparent 100%)',
-                width: 20,
-                zIndex: 10,
-              }}
-            />
           </div>
         </div>
       </div>
