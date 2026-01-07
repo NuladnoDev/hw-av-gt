@@ -27,7 +27,31 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function preventZoom(e) {
+                  if (e.scale && e.scale !== 1) {
+                    e.preventDefault();
+                  }
+                }
+                document.addEventListener('gesturestart', preventZoom, { passive: false });
+                document.addEventListener('gesturechange', preventZoom, { passive: false });
+                document.addEventListener('gestureend', preventZoom, { passive: false });
+                document.addEventListener('wheel', function(e) {
+                  if (e.ctrlKey) {
+                    e.preventDefault();
+                  }
+                }, { passive: false });
+              })();
+            `,
+          }}
+        />
       </head>
       <body
         className="antialiased overflow-hidden bg-black text-white"

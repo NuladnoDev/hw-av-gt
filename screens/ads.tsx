@@ -686,17 +686,17 @@ export default function Ads({
 
           {/* Category Carousel */}
           <div className="mt-3 w-full relative">
-            {/* Left fade gradient */}
+            {/* Left fade gradient – только вокруг карусели */}
             <div 
-              className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
+              className="absolute left-0 top-0 bottom-0 z-10 pointer-events-none"
               style={{
                 background: 'linear-gradient(to right, #000000, transparent)',
                 width: 32,
               }}
             />
-            {/* Right fade gradient */}
+            {/* Right fade gradient – только вокруг карусели */}
             <div 
-              className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none"
+              className="absolute right-0 top-0 bottom-0 z-10 pointer-events-none"
               style={{
                 background: 'linear-gradient(to left, #000000, transparent)',
                 width: 32,
