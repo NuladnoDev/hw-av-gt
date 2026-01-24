@@ -138,11 +138,21 @@ export default function Support({ onClose }: { onClose: () => void }) {
     setIsModerator(isMod)
 
     if (isMod) {
-      // Fetch all open tickets
-      const { data: allTickets } = await client
+      // Fetch all tickets with profiles
+      const { data: allTickets, error: fetchError } = await client
         .from('support_tickets')
-        .select('*, profiles(tag, avatar_url)')
+        .select(`
+          *,
+          profiles:user_id (
+            tag,
+            avatar_url
+          )
+        `)
         .order('updated_at', { ascending: false })
+      
+      if (fetchError) {
+        console.error('Error fetching tickets:', fetchError)
+      }
       
       setTickets(allTickets || [])
       setLoading(false)
@@ -291,9 +301,9 @@ export default function Support({ onClose }: { onClose: () => void }) {
           >
             <ChevronLeft className="w-6 h-6 text-white" />
           </button>
-          <div className="flex flex-col items-center">
-            <span className="text-[17px] font-ttc-bold text-white">
-              {activeTicket ? (isModerator ? `@${activeTicket.profiles?.tag}` : 'Поддержка') : 'Обращения'}
+          <div className="flex flex-col items-center flex-1 -mt-1">
+            <span className="text-[17px] font-sf-ui-medium text-white/90">
+              {activeTicket ? (isModerator ? `@${activeTicket.profiles?.tag}` : 'Поддержка') : ''}
             </span>
           </div>
           <div className="w-10" />
