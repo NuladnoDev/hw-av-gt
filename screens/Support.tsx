@@ -116,11 +116,16 @@ export default function Support({ onClose }: { onClose: () => void }) {
   }, [activeTicket?.id])
 
   const init = async () => {
+    console.log('Support: Starting init...')
     const client = getSupabase()
-    if (!client) return
+    if (!client) {
+      console.error('Support: No Supabase client found')
+      return
+    }
 
     const auth = await loadLocalAuth()
     const uid = auth?.uuid || auth?.uid
+    console.log('Support: User UID:', uid)
     if (!uid) {
       setLoading(false)
       return
@@ -128,22 +133,28 @@ export default function Support({ onClose }: { onClose: () => void }) {
     setUserId(uid)
 
     // Check if user is moderator
-    const { data: profile } = await client
+    const { data: profile, error: profileError } = await client
       .from('profiles')
       .select('is_moderator')
       .eq('id', uid)
       .maybeSingle()
     
+    if (profileError) {
+      console.error('Support: Error fetching profile:', profileError)
+    }
+    
     const isMod = !!profile?.is_moderator
+    console.log('Support: Is Moderator:', isMod)
     setIsModerator(isMod)
 
     if (isMod) {
       // Fetch all tickets with profiles
+      console.log('Support: Fetching all tickets for moderator...')
       const { data: allTickets, error: fetchError } = await client
         .from('support_tickets')
         .select(`
           *,
-          profiles:user_id (
+          profiles:profiles (
             tag,
             avatar_url
           )
@@ -151,7 +162,9 @@ export default function Support({ onClose }: { onClose: () => void }) {
         .order('updated_at', { ascending: false })
       
       if (fetchError) {
-        console.error('Error fetching tickets:', fetchError)
+        console.error('Support: Error fetching tickets:', fetchError)
+      } else {
+        console.log('Support: Tickets fetched:', allTickets?.length)
       }
       
       setTickets(allTickets || [])

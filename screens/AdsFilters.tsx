@@ -63,9 +63,9 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
       <motion.div
         className="fixed left-1/2 -translate-x-1/2 top-20 z-[160] flex flex-col bg-[#0A0A0A] rounded-[32px] overflow-hidden shadow-2xl w-[calc(100%-32px)] max-w-[400px]"
         style={{ maxHeight: 'calc(100vh - 120px)' }}
-        initial={{ opacity: 0, y: -20, x: '-50%', scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
-        exit={{ opacity: 0, y: -20, x: '-50%', scale: 0.95 }}
+        initial={{ opacity: 0, y: 100, x: '-50%' }}
+        animate={{ opacity: 1, y: 0, x: '-50%' }}
+        exit={{ opacity: 0, y: 100, x: '-50%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       >
         {/* Header */}
