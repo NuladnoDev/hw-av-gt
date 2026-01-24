@@ -134,7 +134,7 @@ export default function Support({ onClose }: { onClose: () => void }) {
           filter: `id=eq.${currentTicketId}`
         }, (payload) => {
           if (isMounted) {
-            setActiveTicket(payload.new as Ticket)
+            setActiveTicket(prev => prev ? { ...prev, ...payload.new } : (payload.new as Ticket))
           }
         })
         .subscribe()
@@ -745,6 +745,19 @@ export default function Support({ onClose }: { onClose: () => void }) {
                   </div>
                 )
               })}
+
+              {/* Добавляем плашку в конец, если текущий активный тикет закрыт */}
+              {activeTicket?.status === 'closed' && (
+                <div className="flex justify-center my-6 px-4">
+                  <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-400/50" />
+                    <span className="text-[12px] text-white/40 font-sf-ui-medium uppercase tracking-wider">
+                      Обращение закрыто поддержкой
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </>
           )}
