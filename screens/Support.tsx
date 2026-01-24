@@ -552,28 +552,6 @@ export default function Support({ onClose }: { onClose: () => void }) {
                 </div>
               )}
             </div>
-          ) : !activeTicket && showClosedNotice ? (
-            // User: Closed Ticket Notice
-            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-              <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
-                <CheckCircle2 className="w-10 h-10 text-red-500/50" />
-              </div>
-              <h3 className="text-[19px] font-ttc-bold text-white mb-2">Обращение закрыто</h3>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 w-full">
-                <p className="text-[15px] text-white/60 font-sf-ui-medium leading-relaxed">
-                  Предыдущий тикет был закрыт поддержкой.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowClosedNotice(false)
-                  // Logic to create new ticket could go here if needed
-                }}
-                className="mt-8 px-8 py-4 rounded-2xl bg-white text-black font-ttc-bold text-[15px] active:scale-95 transition-all"
-              >
-                Понятно
-              </button>
-            </div>
           ) : (
             // Chat View
             <>
