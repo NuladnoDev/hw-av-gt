@@ -1,9 +1,5 @@
-<svg width="25" height="17" viewBox="0 0 25 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M4.74227 8.08585H19.3325M1.5 1.5H22.5747M9.60567 14.6717H14.4691" stroke="url(#paint0_linear_212_450)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<defs>
-<linearGradient id="paint0_linear_212_450" x1="12.0374" y1="1.5" x2="12.0374" y2="14.6717" gradientUnits="userSpaceOnUse">
-<stop stop-color="#4778AF"/>
-<stop offset="1" stop-color="#FFF5F5"/>
-</linearGradient>
-</defs>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="white"/>
+  <path d="M250.343 138C269.429 138 287.737 145.586 301.24 159.088L409.466 267.314C433.682 291.53 433.682 330.813 409.466 355.029L355.029 409.466C330.813 433.682 291.53 433.682 267.314 409.466L159.088 301.24C145.586 287.737 138 269.429 138 250.343V184C138 158.595 158.595 138 184 138H250.343Z" stroke="#3B82F6" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="212" cy="212" r="28" fill="#3B82F6"/>
 </svg>
