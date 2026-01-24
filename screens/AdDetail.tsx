@@ -588,13 +588,13 @@ export default function AdDetail({
                 </div>
 
                 {!contactsVisible && (
-                  <div className="mt-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-start gap-4">
-                    <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
-                      <ShieldCheck className="w-5 h-5" />
+                  <div className="mt-4 p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-start gap-6">
+                    <div className="p-4 rounded-xl bg-blue-500/15 text-blue-400">
+                      <ShieldCheck className="w-7 h-7" />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <div className="text-[14px] font-ttc-bold text-white/90">Безопасность</div>
-                      <div className="text-[12px] text-white/40 font-sf-ui-light leading-relaxed">
+                    <div className="flex flex-col gap-2">
+                      <div className="text-[18px] font-ttc-bold text-white/95">Безопасность</div>
+                      <div className="text-[15px] text-white/50 font-sf-ui-light leading-relaxed">
                         Никогда не переводите предоплату. Встречайтесь в людных местах для проверки товара и документов.
                       </div>
                     </div>
@@ -647,13 +647,13 @@ export default function AdDetail({
               )}
 
               {contactsVisible && (
-                 <div className="mt-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-start gap-4">
-                   <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
-                     <ShieldCheck className="w-5 h-5" />
+                 <div className="mt-4 p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-start gap-6">
+                   <div className="p-4 rounded-xl bg-blue-500/15 text-blue-400">
+                     <ShieldCheck className="w-7 h-7" />
                    </div>
-                   <div className="flex flex-col gap-1">
-                     <div className="text-[14px] font-ttc-bold text-white/90">Безопасность</div>
-                     <div className="text-[12px] text-white/40 font-sf-ui-light leading-relaxed">
+                   <div className="flex flex-col gap-2">
+                     <div className="text-[18px] font-ttc-bold text-white/95">Безопасность</div>
+                     <div className="text-[15px] text-white/50 font-sf-ui-light leading-relaxed">
                        Никогда не переводите предоплату. Встречайтесь в людных местах для проверки товара и документов.
                      </div>
                    </div>
@@ -662,9 +662,20 @@ export default function AdDetail({
 
                <div className="mt-8 flex items-center justify-center gap-4 border-t border-white/[0.05] pt-8">
                  <button 
-                   type="button"
-                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-white/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
-                 >
+                  type="button"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: ad.title,
+                        text: 'тест',
+                        url: window.location.href
+                      }).catch(() => {})
+                    } else {
+                      navigator.clipboard.writeText('тест').catch(() => {})
+                    }
+                  }}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-white/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
+                >
                    <Share2 className="w-4 h-4" />
                    Поделиться
                  </button>

@@ -669,6 +669,31 @@ export default function Ads({
       filtered = filtered.filter((ad) => ad.title.toLowerCase().includes(normalizedQuery))
     }
 
+    if (selectedCategory) {
+      if (selectedCategory === 'Новые') {
+        const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
+        filtered = filtered.filter((ad) => ad.createdAt > oneDayAgo)
+      } else if (selectedCategory === 'Подтверждённые') {
+        // Here we could check if user is verified, for now let's say all ads with location are "confirmed" or similar logic
+        // Or if we have a list of verified tags. Let's assume for now ads with specific tags or just placeholder
+        filtered = filtered.filter((ad) => ad.location !== null)
+      } else if (selectedCategory === 'Популярные') {
+        // Just sort by most specs or similar for now
+        filtered = [...filtered].sort((a, b) => (b.specs?.length || 0) - (a.specs?.length || 0))
+      } else if (selectedCategory === 'Бесплатно') {
+        filtered = filtered.filter((ad) => {
+          const p = ad.price.toLowerCase().replace(/\s/g, '')
+          return p === '0' || p.includes('бесплатно')
+        })
+      } else if (selectedCategory === 'Обмен') {
+        filtered = filtered.filter((ad) => {
+          const t = ad.title.toLowerCase()
+          const d = (ad.description || '').toLowerCase()
+          return t.includes('обмен') || d.includes('обмен')
+        })
+      }
+    }
+
     if (activeFilters) {
       if (activeFilters.categories.length > 0) {
         filtered = filtered.filter((ad) => ad.category && activeFilters.categories.includes(ad.category as any))
@@ -701,7 +726,7 @@ export default function Ads({
     }
 
     return filtered
-  }, [items, searchQuery, activeFilters])
+  }, [items, searchQuery, activeFilters, selectedCategory])
   return (
     <div className="relative h-full w-full">
       <div

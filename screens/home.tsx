@@ -763,6 +763,16 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                       type="button"
                       onClick={() => {
                         closeProfileMenu()
+                        if (navigator.share) {
+                          navigator.share({
+                            title: 'Профиль',
+                            text: 'тест',
+                            url: window.location.href
+                          }).catch(() => {})
+                        } else {
+                          // Fallback to clipboard if share not available
+                          navigator.clipboard.writeText('тест').catch(() => {})
+                        }
                       }}
                       className="flex w-full items-center"
                       style={{
