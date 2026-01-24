@@ -19,6 +19,9 @@ type Ticket = {
   user_id: string
   status: 'open' | 'closed'
   created_at: string
+  updated_at?: string
+  lastMessage?: string
+  lastMessageSenderId?: string
   profiles?: {
     tag: string
     avatar_url: string | null
@@ -104,13 +107,11 @@ export default function Support({ onClose }: { onClose: () => void }) {
       setMessages(data || [])
       scrollToBottom()
 
-      // 2. Subscribe to new messages
-      // For user, we might need to subscribe to all their tickets? 
-      // Actually, if they send a message, it creates a new ticket and activeTicket changes, triggering this effect again.
-      // So subscribing to just the activeTicket is enough for current interaction.
+      // 2. Subscribe to messages AND ticket updates
       const currentTicketId = activeTicket.id
       const channel = client
-        .channel(`ticket-${currentTicketId}`)
+        .channel(`active-ticket-${currentTicketId}`)
+        // Listen for new messages
         .on('postgres_changes', { 
           event: 'INSERT', 
           schema: 'public', 
@@ -125,9 +126,18 @@ export default function Support({ onClose }: { onClose: () => void }) {
             scrollToBottom()
           }
         })
-        .subscribe((status) => {
-          console.log(`Subscription status for ticket ${currentTicketId}:`, status)
+        // Listen for ticket status changes (closure)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'support_tickets',
+          filter: `id=eq.${currentTicketId}`
+        }, (payload) => {
+          if (isMounted) {
+            setActiveTicket(payload.new as Ticket)
+          }
         })
+        .subscribe()
 
       return channel
     }
@@ -148,6 +158,78 @@ export default function Support({ onClose }: { onClose: () => void }) {
       })
     }
   }, [activeTicket?.id])
+
+  useEffect(() => {
+    if (!isModerator || activeTicket) return
+
+    const client = getSupabase()
+    if (!client) return
+
+    const channel = client
+      .channel('moderator-list')
+      .on('postgres_changes', {
+        event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'support_tickets'
+      }, async (payload) => {
+        if (payload.eventType === 'INSERT') {
+          // Fetch the full ticket data including profile for the new ticket
+          const { data: newTicket, error } = await client
+            .from('support_tickets')
+            .select(`
+              *,
+              profiles (tag, avatar_url),
+              support_messages (message, created_at)
+            `)
+            .eq('id', payload.new.id)
+            .single()
+          
+          if (newTicket) {
+            const msgs = newTicket.support_messages || []
+            const lastMsg = msgs.sort((a: any, b: any) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0]
+            
+            setTickets(prev => [{
+               ...newTicket,
+               lastMessage: lastMsg?.message || 'Новое обращение',
+               lastMessageSenderId: lastMsg?.sender_id
+             }, ...prev])
+           }
+         } else if (payload.eventType === 'UPDATE') {
+           setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t))
+         } else if (payload.eventType === 'DELETE') {
+           setTickets(prev => prev.filter(t => t.id === payload.old.id))
+         }
+       })
+       .on('postgres_changes', {
+         event: 'INSERT',
+         schema: 'public',
+         table: 'support_messages'
+       }, (payload) => {
+         // Update last message in the list
+         setTickets(prev => prev.map(t => {
+           if (t.id === payload.new.ticket_id) {
+             return { 
+               ...t, 
+               lastMessage: payload.new.message || 'Отправлено фото', 
+               lastMessageSenderId: payload.new.sender_id,
+               updated_at: payload.new.created_at 
+             }
+           }
+           return t
+         }).sort((a, b) => {
+           const timeA = new Date(a.updated_at || a.created_at).getTime()
+           const timeB = new Date(b.updated_at || b.created_at).getTime()
+           return timeB - timeA
+         }))
+       })
+      .subscribe()
+
+    return () => {
+      client.removeChannel(channel)
+    }
+  }, [isModerator, activeTicket === null])
 
   const init = async () => {
     console.log('Support: Starting init...')
@@ -220,15 +302,16 @@ export default function Support({ onClose }: { onClose: () => void }) {
         console.log('Support: Tickets fetched:', allTickets?.length)
       }
       
-      // Map tickets to include the last message text
-      const ticketsWithLastMsg = (allTickets || []).map((ticket: any) => {
+      // Map tickets to include the last message text and sender
+      const ticketsWithLastMsg: Ticket[] = (allTickets || []).map((ticket: any) => {
         const msgs = ticket.support_messages || []
         const lastMsg = msgs.sort((a: any, b: any) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )[0]
         return {
           ...ticket,
-          lastMessage: lastMsg?.message || 'Нет сообщений'
+          lastMessage: lastMsg?.message || 'Нет сообщений',
+          lastMessageSenderId: lastMsg?.sender_id
         }
       })
       
@@ -500,55 +583,102 @@ export default function Support({ onClose }: { onClose: () => void }) {
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
           {!activeTicket && isModerator ? (
             // Moderator: Tickets List
-            <div className="space-y-3">
-              {tickets.map(ticket => (
-                <div key={ticket.id} className="relative overflow-hidden rounded-2xl">
-                  {/* Delete Background */}
-                  <div className="absolute inset-0 bg-red-500 flex items-center justify-end px-6">
-                    <Trash2 className="w-6 h-6 text-white" />
-                  </div>
-                  
-                  {/* Ticket Card */}
-                  <motion.div
-                    drag="x"
-                    dragConstraints={{ left: -100, right: 0 }}
-                    onDragEnd={(_, info) => {
-                      if (info.offset.x < -60) {
-                        handleDeleteTicket(ticket.id)
-                      }
-                    }}
-                    className="relative z-10 w-full flex items-center gap-4 p-4 bg-[#0A0A0A] border border-white/5 active:scale-[0.98] transition-all text-left"
-                    style={{ x: 0 }}
-                  >
-                    <button
-                      onClick={() => setActiveTicket(ticket)}
-                      className="flex-1 flex items-center gap-4 text-left"
-                    >
-                      <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                        <User className="w-6 h-6 text-blue-400" />
-                      </div>
-                      <div className="flex-1 overflow-hidden">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="font-ttc-bold text-white/90 truncate">@{ticket.profiles?.tag}</span>
-                          <span className="text-[11px] text-white/30 shrink-0">{new Date(ticket.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-[13px] text-white/50 truncate font-sf-ui-light mb-2">
-                          {(ticket as any).lastMessage}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${ticket.status === 'open' ? 'bg-green-500/10 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                            {ticket.status === 'open' ? 'Открыт' : 'Закрыт'}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  </motion.div>
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between px-2 mb-2">
+                <h2 className="text-[20px] font-ttc-bold text-white">Все обращения</h2>
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[11px] text-white/50 font-sf-ui-medium uppercase tracking-wider">Live</span>
                 </div>
-              ))}
+              </div>
+
+              {tickets.map(ticket => {
+                const isUnanswered = (ticket as any).lastMessageSenderId === ticket.user_id && ticket.status === 'open'
+                
+                return (
+                  <div key={ticket.id} className="relative group">
+                    {/* Delete Background */}
+                    <div className="absolute inset-0 bg-red-500/20 rounded-3xl flex items-center justify-end px-8">
+                      <Trash2 className="w-6 h-6 text-red-500" />
+                    </div>
+                    
+                    {/* Ticket Card */}
+                    <motion.div
+                      drag="x"
+                      dragConstraints={{ left: -100, right: 0 }}
+                      onDragEnd={(_, info) => {
+                        if (info.offset.x < -60) {
+                          handleDeleteTicket(ticket.id)
+                        }
+                      }}
+                      className="relative z-10 w-full"
+                    >
+                      <button
+                        onClick={() => setActiveTicket(ticket)}
+                        className={`w-full flex items-center gap-4 p-5 bg-[#121212] border border-white/5 rounded-3xl hover:border-white/10 active:scale-[0.98] transition-all text-left shadow-lg ${isUnanswered ? 'ring-1 ring-blue-500/30 bg-blue-500/[0.02]' : ''}`}
+                      >
+                        <div className="relative">
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                            {ticket.profiles?.avatar_url ? (
+                              <img src={ticket.profiles.avatar_url} className="w-full h-full object-cover rounded-2xl" />
+                            ) : (
+                              <User className="w-7 h-7 text-white/40" />
+                            )}
+                          </div>
+                          {isUnanswered && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-[#121212]" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-ttc-bold text-[16px] text-white/90 truncate">
+                              @{ticket.profiles?.tag || 'User'}
+                            </span>
+                            <span className="text-[11px] text-white/30 font-sf-ui-medium">
+                              {new Date(ticket.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          
+                          <p className={`text-[14px] truncate font-sf-ui-medium mb-3 ${isUnanswered ? 'text-white/80' : 'text-white/40'}`}>
+                            {(ticket as any).lastMessage}
+                          </p>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] px-2.5 py-1 rounded-lg font-ttc-bold uppercase tracking-wider ${
+                                ticket.status === 'open' 
+                                  ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                                  : 'bg-white/5 text-white/30 border border-white/5'
+                              }`}>
+                                {ticket.status === 'open' ? 'Открыт' : 'Закрыт'}
+                              </span>
+                              {isUnanswered && (
+                                <span className="text-[10px] px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 font-ttc-bold uppercase tracking-wider">
+                                  Нужен ответ
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex -space-x-2">
+                              {/* Optional: Show icons of moderators who participated */}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    </motion.div>
+                  </div>
+                )
+              })}
+
               {tickets.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-white/20">
-                  <MessageCircle className="w-12 h-12 mb-4 opacity-20" />
-                  <p className="text-[15px] font-sf-ui-light">Обращений пока нет</p>
+                <div className="flex flex-col items-center justify-center py-32 px-10 text-center">
+                  <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
+                    <MessageCircle className="w-10 h-10 text-white/10" />
+                  </div>
+                  <h3 className="text-[17px] font-ttc-bold text-white/90 mb-2">Обращений пока нет</h3>
+                  <p className="text-[14px] text-white/30 font-sf-ui-light leading-relaxed">
+                    Когда пользователи напишут в поддержку, они появятся здесь в реальном времени.
+                  </p>
                 </div>
               )}
             </div>
@@ -625,9 +755,9 @@ export default function Support({ onClose }: { onClose: () => void }) {
           <div className="p-4 border-t border-white/5 bg-[#0A0A0A] safe-area-bottom">
             <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-2 pr-3 focus-within:border-blue-500/50 transition-colors">
                 <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={sending}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/5 active:scale-90 transition-all text-white/40"
+                  onClick={() => {/* fileInputRef.current?.click() */}}
+                  disabled={true}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl transition-all text-white/10 cursor-not-allowed"
                 >
                   <ImageIcon className="w-5 h-5" />
                 </button>
@@ -644,8 +774,8 @@ export default function Support({ onClose }: { onClose: () => void }) {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Напишите сообщение..."
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-white text-[15px] font-sf-ui-light py-2"
+                  placeholder="Задайте вопрос"
+                  className="flex-1 bg-transparent border-none focus:ring-0 outline-none shadow-none text-white text-[15px] font-sf-ui-light py-2"
                   disabled={sending}
                 />
                 <button 

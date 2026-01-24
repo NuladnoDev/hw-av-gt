@@ -724,7 +724,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                       type="button"
                       onClick={() => {
                         closeProfileMenu()
-                        setSupportOpen(true)
+                        window.open('https://t.me/test', '_blank')
                       }}
                       className="flex w-full items-center"
                       style={{
