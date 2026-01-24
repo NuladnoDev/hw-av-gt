@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { ChevronLeft, Bell, BellRing, ShieldCheck, Share2, Flag } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 
@@ -27,6 +28,11 @@ export default function Setting({
   const [showRealId, setShowRealId] = useState(false)
   const [tagText, setTagText] = useState<string>('user')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showVerification, setShowVerification] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [subNotifs, setSubNotifs] = useState(true)
+  const [newPostNotifs, setNewPostNotifs] = useState(true)
 
   useEffect(() => {
     const baseW = 375
@@ -309,16 +315,15 @@ export default function Setting({
                 type="button"
                 className="flex w-full items-center justify-between text-left bg-transparent"
                 style={{ height: 'var(--settings-item-height)' }}
-                disabled
+                onClick={() => setShowNotifications(true)}
               >
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
                   <img
                     src="/setting/notification-box.svg"
                     alt="Уведомления"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                    className="opacity-60"
                   />
-                  <span className="leading-[1.7em] text-white/60 font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Уведомления
                   </span>
                 </div>
@@ -340,7 +345,6 @@ export default function Setting({
                     src="/interface/address.svg"
                     alt="Контакты"
                     style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                    className="opacity-60"
                   />
                   <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
                     Контакты
@@ -355,9 +359,31 @@ export default function Setting({
               </button>
               <button
                 type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent"
+                className="flex w-full items-center justify-between text-left bg-transparent active:opacity-60 transition-opacity"
                 style={{ height: 'var(--settings-item-height)' }}
-                onClick={openProject}
+                onClick={() => setShowVerification(true)}
+              >
+                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
+                  <img
+              src="/interface/verified.svg"
+              alt="Подтверждение аккаунта"
+              style={{ width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)', filter: 'brightness(0) saturate(100%) invert(43%) sepia(98%) saturate(2338%) hue-rotate(185deg) brightness(101%) contrast(101%)' }}
+            />
+                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
+                    Подтверждение аккаунта
+                  </span>
+                </div>
+                <img
+                  src="/interface/chevron-right 1.svg"
+                  alt=""
+                  className="h-[20px] w-[20px]"
+                  style={{ filter: 'var(--settings-chevron-filter)' }}
+                />
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between text-left bg-transparent opacity-40 cursor-not-allowed"
+                style={{ height: 'var(--settings-item-height)' }}
               >
                 <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
                   <img
@@ -369,16 +395,193 @@ export default function Setting({
                     О проекте...
                   </span>
                 </div>
-                <img
-                  src="/interface/chevron-right 1.svg"
-                  alt=""
-                  className="h-[20px] w-[20px]"
-                  style={{ filter: 'var(--settings-chevron-filter)' }}
-                />
+                <div className="text-[11px] text-white/30 font-sf-ui-medium uppercase tracking-wider pr-1">Скоро</div>
               </button>
             </div>
           </div>
         </div>
+
+        <AnimatePresence>
+          {showNotifications && (
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute inset-0 z-[60] bg-[#0A0A0A] flex flex-col"
+            >
+              {/* Notifications Header */}
+              <div 
+                className="flex items-center px-6 bg-[#0A0A0A]"
+                style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowNotifications(false)}
+                  className="flex h-full items-center"
+                >
+                  <img
+                    src="/interface/str.svg"
+                    alt="back"
+                    className="h-[22px] w-[22px]"
+                    style={{ filter: 'brightness(0) invert(1)' }}
+                  />
+                </button>
+                <div className="flex-1 text-center pr-6">
+                  <div className="text-[20px] font-bold text-white font-ttc-bold">
+                    Уведомления
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 px-6 mt-4 space-y-6">
+                {/* Main Toggle */}
+                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${notificationsEnabled ? 'bg-indigo-500/10 text-indigo-400' : 'bg-white/5 text-white/20'}`}>
+                      <Bell className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[15px] font-sf-ui-medium text-white">Все уведомления</span>
+                      <span className="text-[12px] text-white/40 font-sf-ui-light">Глобальный переключатель</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? 'bg-blue-500' : 'bg-white/10'}`}
+                  >
+                    <motion.div
+                      animate={{ x: notificationsEnabled ? 26 : 4 }}
+                      className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                    />
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {notificationsEnabled && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="space-y-4"
+                    >
+                      <div className="text-[11px] text-white/30 font-sf-ui-bold uppercase tracking-widest pl-2">Настройки подписок</div>
+                      
+                      {/* Subscription Toggle */}
+                      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-[15px] font-sf-ui-medium text-white/90">Новые подписчики</span>
+                          <span className="text-[12px] text-white/40 font-sf-ui-light">Когда кто-то подписывается на вас</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSubNotifs(!subNotifs)}
+                          className={`w-10 h-5 rounded-full transition-colors relative ${subNotifs ? 'bg-blue-500/60' : 'bg-white/5'}`}
+                        >
+                          <motion.div
+                            animate={{ x: subNotifs ? 22 : 2 }}
+                            className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
+                          />
+                        </button>
+                      </div>
+
+                      {/* New Posts Toggle */}
+                      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-[15px] font-sf-ui-medium text-white/90">Новые публикации</span>
+                          <span className="text-[12px] text-white/40 font-sf-ui-light">От людей, на которых вы подписаны</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNewPostNotifs(!newPostNotifs)}
+                          className={`w-10 h-5 rounded-full transition-colors relative ${newPostNotifs ? 'bg-blue-500/60' : 'bg-white/5'}`}
+                        >
+                          <motion.div
+                            animate={{ x: newPostNotifs ? 22 : 2 }}
+                            className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
+                          />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {!notificationsEnabled && (
+                  <div className="p-6 text-center space-y-2">
+                    <div className="text-white/20 flex justify-center">
+                      <BellRing className="w-12 h-12 stroke-[1px]" />
+                    </div>
+                    <div className="text-[14px] text-white/30 font-sf-ui-light">
+                      Уведомления полностью отключены. Вы не будете получать никаких оповещений.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showVerification && (
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute inset-0 z-[60] bg-[#0A0A0A] flex flex-col"
+            >
+              {/* Header */}
+              <div 
+                className="flex items-center px-6 bg-[#0A0A0A]"
+                style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowVerification(false)}
+                  className="flex h-full items-center"
+                >
+                  <img
+                    src="/interface/str.svg"
+                    alt="back"
+                    className="h-[22px] w-[22px]"
+                    style={{ filter: 'brightness(0) invert(1)' }}
+                  />
+                </button>
+                <div className="flex-1 text-center pr-6">
+                  <div className="text-[20px] font-bold text-white font-ttc-bold">
+                    Подтверждение
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 px-6 flex flex-col items-center justify-center text-center space-y-8">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-blue-500/20 blur-[60px] rounded-full" />
+                  <div className="relative p-6 rounded-[32px] bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl">
+                    <ShieldCheck className="w-12 h-12 text-blue-400" strokeWidth={1.5} />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h2 className="text-[24px] font-ttc-bold text-white tracking-tight">
+                    Подайте заявку
+                  </h2>
+                  <p className="text-[16px] text-white/40 font-sf-ui-regular leading-relaxed max-w-[280px]">
+                    Для получения значка верификации необходимо заполнить специальную форму в нашем Telegram канале.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="w-full max-w-[280px] py-4 rounded-2xl bg-white/5 border border-white/5 text-white/40 font-sf-ui-medium text-[16px] active:scale-[0.98] transition-all cursor-not-allowed"
+                >
+                  Скоро
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div
           className="absolute left-0 w-full bg-[#0A0A0A]"

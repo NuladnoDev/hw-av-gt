@@ -419,92 +419,92 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                           style={{
                             width: 'var(--about-political-dot-size, 8px)',
                             height: 'var(--about-political-dot-size, 8px)',
-                            backgroundColor: '#6EBC3D',
-                          }}
-                        />
-                      )}
-                    </button>
-                  ))}
-                </div>
+                            backgroundColor: '#0095f6',
+                        }}
+                      />
+                    )}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div>
-                <label className="block text-white/60 text-sm mb-2 font-sf-ui-light">
-                  Место жительства
-                </label>
+            <div>
+              <label className="block text-white/60 text-sm mb-2 font-sf-ui-light">
+                Место жительства
+              </label>
+              <button
+                type="button"
+                onClick={openCitySelector}
+                className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light flex items-center justify-between hover:bg-white/10 transition-all text-left"
+              >
+                <span className={city ? '' : 'text-white/50'}>
+                  {city || 'Выберите город'}
+                </span>
+                <ChevronDown size={20} className="text-white/40" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-white/60 text-sm mb-2 font-sf-ui-light">
+                Увлечения
+              </label>
+              <div className="relative">
+                <input
+                  value={hobbies}
+                  onChange={(e) => setHobbies(e.target.value)}
+                  placeholder="Программист, дизайнер, художник"
+                  className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all placeholder:text-white/50"
+                />
+                {hobbies.trim().length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setHobbies('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-all"
+                    aria-label="Очистить"
+                  >
+                    <X size={18} className="text-white/40" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-2">
+              <label className="block text-white/60 text-sm mb-4 font-sf-ui-light">
+                Выберите пол
+              </label>
+              <div className="flex flex-col gap-3">
                 <button
                   type="button"
-                  onClick={openCitySelector}
-                  className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light flex items-center justify-between hover:bg-white/10 transition-all text-left"
+                  onClick={() => setGender('Женский')}
+                  className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 active:bg-white/10 transition-all"
                 >
-                  <span className={city ? '' : 'text-white/50'}>
-                    {city || 'Выберите город'}
+                  <div
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                      isGenderSelected('жен') ? 'border-[#0095f6] bg-[#0095f6]' : 'border-white/30'
+                    }`}
+                  >
+                    {isGenderSelected('жен') && (
+                      <div className="w-3 h-3 rounded-full bg-[#0a0a0a]" />
+                    )}
+                  </div>
+                  <span className="text-white font-sf-ui-light">
+                    Женский
                   </span>
-                  <ChevronDown size={20} className="text-white/40" />
                 </button>
-              </div>
-
-              <div>
-                <label className="block text-white/60 text-sm mb-2 font-sf-ui-light">
-                  Увлечения
-                </label>
-                <div className="relative">
-                  <input
-                    value={hobbies}
-                    onChange={(e) => setHobbies(e.target.value)}
-                    placeholder="Программист, дизайнер, художник"
-                    className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all placeholder:text-white/50"
-                  />
-                  {hobbies.trim().length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setHobbies('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-all"
-                      aria-label="Очистить"
-                    >
-                      <X size={18} className="text-white/40" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-2">
-                <label className="block text-white/60 text-sm mb-4 font-sf-ui-light">
-                  Выберите пол
-                </label>
-                <div className="flex flex-col gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setGender('Женский')}
-                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 active:bg-white/10 transition-all"
+                <button
+                  type="button"
+                  onClick={() => setGender('Мужской')}
+                  className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 active:bg-white/10 transition-all"
+                >
+                  <div
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                      isGenderSelected('муж') ? 'border-[#0095f6] bg-[#0095f6]' : 'border-white/30'
+                    }`}
                   >
-                    <div
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-                        isGenderSelected('жен') ? 'border-[#4CAF50] bg-[#4CAF50]' : 'border-white/30'
-                      }`}
-                    >
-                      {isGenderSelected('жен') && (
-                        <div className="w-3 h-3 rounded-full bg-[#0a0a0a]" />
-                      )}
-                    </div>
-                    <span className="text-white font-sf-ui-light">
-                      Женский
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGender('Мужской')}
-                    className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 active:bg-white/10 transition-all"
-                  >
-                    <div
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-                        isGenderSelected('муж') ? 'border-[#4CAF50] bg-[#4CAF50]' : 'border-white/30'
-                      }`}
-                    >
-                      {isGenderSelected('муж') && (
-                        <div className="w-3 h-3 rounded-full bg-[#0a0a0a]" />
-                      )}
-                    </div>
+                    {isGenderSelected('муж') && (
+                      <div className="w-3 h-3 rounded-full bg-[#0a0a0a]" />
+                    )}
+                  </div>
                     <span className="text-white font-sf-ui-light">
                       Мужской
                     </span>

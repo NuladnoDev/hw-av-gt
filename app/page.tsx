@@ -7,6 +7,8 @@ import HelloScreenTag from '@/screens/hello_screen_tag'
 import HelloScreenPasswordCreate from '@/screens/hello_screen_password_create'
 import HelloScreenCity from '@/screens/hello_screen_city'
 import HelloScreenLogin from '@/screens/hello_screen_login'
+import { Smartphone, Send, ExternalLink, QrCode } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 
 export default function Home() {
   const envReady =
@@ -187,9 +189,80 @@ export default function Home() {
 
   if (isMobile === false) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-        <div className="text-center text-zinc-700 dark:text-zinc-300">
-          <p className="text-lg">Откройте сайт на мобильном устройстве</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] p-6 selection:bg-indigo-500/30">
+        <div className="max-w-[900px] w-full flex flex-col md:flex-row items-center gap-12 md:gap-24">
+          {/* Left Side: Info */}
+          <div className="flex-1 text-center md:text-left">
+            <div className="mb-8 relative inline-block">
+              <div className="absolute inset-0 bg-indigo-500/20 blur-[60px] rounded-full" />
+              <div className="relative p-5 rounded-[28px] bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl">
+                <Smartphone className="w-10 h-10 text-indigo-400" strokeWidth={1.5} />
+              </div>
+            </div>
+
+            <h1 className="text-[40px] md:text-[48px] font-ttc-bold text-white mb-6 tracking-tight leading-[1.1]">
+              Пожалуйста, зайдите <br /> с телефона
+            </h1>
+            <p className="text-[18px] text-white/40 font-sf-ui-regular leading-relaxed mb-10 max-w-[400px]">
+              Наш сайт оптимизирован для мобильных устройств. Отсканируйте QR-код или введите адрес в мобильном браузере.
+            </p>
+
+            <div className="space-y-4 max-w-[360px]">
+              <a 
+                href="https://t.me/test" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group flex items-center justify-between p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12] transition-all active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-4 text-left">
+                  <div className="w-10 h-10 rounded-xl bg-[#24A1DE]/10 flex items-center justify-center text-[#24A1DE]">
+                    <Send className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[15px] font-ttc-demibold text-white group-hover:text-indigo-400 transition-colors">Telegram канал</span>
+                    <span className="text-[12px] text-white/30 font-sf-ui-light">Узнавайте об обновлениях</span>
+                  </div>
+                </div>
+                <ExternalLink className="w-4 h-4 text-white/10 group-hover:text-white/30 transition-colors" />
+              </a>
+
+              <div className="pt-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.02] border border-white/[0.05] text-[11px] text-white/20 font-sf-ui-medium uppercase tracking-widest">
+                  hw-project • 2026
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side: QR Code */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-indigo-500/10 blur-[80px] rounded-full group-hover:bg-indigo-500/20 transition-all duration-700" />
+            <div className="relative p-8 rounded-[40px] bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl flex flex-col items-center gap-6">
+              <div className="p-4 bg-white rounded-[24px]">
+                <QRCodeSVG 
+                  value={typeof window !== 'undefined' ? window.location.href : 'https://hw-project.vercel.app'} 
+                  size={200}
+                  level="H"
+                  includeMargin={false}
+                  imageSettings={{
+                    src: "/interface/verified.svg",
+                    x: undefined,
+                    y: undefined,
+                    height: 40,
+                    width: 40,
+                    excavate: true,
+                  }}
+                />
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-2 text-white/60 font-sf-ui-medium">
+                  <QrCode className="w-4 h-4 text-blue-400" />
+                  <span>Наведите камеру</span>
+                </div>
+                <span className="text-[12px] text-white/20 font-sf-ui-light">Автоматический переход на сайт</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )

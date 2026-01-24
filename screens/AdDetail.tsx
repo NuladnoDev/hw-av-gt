@@ -543,7 +543,7 @@ export default function AdDetail({
                 {hasExtraSpecs && (
                   <button
                     type="button"
-                    className="flex items-center gap-2 text-[13px] text-indigo-400 font-sf-ui-medium pt-2 active:opacity-60 transition-opacity"
+                    className="flex items-center gap-2 text-[13px] text-blue-400 font-sf-ui-medium pt-2 active:opacity-60 transition-opacity"
                     onClick={() => setShowAllSpecs(!showAllSpecs)}
                   >
                     {showAllSpecs ? 'Свернуть' : `Показать все (${specs.length})`}
@@ -570,7 +570,7 @@ export default function AdDetail({
                   {!showFullDescription && descriptionText.length > 200 && (
                     <button
                       type="button"
-                      className="mt-2 text-[14px] text-indigo-400 font-sf-ui-medium active:opacity-60 transition-opacity"
+                      className="mt-2 text-[14px] text-blue-400 font-sf-ui-medium active:opacity-60 transition-opacity"
                       onClick={() => setShowFullDescription(true)}
                     >
                       Читать полностью
@@ -579,7 +579,7 @@ export default function AdDetail({
                   {showFullDescription && descriptionText.length > 200 && (
                     <button
                       type="button"
-                      className="mt-2 text-[14px] text-indigo-400 font-sf-ui-medium active:opacity-60 transition-opacity"
+                      className="mt-2 text-[14px] text-blue-400 font-sf-ui-medium active:opacity-60 transition-opacity"
                       onClick={() => setShowFullDescription(false)}
                     >
                       Свернуть
@@ -587,17 +587,19 @@ export default function AdDetail({
                   )}
                 </div>
 
-                <div className="mt-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-start gap-4">
-                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="text-[14px] font-ttc-bold text-white/90">Безопасность</div>
-                    <div className="text-[12px] text-white/40 font-sf-ui-light leading-relaxed">
-                      Никогда не переводите предоплату. Встречайтесь в людных местах для проверки товара и документов.
+                {!contactsVisible && (
+                  <div className="mt-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-start gap-4">
+                    <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="text-[14px] font-ttc-bold text-white/90">Безопасность</div>
+                      <div className="text-[12px] text-white/40 font-sf-ui-light leading-relaxed">
+                        Никогда не переводите предоплату. Встречайтесь в людных местах для проверки товара и документов.
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -642,26 +644,40 @@ export default function AdDetail({
                     Продавец не указал способы связи в профиле
                   </p>
                 </div>
-            )}
+              )}
 
-            <div className="mt-8 flex items-center justify-center gap-4 border-t border-white/[0.05] pt-8">
-              <button 
-                type="button"
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-white/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
-              >
-                <Share2 className="w-4 h-4" />
-                Поделиться
-              </button>
-              <button 
-                type="button"
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-red-400/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
-              >
-                <Flag className="w-4 h-4" />
-                Пожаловаться
-              </button>
-            </div>
+              {contactsVisible && (
+                 <div className="mt-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-start gap-4">
+                   <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
+                     <ShieldCheck className="w-5 h-5" />
+                   </div>
+                   <div className="flex flex-col gap-1">
+                     <div className="text-[14px] font-ttc-bold text-white/90">Безопасность</div>
+                     <div className="text-[12px] text-white/40 font-sf-ui-light leading-relaxed">
+                       Никогда не переводите предоплату. Встречайтесь в людных местах для проверки товара и документов.
+                     </div>
+                   </div>
+                 </div>
+               )}
+
+               <div className="mt-8 flex items-center justify-center gap-4 border-t border-white/[0.05] pt-8">
+                 <button 
+                   type="button"
+                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-white/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
+                 >
+                   <Share2 className="w-4 h-4" />
+                   Поделиться
+                 </button>
+                 <button 
+                   type="button"
+                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-red-400/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
+                 >
+                   <Flag className="w-4 h-4" />
+                   Пожаловаться
+                 </button>
+               </div>
+             </div>
           </div>
-        </div>
         </div>
       </div>
     </motion.div>

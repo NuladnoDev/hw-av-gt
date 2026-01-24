@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
+import { Search, Package } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 import { AdCard, AdCardSkeleton, loadAdsFromStorage, deleteAdById, StoredAd } from './ads'
@@ -1315,9 +1316,7 @@ export default function Profile({
                   </div>
                 ) : (
                   <>
-                    <img
-                      src="/interface/glass.png"
-                      alt="empty"
+                    <div
                       style={{
                         position: 'absolute',
                         top: 'var(--profile-empty-icon-top)',
@@ -1325,8 +1324,15 @@ export default function Profile({
                         transform: 'translateX(-50%)',
                         width: 'var(--profile-empty-icon-size)',
                         height: 'var(--profile-empty-icon-size)',
-                      }}
-                    />
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.1,
+                         color: '#FFFFFF'
+                       }}
+                     >
+                       <Package size={120} strokeWidth={1} />
+                     </div>
                     <div
                       className="text-center text-[16px] leading-[1.4em] text-[#A1A1A1]"
                       style={{ position: 'absolute', left: 0, right: 0, bottom: 'var(--profile-empty-text-bottom)' }}

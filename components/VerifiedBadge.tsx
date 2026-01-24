@@ -47,7 +47,7 @@ export default function VerifiedBadge({ className = '', size = 18 }: VerifiedBad
           style={{ 
             width: size, 
             height: size,
-            filter: 'brightness(0) saturate(100%) invert(81%) sepia(51%) saturate(1455%) hue-rotate(44deg) brightness(105%) contrast(101%)'
+            filter: 'brightness(0) saturate(100%) invert(43%) sepia(98%) saturate(2338%) hue-rotate(185deg) brightness(101%) contrast(101%)'
           }}
           animate={{
             y: [0, -4, 0],

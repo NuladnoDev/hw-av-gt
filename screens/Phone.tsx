@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { X, Smartphone, Tablet, Laptop, Globe, MapPin, Clock, Shield } from 'lucide-react'
+import { X, Smartphone, Tablet, Laptop, Globe, MapPin, Clock, Shield, LogOut, ChevronRight } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 
 type DeviceInfo = {
@@ -24,7 +24,6 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
   const [draggingKey, setDraggingKey] = useState<string | null>(null)
   const [dragOffsetX, setDragOffsetX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
-  const [dragStates, setDragStates] = useState<Record<string, { offset: number; isDragging: boolean }>>({})
 
   useEffect(() => {
     const baseW = 375
@@ -48,19 +47,17 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
     try {
       setLoading(true)
       
-      // Получаем текущую сессию
       const auth = await loadLocalAuth()
       const client = getSupabase()
       
       if (!client || !auth?.uuid) {
-        // Заглушка с текущим устройством
         const currentDevice: DeviceInfo = {
           id: 'current',
           deviceType: getDeviceType(),
           deviceName: getDeviceName(),
           os: getOS(),
           browser: getBrowser(),
-          location: 'Череповец, Россия', // Заглушка
+          location: 'Череповец, Россия',
           lastActive: new Date().toISOString(),
           isCurrent: true
         }
@@ -68,7 +65,6 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
         return
       }
 
-      // Пытаемся получить реальные данные о сессиях из Supabase
       const { data: sessions, error } = await client
         .from('auth.sessions')
         .select('*')
@@ -77,7 +73,6 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
         .limit(5)
 
       if (error || !sessions?.length) {
-        // Если не получилось, показываем только текущее устройство
         const currentDevice: DeviceInfo = {
           id: 'current',
           deviceType: getDeviceType(),
@@ -90,7 +85,6 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
         }
         setDevices([currentDevice])
       } else {
-        // Преобразуем сессии в устройства
         const deviceInfos: DeviceInfo[] = sessions.map((session, index) => ({
           id: session.id || `device-${index}`,
           deviceType: detectDeviceType(session.user_agent || ''),
@@ -98,15 +92,14 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
           os: getOSFromUA(session.user_agent || ''),
           browser: getBrowserFromUA(session.user_agent || ''),
           ip: session.ip_address,
-          location: 'Череповец, Россия', // Можно интегрировать IP геолокацию
+          location: 'Череповец, Россия',
           lastActive: session.updated_at || session.created_at,
-          isCurrent: index === 0 // Самая recent сессия - текущая
+          isCurrent: index === 0
         }))
         setDevices(deviceInfos)
       }
     } catch (error) {
       console.error('Ошибка при загрузке устройств:', error)
-      // Показываем хотя бы текущее устройство
       const currentDevice: DeviceInfo = {
         id: 'current',
         deviceType: getDeviceType(),
@@ -222,220 +215,195 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
     return date.toLocaleDateString('ru-RU')
   }
 
-  const handleDragStart = (deviceId: string) => {
-    setDragStates(prev => ({
-      ...prev,
-      [deviceId]: { offset: 0, isDragging: true }
-    }))
-  }
-
-  const handleDrag = (deviceId: string, offset: number) => {
-    setDragStates(prev => ({
-      ...prev,
-      [deviceId]: { ...prev[deviceId], offset }
-    }))
-  }
-
   const handleLogoutDevice = async (deviceId: string) => {
     try {
       const client = getSupabase()
       if (!client) return
-      
-      // Удаляем устройство из списка
       setDevices(prev => prev.filter(device => device.id !== deviceId))
-      
-      // В реальном приложении здесь был бы запрос к API для завершения сессии
-      // await client.auth.signOut({ scope: 'single', deviceId })
-      
-      console.log(`Устройство ${deviceId} вышло из аккаунта`)
     } catch (error) {
       console.error('Ошибка при выходе устройства:', error)
     }
   }
 
-  const handleDragEnd = (deviceId: string, finalOffset: number) => {
-    if (finalOffset <= -70) {
-      handleLogoutDevice(deviceId)
-    } else {
-      setDragStates(prev => ({
-        ...prev,
-        [deviceId]: { offset: 0, isDragging: false }
-      }))
-    }
-  }
+  const currentDevice = devices.find(d => d.isCurrent)
+  const otherDevices = devices.filter(d => !d.isCurrent)
 
   return (
     <motion.div
       className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden"
-      initial={{ opacity: 0, x: 40 }}
+      initial={{ opacity: 0, x: '100%' }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.22, ease: 'easeOut' }}
+      exit={{ opacity: 0, x: '100%' }}
+      transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
     >
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
-        <div className="absolute left-0 top-0 h-[812px] w-[375px] bg-[#0A0A0A]" />
-
+      <div className="relative h-full w-full flex flex-col bg-[#0A0A0A]" style={{ transform: `scale(${scale})` }}>
         {/* Header */}
-        <div
-          className="absolute left-0 w-full bg-[#0A0A0A]"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
+        <div 
+          className="flex items-center px-6 bg-[#0A0A0A]/80 backdrop-blur-xl z-50 sticky top-0"
+          style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
-          <div className="relative h-full w-full flex items-center justify-center">
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute left-4 p-2 -ml-1 rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-300"
-              aria-label="Назад"
-            >
-              <X size={24} className="text-white" />
-            </button>
-            <div className="text-white leading-[1em]" style={{ fontSize: 'var(--profile-name-size, 20px)' }}>
-              Устройства
-            </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 -ml-2 items-center justify-center rounded-full active:bg-white/10 transition-colors"
+          >
+            <img
+              src="/interface/str.svg"
+              alt="back"
+              className="h-[22px] w-[22px]"
+              style={{ filter: 'brightness(0) invert(1)' }}
+            />
+          </button>
+          <div className="flex-1 text-center pr-8">
+            <span className="text-[20px] font-ttc-bold text-white">Устройства</span>
           </div>
         </div>
 
         {/* Content */}
-        <div
-          className="absolute left-0 w-full overflow-y-auto px-4"
-          style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-            height: 'calc(812px - 56px - var(--home-header-offset))',
-          }}
-        >
-          <div className="py-4">
-            {/* Security Info */}
-            <div className="mb-6 p-4 bg-white/3 rounded-xl border border-white/10">
-              <div className="flex items-center gap-3 mb-2">
-                <Shield className="w-5 h-5 text-green-400" />
-                <div className="text-white font-medium">Безопасность</div>
-              </div>
-              <div className="text-white/60 text-sm">
-                {devices.length > 0 
-                  ? `Активных устройств: ${devices.length}`
-                  : 'Информация об устройствах загружается'
-                }
-              </div>
+        <div className="flex-1 overflow-y-auto scrollbar-hidden px-6 pt-4 pb-32">
+          {/* Security Banner */}
+          <div className="mb-8 p-5 rounded-3xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-4">
+            <div className="p-2.5 rounded-2xl bg-blue-500/20 text-blue-400">
+              <Shield className="w-6 h-6" />
             </div>
-
-            {loading && (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-white/60 text-sm">Загрузка устройств...</div>
-              </div>
-            )}
-
-            {!loading && devices.length === 0 && (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-white/60 text-sm">Устройства не найдены</div>
-              </div>
-            )}
-
-            {!loading && devices.length > 0 && (
-              <div className="space-y-3">
-                {devices.map((device) => {
-                  const key = device.id
-                  const isDragging = draggingKey === key
-                  const offset = isDragging ? dragOffsetX : 0
-                  const clamped = Math.max(-120, Math.min(0, offset))
-                  const intensity = Math.min(1, Math.abs(clamped) / 120)
-                  const bg = `rgba(220,38,38,${0.2 + intensity * 0.4})`
-                  
-                  return (
-                    <motion.div
-                      key={device.id}
-                      className="relative"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div
-                        className="absolute inset-0 rounded-xl"
-                        style={{
-                          background: clamped < 0 ? bg : 'transparent',
-                        }}
-                      />
-                      <motion.div
-                        className="relative p-4 bg-white/3 rounded-xl border border-white/10"
-                        drag={!device.isCurrent ? "x" : undefined}
-                        dragConstraints={{ left: -120, right: 0 }}
-                        dragElastic={0.2}
-                        onDragStart={() => {
-                          if (!device.isCurrent) {
-                            setDraggingKey(key)
-                            setDragOffsetX(0)
-                            setIsDragging(true)
-                          }
-                        }}
-                        onDrag={(event, info) => {
-                          if (draggingKey !== key) return
-                          setDragOffsetX(info.offset.x)
-                        }}
-                        onDragEnd={(event, info) => {
-                          const finalOffset = info.offset.x
-                          if (finalOffset <= -70) {
-                            handleLogoutDevice(device.id)
-                          }
-                          setDraggingKey(null)
-                          setDragOffsetX(0)
-                          setIsDragging(false)
-                        }}
-                        style={{
-                          x: clamped,
-                          touchAction: 'pan-y',
-                          cursor: device.isCurrent ? 'default' : 'grab',
-                        }}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="text-white/70">
-                              {getDeviceIcon(device.deviceType)}
-                            </div>
-                            <div>
-                              <div className="text-white font-medium">
-                                {device.deviceName}
-                                {device.isCurrent && (
-                                  <span className="ml-2 text-xs text-green-400">(этот)</span>
-                                )}
-                              </div>
-                              <div className="text-white/60 text-sm">
-                                {device.os} • {device.browser}
-                              </div>
-                              {device.location && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <MapPin size={12} className="text-white/40" />
-                                  <div className="text-white/50 text-xs">{device.location}</div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="flex items-center gap-1 text-white/50 text-xs">
-                              <Clock size={12} />
-                              {formatLastActive(device.lastActive)}
-                            </div>
-                            {device.ip && (
-                              <div className="text-white/40 text-xs mt-1">
-                                IP: {device.ip}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Info */}
-            <div className="mt-6 p-4 bg-white/3 rounded-xl border border-white/10">
-              <div className="text-white/60 text-sm mb-2">
-                Здесь отображаются устройства, на которых вы вошли в аккаунт.
-              </div>
-              <div className="text-white/40 text-xs">
-                Смахните устройство влево, чтобы выйти из аккаунта
+            <div className="flex flex-col gap-1">
+              <div className="text-[16px] font-ttc-bold text-white/90">Безопасность</div>
+              <div className="text-[13px] text-white/40 font-sf-ui-light leading-relaxed">
+                Здесь отображаются все сеансы входа в ваш аккаунт. Вы можете завершить любой из них.
               </div>
             </div>
           </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+              <div className="w-8 h-8 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+              <div className="text-white/20 text-[14px] font-sf-ui-medium uppercase tracking-widest">Загрузка...</div>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Current Device Section */}
+              {currentDevice && (
+                <div className="space-y-4">
+                  <div className="text-[13px] text-white/20 font-sf-ui-medium uppercase tracking-widest pl-1">Этот девайс</div>
+                  <div className="p-5 rounded-3xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl">
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/10">
+                        {getDeviceIcon(currentDevice.deviceType)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[18px] font-ttc-bold text-white truncate">
+                          {currentDevice.deviceName}
+                        </div>
+                        <div className="text-[14px] text-white/40 font-sf-ui-regular truncate">
+                          {currentDevice.os} • {currentDevice.browser}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[11px] font-sf-ui-bold text-emerald-400 uppercase tracking-tight">Онлайн</span>
+                        </div>
+                      </div>
+                    </div>
+                    {currentDevice.location && (
+                      <div className="mt-4 pt-4 border-t border-white/[0.05] flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-white/20" />
+                        <span className="text-[13px] text-white/30 font-sf-ui-light">{currentDevice.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Devices Section */}
+              {otherDevices.length > 0 && (
+                <div className="space-y-4">
+                  <div className="text-[13px] text-white/20 font-sf-ui-medium uppercase tracking-widest pl-1">Активные сессии</div>
+                  <div className="space-y-3">
+                    {otherDevices.map((device) => {
+                      const key = device.id
+                      const isDragging = draggingKey === key
+                      const offset = isDragging ? dragOffsetX : 0
+                      const clamped = Math.max(-120, Math.min(0, offset))
+                      
+                      return (
+                        <div key={device.id} className="relative overflow-hidden rounded-3xl group">
+                          {/* Delete Background */}
+                          <div 
+                            className="absolute inset-0 bg-red-500 flex items-center justify-end px-8 transition-opacity duration-300"
+                            style={{ opacity: Math.abs(clamped) / 80 }}
+                          >
+                            <LogOut className="w-6 h-6 text-white" />
+                          </div>
+
+                          <motion.div
+                            drag="x"
+                            dragConstraints={{ left: -120, right: 0 }}
+                            dragElastic={0.2}
+                            onDragStart={() => {
+                              setDraggingKey(key)
+                              setIsDragging(true)
+                            }}
+                            onDrag={(e, info) => setDragOffsetX(info.offset.x)}
+                            onDragEnd={(e, info) => {
+                              if (info.offset.x <= -80) {
+                                handleLogoutDevice(device.id)
+                              }
+                              setDraggingKey(null)
+                              setDragOffsetX(0)
+                              setIsDragging(false)
+                            }}
+                            style={{ x: clamped }}
+                            className="relative p-5 bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl rounded-3xl active:bg-white/[0.05] transition-colors flex items-center gap-5"
+                          >
+                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/60">
+                              {getDeviceIcon(device.deviceType)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[16px] font-ttc-bold text-white truncate">
+                                {device.deviceName}
+                              </div>
+                              <div className="text-[13px] text-white/40 font-sf-ui-regular truncate">
+                                {device.os} • {device.browser}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5 text-white/20" />
+                                  <span className="text-[11px] text-white/30 font-sf-ui-light">{formatLastActive(device.lastActive)}</span>
+                                </div>
+                                {device.location && (
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-3.5 h-3.5 text-white/20" />
+                                    <span className="text-[11px] text-white/30 font-sf-ui-light truncate max-w-[100px]">{device.location}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+                              <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-white/30 transition-colors" />
+                            </div>
+                          </motion.div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Footer Hint */}
+          {!loading && otherDevices.length > 0 && (
+            <div className="mt-12 flex flex-col items-center gap-3 text-center px-8">
+              <div className="p-3 rounded-full bg-white/[0.02] border border-white/[0.05]">
+                <LogOut className="w-5 h-5 text-white/20" />
+              </div>
+              <p className="text-[13px] text-white/20 font-sf-ui-light leading-relaxed">
+                Смахните устройство влево,<br />чтобы завершить сеанс
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
