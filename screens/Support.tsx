@@ -30,6 +30,7 @@ export default function Support({ onClose }: { onClose: () => void }) {
   const [userId, setUserId] = useState<string | null>(null)
   const [isModerator, setIsModerator] = useState(false)
   const [tickets, setTickets] = useState<Ticket[]>([])
+  const [userTickets, setUserTickets] = useState<Ticket[]>([])
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -75,15 +76,23 @@ export default function Support({ onClose }: { onClose: () => void }) {
     const client = getSupabase()
     if (!client) return
 
-    const currentTicketId = activeTicket.id
-
     const loadAndSubscribe = async () => {
       // 1. Load existing messages
-      const { data, error } = await client
-        .from('support_messages')
-        .select('*')
-        .eq('ticket_id', currentTicketId)
-        .order('created_at', { ascending: true })
+      let query = client.from('support_messages').select('*')
+      
+      if (isModerator) {
+        query = query.eq('ticket_id', activeTicket.id)
+      } else {
+        // For user, load messages from ALL their tickets to show history
+        const ticketIds = userTickets.map(t => t.id)
+        if (ticketIds.length > 0) {
+          query = query.in('ticket_id', ticketIds)
+        } else {
+          query = query.eq('ticket_id', activeTicket.id)
+        }
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: true })
       
       if (error) {
         console.error('Error loading messages:', error)
@@ -96,6 +105,10 @@ export default function Support({ onClose }: { onClose: () => void }) {
       scrollToBottom()
 
       // 2. Subscribe to new messages
+      // For user, we might need to subscribe to all their tickets? 
+      // Actually, if they send a message, it creates a new ticket and activeTicket changes, triggering this effect again.
+      // So subscribing to just the activeTicket is enough for current interaction.
+      const currentTicketId = activeTicket.id
       const channel = client
         .channel(`ticket-${currentTicketId}`)
         .on('postgres_changes', { 
@@ -222,33 +235,28 @@ export default function Support({ onClose }: { onClose: () => void }) {
       setTickets(ticketsWithLastMsg)
       setLoading(false)
     } else {
-      // Fetch user's ticket (last one created)
-      const { data: userTicket, error: ticketError } = await client
+      // Fetch user's tickets (all of them for history)
+      const { data: uTickets, error: ticketError } = await client
         .from('support_tickets')
         .select('*')
         .eq('user_id', uid)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
 
-      if (userTicket) {
-        if (userTicket.status === 'closed') {
-          setShowClosedNotice(true)
-        } else {
-          setActiveTicket(userTicket)
-        }
+      if (uTickets && uTickets.length > 0) {
+        setUserTickets(uTickets)
+        // Latest ticket is the active one
+        setActiveTicket(uTickets[0])
       } else {
         // Create new ticket if none exists
         const { data: newTicket, error: createError } = await client
           .from('support_tickets')
-          .insert({ user_id: uid })
+          .insert({ user_id: uid, status: 'open' })
           .select()
           .single()
         
-        if (createError) {
-          console.error('Error creating ticket:', createError)
-        } else if (newTicket) {
-          setActiveTicket(newTicket)
+        if (newTicket) {
+          setActiveTicket(newTicket as Ticket)
+          setUserTickets([newTicket as Ticket])
         }
       }
       setLoading(false)
@@ -305,6 +313,21 @@ export default function Support({ onClose }: { onClose: () => void }) {
     }, 100)
   }
 
+  const createNewTicket = async (uid: string) => {
+    const client = getSupabase()
+    if (!client) return null
+    const { data, error } = await client
+      .from('support_tickets')
+      .insert({ user_id: uid, status: 'open' })
+      .select()
+      .single()
+    if (error) {
+      console.error('Error creating new ticket:', error)
+      return null
+    }
+    return data as Ticket
+  }
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !activeTicket || !userId || sending) return
 
@@ -315,10 +338,26 @@ export default function Support({ onClose }: { onClose: () => void }) {
     const msgText = newMessage.trim()
     setNewMessage('')
 
+    let currentTicketId = activeTicket.id
+
+    // If ticket is closed and user is sending a message, create a new ticket
+    if (!isModerator && activeTicket.status === 'closed') {
+      const newTicket = await createNewTicket(userId)
+      if (newTicket) {
+        currentTicketId = newTicket.id
+        setActiveTicket(newTicket)
+        setUserTickets(prev => [newTicket, ...prev])
+      } else {
+        setNewMessage(msgText)
+        setSending(false)
+        return
+      }
+    }
+
     const { data, error } = await client
       .from('support_messages')
       .insert({
-        ticket_id: activeTicket.id,
+        ticket_id: currentTicketId,
         sender_id: userId,
         message: msgText
       })
@@ -337,10 +376,10 @@ export default function Support({ onClose }: { onClose: () => void }) {
       await client
         .from('support_tickets')
         .update({ updated_at: new Date().toISOString() })
-        .eq('id', activeTicket.id)
+        .eq('id', currentTicketId)
       
       if (isModerator) {
-        notifyUser(activeTicket.id, msgText)
+        notifyUser(currentTicketId, msgText)
       }
     }
 
@@ -354,9 +393,25 @@ export default function Support({ onClose }: { onClose: () => void }) {
     const client = getSupabase()
     if (!client) return
 
+    setSending(true)
+    let currentTicketId = activeTicket.id
+
+    // If ticket is closed and user is sending a message, create a new ticket
+    if (!isModerator && activeTicket.status === 'closed') {
+      const newTicket = await createNewTicket(userId)
+      if (newTicket) {
+        currentTicketId = newTicket.id
+        setActiveTicket(newTicket)
+        setUserTickets(prev => [newTicket, ...prev])
+      } else {
+        setSending(false)
+        return
+      }
+    }
+
     const fileExt = file.name.split('.').pop()
     const fileName = `${Math.random()}.${fileExt}`
-    const filePath = `support/${activeTicket.id}/${fileName}`
+    const filePath = `support/${currentTicketId}/${fileName}`
 
     const { error: uploadError } = await client.storage
       .from('support_assets')
@@ -365,6 +420,7 @@ export default function Support({ onClose }: { onClose: () => void }) {
     if (uploadError) {
       console.error('Error uploading image:', uploadError)
       alert('Ошибка при загрузке фото. Убедитесь, что бакет support_assets создан и доступен.')
+      setSending(false)
       return
     }
 
@@ -375,7 +431,7 @@ export default function Support({ onClose }: { onClose: () => void }) {
     const { data: msgData, error: msgError } = await client
       .from('support_messages')
       .insert({
-        ticket_id: activeTicket.id,
+        ticket_id: currentTicketId,
         sender_id: userId,
         message: '',
         image_url: publicUrl
@@ -389,9 +445,10 @@ export default function Support({ onClose }: { onClose: () => void }) {
       setMessages(prev => [...prev, msgData as Message])
       scrollToBottom()
       if (isModerator) {
-        notifyUser(activeTicket.id, 'Отправлено изображение')
+        notifyUser(currentTicketId, 'Отправлено изображение')
       }
     }
+    setSending(false)
   }
 
   if (loading) {
@@ -527,42 +584,56 @@ export default function Support({ onClose }: { onClose: () => void }) {
                     Пожалуйста, пишите только по делу. За спам или неадекватное поведение — блокировка без возможности восстановления.
                   </p>
                 </div>
-              ) : activeTicket?.status === 'closed' ? (
+              ) : (activeTicket?.status === 'closed' && isModerator) ? (
                 <div className="mx-2 mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
                   <p className="text-[13px] text-red-200/70 font-sf-ui-medium leading-relaxed text-center">
-                    Это обращение закрыто. Вы можете просматривать историю сообщений, но отправка новых недоступна.
+                    Это обращение закрыто. Вы не можете отправлять сообщения в закрытый тикет.
                   </p>
                 </div>
               ) : null}
 
               {messages.map((msg, i) => {
                 const isOwn = msg.sender_id === userId
+                const showClosedDivider = i > 0 && messages[i-1].ticket_id !== msg.ticket_id
+
                 return (
-                  <div 
-                    key={msg.id} 
-                    className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}
-                  >
-                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      isOwn 
-                        ? 'bg-blue-600 text-white rounded-tr-none' 
-                        : 'bg-white/5 text-white/90 rounded-tl-none border border-white/5'
-                    }`}>
-                      {msg.image_url ? (
-                        <img 
-                          src={msg.image_url} 
-                          alt="Support attachment" 
-                          className="rounded-lg max-w-full mb-2"
-                        />
-                      ) : (
-                        <p className="text-[15px] font-sf-ui-light leading-relaxed break-words">
-                          {msg.message}
-                        </p>
-                      )}
-                      <div className={`text-[10px] mt-1 ${isOwn ? 'text-white/50' : 'text-white/30'} flex items-center gap-1`}>
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {isOwn && <CheckCircle2 className="w-3 h-3" />}
+                  <div key={msg.id}>
+                    {showClosedDivider && (
+                      <div className="flex items-center gap-4 my-8 px-2">
+                        <div className="h-[1px] flex-1 bg-white/5" />
+                        <span className="text-[11px] text-white/20 font-sf-ui-medium uppercase tracking-wider text-center">
+                          Обращение было закрыто поддержкой
+                        </span>
+                        <div className="h-[1px] flex-1 bg-white/5" />
                       </div>
-                    </div>
+                    )}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} mb-4`}
+                    >
+                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        isOwn 
+                          ? 'bg-blue-600 text-white rounded-tr-none' 
+                          : 'bg-white/5 text-white/90 rounded-tl-none border border-white/5'
+                      }`}>
+                        {msg.image_url ? (
+                          <img 
+                            src={msg.image_url} 
+                            alt="Support attachment" 
+                            className="rounded-lg max-w-full mb-2"
+                          />
+                        ) : (
+                          <p className="text-[15px] font-sf-ui-light leading-relaxed break-words">
+                            {msg.message}
+                          </p>
+                        )}
+                        <div className={`text-[10px] mt-1 ${isOwn ? 'text-white/50' : 'text-white/30'} flex items-center gap-1`}>
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {isOwn && <CheckCircle2 className="w-3 h-3" />}
+                        </div>
+                      </div>
+                    </motion.div>
                   </div>
                 )
               })}
@@ -572,10 +643,9 @@ export default function Support({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Input Area */}
-        {activeTicket && (
+        {activeTicket && (activeTicket.status === 'open' || !isModerator) && (
           <div className="p-4 border-t border-white/5 bg-[#0A0A0A] safe-area-bottom">
-            {activeTicket.status === 'open' ? (
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-2 pr-3 focus-within:border-blue-500/50 transition-colors">
+            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-2 pr-3 focus-within:border-blue-500/50 transition-colors">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
                   disabled={sending}
@@ -612,11 +682,6 @@ export default function Support({ onClose }: { onClose: () => void }) {
                   <Send className="w-5 h-5" />
                 </button>
               </div>
-            ) : (
-              <div className="flex items-center justify-center py-2 px-4 bg-white/5 rounded-2xl border border-white/5">
-                <span className="text-[14px] text-white/30 font-sf-ui-medium">Обращение закрыто</span>
-              </div>
-            )}
           </div>
         )}
       </div>
