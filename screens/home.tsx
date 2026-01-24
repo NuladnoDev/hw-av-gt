@@ -15,6 +15,7 @@ import Phone from './Phone'
 import { getSupabase } from '@/lib/supabaseClient'
 import Ads, { type StoredAd } from './ads'
 import AdDetail from './AdDetail'
+import Support from './Support'
 
 export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [scale, setScale] = useState(1)
@@ -53,6 +54,15 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       return null
     }
   })
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
+    try {
+      const authRaw = typeof window !== 'undefined' ? window.localStorage.getItem('hw-auth') : null
+      const auth = authRaw ? (JSON.parse(authRaw) as { uid?: string | null, uuid?: string | null }) : null
+      return auth?.uuid ?? auth?.uid ?? null
+    } catch {
+      return null
+    }
+  })
   const [selectedAd, setSelectedAd] = useState<StoredAd | null>(null)
   const [adsCreateRequested, setAdsCreateRequested] = useState(false)
   const [viewProfileMode, setViewProfileMode] = useState<'own' | 'foreign'>('own')
@@ -66,6 +76,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [userSearchResults, setUserSearchResults] = useState<Array<{id: string, tag: string, avatarUrl: string | null}>>([])
   const [userSearchLoading, setUserSearchLoading] = useState(false)
   const [phoneOpen, setPhoneOpen] = useState(false)
+  const [supportOpen, setSupportOpen] = useState(false)
   const [adsNavNextVisible, setAdsNavNextVisible] = useState(false)
   const [adsNavNextEnabled, setAdsNavNextEnabled] = useState(false)
   const [adsNavNextLabel, setAdsNavNextLabel] = useState('Далее')
@@ -104,6 +115,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     setUserSearchResults([])
     setPhoneOpen(false)
     setSelectedAd(null)
+    setSupportOpen(false)
   }
 
   const searchUsers = async (query: string) => {
@@ -279,6 +291,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       const { data } = await client.auth.getUser()
       const id = data.user?.id ?? null
       const email = data.user?.email ?? null
+      if (id) setCurrentUserId(id)
       if (!id) {
         const authRaw = window.localStorage.getItem('hw-auth')
         const auth = authRaw ? (JSON.parse(authRaw) as { tag?: string | null }) : null
@@ -327,10 +340,12 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       if (uid && tagFromEmail && tagFromEmail.trim().length > 0) {
         window.localStorage.setItem('hw-auth', JSON.stringify({ tag: tagFromEmail.trim(), uid, uuid: uid, email }))
         setCurrentTag(tagFromEmail.trim())
+        setCurrentUserId(uid)
       }
       if (event === 'SIGNED_OUT') {
         window.localStorage.removeItem('hw-auth')
         setCurrentTag(null)
+        setCurrentUserId(null)
       }
     })
     return () => {
@@ -706,9 +721,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                         </>
                       )}
                       <button
-                        type="button"
-                        onClick={() => {
+                      type="button"
+                      onClick={() => {
                         closeProfileMenu()
+                        setSupportOpen(true)
                       }}
                       className="flex w-full items-center"
                       style={{
@@ -763,16 +779,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                       type="button"
                       onClick={() => {
                         closeProfileMenu()
-                        if (navigator.share) {
-                          navigator.share({
-                            title: 'Профиль',
-                            text: 'тест',
-                            url: window.location.href
-                          }).catch(() => {})
-                        } else {
-                          // Fallback to clipboard if share not available
-                          navigator.clipboard.writeText('тест').catch(() => {})
-                        }
+                        setSupportOpen(true)
                       }}
                       className="flex w-full items-center"
                       style={{
@@ -827,6 +834,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                       type="button"
                       onClick={() => {
                         closeProfileMenu()
+                        navigator.clipboard.writeText(window.location.href).catch(() => {})
                       }}
                       className="flex w-full items-center"
                       style={{
@@ -881,6 +889,19 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                       type="button"
                       onClick={() => {
                         closeProfileMenu()
+                        const shareUrl = currentUserId 
+                          ? `${window.location.origin}/?sellerId=${currentUserId}`
+                          : window.location.href
+                        
+                        if (navigator.share) {
+                          navigator.share({
+                            title: 'Профиль',
+                            text: 'Посмотрите мой профиль в приложении!',
+                            url: shareUrl
+                          }).catch(() => {})
+                        } else {
+                          navigator.clipboard.writeText(shareUrl).catch(() => {})
+                        }
                       }}
                       className="flex w-full items-center"
                       style={{
@@ -1243,6 +1264,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             onClose={() => {
               setPhoneOpen(false)
               setSettingsOpen(true)
+            }}
+          />
+        )}
+        {supportOpen && (
+          <Support
+            onClose={() => {
+              setSupportOpen(false)
             }}
           />
         )}

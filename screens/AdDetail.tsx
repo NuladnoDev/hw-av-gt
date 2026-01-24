@@ -156,7 +156,7 @@ export default function AdDetail({
     const detail = {
       showNextInNav: true,
       enabled: true,
-      label: 'Приобрести',
+      label: 'Контакты',
       mode: 'detail' as const,
     }
     const ev = new CustomEvent('ads-create-nav-state', { detail })
@@ -586,82 +586,12 @@ export default function AdDetail({
                     </button>
                   )}
                 </div>
-
-                {!contactsVisible && (
-                  <div className="mt-4 p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-start gap-6">
-                    <div className="p-4 rounded-xl bg-blue-500/15 text-blue-400">
-                      <ShieldCheck className="w-7 h-7" />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="text-[18px] font-ttc-bold text-white/95">Безопасность</div>
-                      <div className="text-[15px] text-white/50 font-sf-ui-light leading-relaxed">
-                        Никогда не переводите предоплату. Встречайтесь в людных местах для проверки товара и документов.
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* Contacts Section */}
-            <div 
-              ref={contactsRef}
-              className={`mt-6 space-y-4 py-6 border-t border-white/5 transition-all duration-500 ${contactsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-            >
-              <h2 className="text-[17px] font-ttc-bold text-white/90">
-                Способы связи
-              </h2>
-              {contacts.length > 0 ? (
-                <div className="grid gap-3">
-                  {contacts.map((c, i) => (
-                    <a
-                      key={i}
-                      href={c.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 active:scale-[0.98] transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.type === 'telegram' ? 'bg-[#24A1DE]/10 text-[#24A1DE]' : 'bg-[#0077FF]/10 text-[#0077FF]'}`}>
-                          <img 
-                            src={c.type === 'telegram' ? '/interface/telegram.svg' : '/interface/vk.svg'} 
-                            alt={c.type}
-                            className="w-5 h-5"
-                          />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[15px] font-sf-ui-medium capitalize">{c.type}</span>
-                          <span className="text-[12px] text-white/40 font-sf-ui-light">{getShortUrl(c.url)}</span>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-white/20" />
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
-                  <p className="text-[14px] text-white/40 font-sf-ui-light">
-                    Продавец не указал способы связи в профиле
-                  </p>
-                </div>
-              )}
-
-              {contactsVisible && (
-                 <div className="mt-4 p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-start gap-6">
-                   <div className="p-4 rounded-xl bg-blue-500/15 text-blue-400">
-                     <ShieldCheck className="w-7 h-7" />
-                   </div>
-                   <div className="flex flex-col gap-2">
-                     <div className="text-[18px] font-ttc-bold text-white/95">Безопасность</div>
-                     <div className="text-[15px] text-white/50 font-sf-ui-light leading-relaxed">
-                       Никогда не переводите предоплату. Встречайтесь в людных местах для проверки товара и документов.
-                     </div>
-                   </div>
-                 </div>
-               )}
-
-               <div className="mt-8 flex items-center justify-center gap-4 border-t border-white/[0.05] pt-8">
-                 <button 
+            <div className="mt-4 flex flex-col items-center gap-4">
+              <div className="flex items-center bg-white/5 border border-white/5 rounded-2xl overflow-hidden w-full max-w-[320px]">
+                <button 
                   type="button"
                   onClick={() => {
                     if (navigator.share) {
@@ -671,23 +601,81 @@ export default function AdDetail({
                         url: window.location.href
                       }).catch(() => {})
                     } else {
-                      navigator.clipboard.writeText('тест').catch(() => {})
+                      navigator.clipboard.writeText(window.location.href).catch(() => {})
                     }
                   }}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-white/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 text-white/60 text-[14px] font-sf-ui-medium active:bg-white/5 transition-all border-r border-white/5"
                 >
-                   <Share2 className="w-4 h-4" />
-                   Поделиться
-                 </button>
-                 <button 
-                   type="button"
-                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-red-400/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
-                 >
-                   <Flag className="w-4 h-4" />
-                   Пожаловаться
-                 </button>
-               </div>
-             </div>
+                  <Share2 className="w-4 h-4" />
+                  Поделиться
+                </button>
+                <button 
+                  type="button"
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 text-red-400/60 text-[14px] font-sf-ui-medium active:bg-white/5 transition-all"
+                >
+                  <Flag className="w-4 h-4" />
+                  Пожаловаться
+                </button>
+              </div>
+            </div>
+
+            {/* Contacts Section */}
+            {contactsVisible && (
+              <div 
+                ref={contactsRef}
+                className="mt-6 space-y-4 py-6 border-t border-white/5 animate-in fade-in slide-in-from-top-4 duration-500"
+              >
+                <h2 className="text-[17px] font-ttc-bold text-white/90">
+                  Способы связи
+                </h2>
+                {contacts.length > 0 ? (
+                  <div className="grid gap-3">
+                    {contacts.map((c, i) => (
+                      <a
+                        key={i}
+                        href={c.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 active:scale-[0.98] transition-all"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.type === 'telegram' ? 'bg-[#24A1DE]/10 text-[#24A1DE]' : 'bg-[#0077FF]/10 text-[#0077FF]'}`}>
+                            <img 
+                              src={c.type === 'telegram' ? '/interface/telegram.svg' : '/interface/vk.svg'} 
+                              alt={c.type}
+                              className="w-5 h-5"
+                            />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[15px] font-sf-ui-medium capitalize">{c.type}</span>
+                            <span className="text-[12px] text-white/40 font-sf-ui-light">{getShortUrl(c.url)}</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-white/20" />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
+                    <p className="text-[14px] text-white/40 font-sf-ui-light">
+                      Продавец не указал способы связи в профиле
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-start gap-6">
+                  <div className="p-4 rounded-xl bg-blue-500/15 text-blue-400">
+                    <ShieldCheck className="w-7 h-7" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="text-[18px] font-ttc-bold text-white/95">Безопасность</div>
+                    <div className="text-[15px] text-white/50 font-sf-ui-light leading-relaxed">
+                      Никогда не переводите предоплату. Проверяйте товар.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

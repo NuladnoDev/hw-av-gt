@@ -8,11 +8,16 @@ export type LocalAuthInfo = {
   email?: string
 } | null
 
+let supabaseInstance: SupabaseClient | null = null
+
 export function getSupabase(): SupabaseClient | null {
+  if (supabaseInstance) return supabaseInstance
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!supabaseUrl || !supabaseAnonKey) return null
-  return createClient(supabaseUrl, supabaseAnonKey, {
+
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -20,6 +25,8 @@ export function getSupabase(): SupabaseClient | null {
       storageKey: 'hw-supabase-auth'
     }
   })
+
+  return supabaseInstance
 }
 
 export async function loadLocalAuth(): Promise<LocalAuthInfo> {
