@@ -110,7 +110,13 @@ export default function Support({ onClose }: { onClose: () => void }) {
     return () => {
       isMounted = false
       channelPromise.then(channel => {
-        if (channel) client.removeChannel(channel)
+        if (channel && client) {
+          try {
+            client.removeChannel(channel)
+          } catch (e) {
+            console.warn('Error removing channel:', e)
+          }
+        }
       })
     }
   }, [activeTicket?.id])
@@ -154,7 +160,7 @@ export default function Support({ onClose }: { onClose: () => void }) {
         .from('support_tickets')
         .select(`
           *,
-          profiles:profiles (
+          profiles (
             tag,
             avatar_url
           )
