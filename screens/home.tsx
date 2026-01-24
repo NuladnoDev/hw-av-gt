@@ -16,8 +16,24 @@ import { getSupabase } from '@/lib/supabaseClient'
 import Ads, { type StoredAd } from './ads'
 import AdDetail from './AdDetail'
 
-export default function HomeScreen() {
+export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [scale, setScale] = useState(1)
+  const [isStandalone, setIsStandalone] = useState(false)
+  const [isIOS, setIsIOS] = useState(false)
+  const [showIosTip, setShowIosTip] = useState(false)
+
+  useEffect(() => {
+    const ua = navigator.userAgent || navigator.vendor || ''
+    const ios = /iPhone|iPad|iPod/i.test(ua)
+    setIsIOS(ios)
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      ((navigator as any).standalone === true)
+    setIsStandalone(standalone)
+    // Show tip if on iOS and not standalone, even for guests
+    setShowIosTip(ios && !standalone)
+  }, [])
+
   const [tab, setTab] = useState<'ads' | 'profile'>('ads')
   const [profileTab, setProfileTab] = useState<'ads' | 'about' | 'friends'>('ads')
   const [profileEdit, setProfileEdit] = useState(false)
@@ -433,8 +449,14 @@ export default function HomeScreen() {
               {viewProfileMode === 'own' ? (
                 <button
                   type="button"
-                  onClick={() => setProfileEdit((v) => !v)}
-                  className="absolute left-6 top-0 flex h-full items-center"
+                  onClick={() => {
+                    if (!isAuthed) {
+                      window.dispatchEvent(new Event('trigger-auth'))
+                      return
+                    }
+                    setProfileEdit((v) => !v)
+                  }}
+                  className={`absolute left-6 top-0 flex h-full items-center transition-all duration-200 ${!isAuthed ? 'opacity-30 grayscale' : ''}`}
                   aria-label="Редактировать профиль"
                 >
                   <img
@@ -461,10 +483,14 @@ export default function HomeScreen() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (!isAuthed) {
+                      window.dispatchEvent(new Event('trigger-auth'))
+                      return
+                    }
                     if (profileMenuOpen) closeProfileMenu()
                     else openProfileMenu()
                   }}
-                  className="flex h-full items-center"
+                  className={`flex h-full items-center transition-all duration-200 ${!isAuthed ? 'opacity-30 grayscale' : ''}`}
                   aria-label="Открыть меню профиля"
                 >
                   <img
@@ -479,7 +505,6 @@ export default function HomeScreen() {
                   Профиль
                 </div>
               </div>
-              <div className="absolute left-0 bottom-[-0.5px] w-full" style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }} />
             </div>
           </div>
         )}
@@ -497,6 +522,7 @@ export default function HomeScreen() {
             transition={{ duration: 0.22, ease: 'easeOut' }}
           >
             <Profile
+              isAuthed={isAuthed}
               profileTab={profileTab}
               setProfileTab={setProfileTab}
               userTag={
@@ -911,6 +937,7 @@ export default function HomeScreen() {
           >
             {tab === 'ads' && (
               <Ads
+                isAuthed={isAuthed}
                 onOpenAd={(ad) => {
                   setSelectedAd(ad)
                 }}
@@ -930,10 +957,6 @@ export default function HomeScreen() {
             bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))',
           }}
         >
-          <div
-            className="absolute -top-[0.5px] left-0 w-full"
-            style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }}
-          />
           <div className="absolute inset-x-0 bottom-3 px-4">
             <div className="relative">
               <div className="absolute inset-0 rounded-[24px] bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.3)]" />
@@ -1214,6 +1237,115 @@ export default function HomeScreen() {
           />
         )}
       </div>
+      {showIosTip && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-[#0A0A0A]"
+        >
+          <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
+            <div
+              className="absolute left-0 top-0 flex h-full w-full items-center justify-center"
+              style={{ zIndex: 20, transform: 'translateY(var(--hello-tip-overlay-offset-y))' }}
+            >
+              <div className="relative">
+                <div
+                  className="absolute left-0 top-4 w-full rounded-[16px]"
+                  style={{ height: 'calc(var(--hello-tip-modal-width) * 0.6)', background: 'rgba(255,255,255,0.04)', filter: 'blur(6px)' }}
+                />
+                <div
+                  className="rounded-[var(--hello-tip-card-radius)] border text-center"
+                  style={{
+                    width: 'var(--hello-tip-modal-width)',
+                    height: 'var(--hello-tip-modal-height)',
+                    padding: 'var(--hello-tip-modal-padding)',
+                    background: 'var(--hello-tip-card-bg)',
+                    borderColor: 'var(--hello-tip-card-border)',
+                    boxShadow: 'var(--hello-tip-card-shadow)',
+                  }}
+                >
+                  <img
+                    src="/interface/link-broken.svg"
+                    alt="union"
+                    style={{
+                      width: 'var(--hello-tip-union-size)',
+                      height: 'var(--hello-tip-union-size)',
+                      marginBottom: 'var(--hello-tip-union-margin-bottom)',
+                      display: 'block',
+                      marginLeft: 'auto',
+                      marginRight: 'auto',
+                      transform: 'translate(var(--hello-tip-union-offset-x), var(--hello-tip-union-offset-y))',
+                    }}
+                  />
+                  <div
+                    className="mx-auto text-white"
+                    style={{
+                      fontSize: 'var(--hello-tip-title-size)',
+                      width: 'var(--hello-tip-text-block-width)',
+                      fontFamily: 'var(--font-sf-ui-text-light)',
+                      lineHeight: 'calc(1.25em + var(--hello-tip-text-indent))',
+                    }}
+                  >
+                    <span>Ой, похоже у вас </span>
+                    <span style={{ color: 'white', fontFamily: 'var(--font-sf-ui-text-medium)' }}>Iphone</span>
+                  </div>
+                  <div
+                    className="mx-auto text-white"
+                    style={{
+                      fontSize: 'var(--hello-tip-text-size)',
+                      marginTop: 'var(--hello-tip-line-gap)',
+                      width: 'var(--hello-tip-text-block-width)',
+                      fontFamily: 'var(--font-sf-ui-text-light)',
+                      lineHeight: 'calc(1.4em + var(--hello-tip-text-indent))',
+                    }}
+                  >
+                    <span>В таком случае </span>
+                    <span style={{ color: 'var(--hello-tip-iphone-color)' }}>крайне рекомендуется</span>
+                    <span> добавить сайт как </span>
+                    <span style={{ color: 'white' }}>приложение</span>
+                  </div>
+                  <div style={{ height: 'var(--hello-tip-gap)' }} />
+                  <div className="mx-auto" style={{ width: 'var(--hello-tip-instruction-width)', marginTop: 'var(--hello-tip-flow-margin-top)' }}>
+                    <div className="flex items-center justify-center" style={{ gap: 'var(--hello-tip-flow-gap)' }}>
+                      <img src="/interface/dot-horizontal.svg" alt="dot" style={{ width: 'var(--hello-tip-icon-size)', height: 'var(--hello-tip-icon-size)' }} />
+                      <span className="text-white" style={{ fontSize: 'var(--hello-tip-text-size)' }}>→</span>
+                      <img src="/interface/Share.svg" alt="Share" style={{ width: 'var(--hello-tip-icon-size)', height: 'var(--hello-tip-icon-size)' }} />
+                      <span className="text-white" style={{ fontSize: 'var(--hello-tip-text-size)' }}>Поделиться</span>
+                      <span className="text-white" style={{ fontSize: 'var(--hello-tip-text-size)' }}>→</span>
+                      <img src="/interface/add-square-03.svg" alt="Add" style={{ width: 'var(--hello-tip-icon-size)', height: 'var(--hello-tip-icon-size)' }} />
+                      <span className="text-white" style={{ fontSize: 'var(--hello-tip-text-size)' }}>
+                        «Домой»
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="absolute left-0 w-full text-center"
+                  style={{
+                    bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--hello-close-bottom))',
+                  }}
+                  onClick={() => {
+                    setShowIosTip(false)
+                  }}
+                >
+                  <span
+                    className="inline-flex items-center justify-center font-vk-demi"
+                    style={{
+                      width: 'var(--hello-close-width)',
+                      height: 'var(--hello-close-height)',
+                      borderRadius: 'var(--hello-close-radius)',
+                      background: 'var(--hello-close-bg)',
+                      fontSize: 'var(--hello-close-text-size)',
+                      color: 'var(--hello-close-text-color)',
+                    }}
+                  >
+                    Закрыть
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

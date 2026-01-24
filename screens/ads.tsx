@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import AdsCreate, { CONDITION_OPTIONS } from './Ads_Create'
 import AdsEdit from './Ads_Edit'
+import AdsFilters, { FilterState } from './AdsFilters'
 
 interface AdCardProps {
   id: string
@@ -20,6 +21,7 @@ interface AdCardProps {
   onEdit?: () => void
   showEditLabel?: boolean
   createdAt?: number
+  specs?: AdSpecItem[]
 }
 
 const ADS_SIDE_PADDING = 4
@@ -203,7 +205,10 @@ export function AdCard({
   onEdit,
   showEditLabel,
   createdAt,
+  specs,
 }: AdCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   const displayTitle =
     title.length > ADS_TITLE_MAX_LENGTH
       ? `${title.slice(0, ADS_TITLE_MAX_LENGTH - 1).trimEnd()}…`
@@ -222,20 +227,22 @@ export function AdCard({
     : ''
 
   return (
-    <div
+    <motion.div 
+      layout
       className="relative w-full"
     >
       <div
-        className="relative cursor-pointer overflow-hidden rounded-2xl bg-[#121212] group"
+        className="relative cursor-pointer overflow-hidden rounded-2xl bg-[#080808] group active:scale-[0.98] transition-all duration-200"
         style={{
-          height: `calc(160px + var(--ad-card-info-height, 80px))`,
-          borderRadius: '16px',
+          minHeight: `calc(160px + var(--ad-card-info-height, 84px))`,
+          borderRadius: '18px',
         }}
         onClick={onClick}
       >
+        {/* Background Blur Effect */}
         <div className="absolute inset-0 overflow-hidden">
           <div
-            className="absolute inset-0 scale-110 blur-xl opacity-50"
+            className="absolute inset-0 scale-125 blur-2xl opacity-[0.15] saturate-200"
             style={{
               backgroundImage: `url(${imageUrl})`,
               backgroundSize: 'cover',
@@ -244,26 +251,34 @@ export function AdCard({
           />
         </div>
 
-        <div className="relative h-[160px] overflow-hidden">
-          <img src={imageUrl} alt={title} className="relative z-10 h-full w-full object-contain" />
+        {/* Image Container */}
+        <div className="relative h-[160px] overflow-hidden bg-black/20 flex items-center justify-center">
+          <img 
+            src={imageUrl} 
+            alt={title} 
+            className="relative z-10 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
+          />
+          
+          {/* Top Overlays */}
           {!showEditLabel && (
-            <div className="absolute left-2 top-2 z-20 rounded-full bg-black/60 px-3 py-1.5 backdrop-blur-sm">
+            <div className="absolute left-2.5 top-2.5 z-20 rounded-xl bg-black/40 px-2.5 py-1.5 backdrop-blur-md border border-white/5">
               <p
-                className="text-white font-['SF_UI_Text:Light',sans-serif]"
-                style={{ fontSize: 'var(--ad-card-user-tag-size, 12px)' }}
+                className="text-white font-sf-ui-medium tracking-tight"
+                style={{ fontSize: '11px' }}
               >
                 @{username}
               </p>
             </div>
           )}
+          
           {isOwn && (
             <button
               type="button"
-              className="absolute right-2 top-2 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-sm"
+              className="absolute right-2.5 top-2.5 z-20 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 transition-colors"
               style={{
-                height: 29,
-                minWidth: 29,
-                paddingLeft: showEditLabel ? 8 : 0,
+                height: 30,
+                minWidth: 30,
+                paddingLeft: showEditLabel ? 10 : 0,
                 paddingRight: showEditLabel ? 12 : 0,
                 gap: showEditLabel ? 6 : 0,
               }}
@@ -277,14 +292,7 @@ export function AdCard({
                 <path d="M14 12C14 13.1046 13.1046 14 12 14C10.8954 14 10 13.1046 10 12C10 10.8954 10.8954 10 12 10C13.1046 10 14 10.8954 14 12Z" stroke="white" strokeWidth="2" />
               </svg>
               {showEditLabel && (
-                <span
-                  className="font-sf-ui-medium"
-                  style={{
-                    fontSize: 12,
-                    lineHeight: '14px',
-                    color: '#FFFFFF',
-                  }}
-                >
+                <span className="font-sf-ui-medium text-[12px] text-white">
                   Изменить
                 </span>
               )}
@@ -292,58 +300,104 @@ export function AdCard({
           )}
         </div>
 
+        {/* Info Section */}
         <div
-          className="relative flex flex-col justify-between bg-gradient-to-b from-[#121212]/95 to-[#121212] p-3"
-          style={{ height: 'var(--ad-card-info-height, 80px)' }}
+          className="relative flex flex-col p-3.5 bg-[#080808]/40 backdrop-blur-sm border-t border-white/[0.03]"
+          style={{ minHeight: 'var(--ad-card-info-height, 84px)' }}
         >
-          <div style={{ marginBottom: -2 }}>
+          <div className="flex flex-col gap-0.5">
             <h3
-              className="line-clamp-1 text-white font-sf-ui-medium"
-              style={{ fontSize: 17, lineHeight: '20px' }}
+              className="line-clamp-1 text-white font-ttc-demibold tracking-tight"
+              style={{ fontSize: 16, lineHeight: '20px' }}
             >
               {displayTitle}
             </h3>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-white/40 font-sf-ui-medium text-[11px] uppercase tracking-wider">
+                {condition && (
+                  <span className={
+                    condition === 'Новое' ? 'text-emerald-400' : 
+                    condition === 'Отличное' ? 'text-green-400' :
+                    condition === 'Хорошее' ? 'text-yellow-400' :
+                    condition === 'Не очень' ? 'text-orange-400' : 'text-white/40'
+                  }>
+                    {condition}
+                  </span>
+                )}
+                {condition && (location || (specs && specs.length > 0)) && <span>•</span>}
+                
+                {specs && specs.length > 0 ? (
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 active:opacity-60 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsExpanded(!isExpanded)
+                    }}
+                  >
+                    <span className="text-white/40 font-sf-ui-medium text-[11px] uppercase tracking-wider">Детали</span>
+                    <motion.svg 
+                      width="8" 
+                      height="8" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="text-white/40"
+                      animate={{ rotate: isExpanded ? 180 : 0 }}
+                    >
+                      <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </motion.svg>
+                  </button>
+                ) : (
+                  location && <span className="line-clamp-1">{location}</span>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div>
-            <div
-              className="flex items-center gap-1.5 text-white/50"
-              style={{
-                fontSize: 13,
-                marginBottom: 2,
-              }}
-            >
-              {condition && conditionConfig && (
-                <span
-                  className="inline-flex items-center justify-center rounded-full"
-                  style={{
-                    width: 16,
-                    height: 16,
-                    backgroundColor: `${conditionConfig.color}26`,
-                    color: conditionConfig.color,
-                  }}
-                >
-                  {conditionConfig.icon}
-                </span>
-              )}
-              {condition && location && <span className="text-[10px] opacity-50">•</span>}
-              {location && <span className="line-clamp-1">{location}</span>}
+          <AnimatePresence>
+            {isExpanded && specs && specs.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
+                exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-col gap-1.5 pt-2 border-t border-white/[0.05]">
+                  {specs.slice(0, 4).map((spec, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-[11px]">
+                      <span className="text-white/30 font-sf-ui-light line-clamp-1 mr-2">{spec.label}</span>
+                      <span className="text-white/70 font-sf-ui-medium text-right line-clamp-1">{spec.value}</span>
+                    </div>
+                  ))}
+                  {specs.length > 4 && (
+                    <div className="text-[10px] text-white/20 font-sf-ui-light italic mt-0.5">
+                      + ещё {specs.length - 4}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex items-baseline justify-between mt-3">
+            <div className="text-[19px] text-white font-ttc-demibold tracking-tight">
+              {price.toLocaleString('ru-RU')} <span className="text-[15px] font-sf-ui-medium opacity-70">₽</span>
             </div>
-            <p className="text-lg text-white font-vk-demi">
-              {price} ₽
-              {publishedText && (
-                <span className="ml-2 text-[13px] text-white/50 font-sf-ui-light">
-                  {publishedText}
-                </span>
-              )}
-            </p>
+            {publishedText && (
+              <span className="text-[11px] text-white/30 font-sf-ui-medium uppercase">
+                {publishedText}
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="absolute inset-0 bg-white/0 transition-all duration-300 group-hover:bg-white/5" />
+        {/* Hover Highlight */}
+        <div className="absolute inset-0 bg-white/0 transition-colors duration-300 group-hover:bg-white/[0.02] pointer-events-none" />
       </div>
-
-    </div>
+    </motion.div>
   )
 }
 
@@ -351,33 +405,33 @@ export function AdCardSkeleton() {
   return (
     <div className="relative w-full">
       <div
-        className="relative overflow-hidden rounded-2xl bg-[#151515]"
+        className="relative overflow-hidden rounded-2xl bg-[#080808]"
         style={{
           height: `calc(160px + var(--ad-card-info-height, 80px))`,
           borderRadius: '16px',
         }}
       >
-        <div className="relative h-[160px] overflow-hidden bg-[#1a1a1a]">
+        <div className="relative h-[160px] overflow-hidden bg-[#0A0A0A]">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
         </div>
         <div
-          className="relative flex flex-col justify-between bg-gradient-to-b from-[#151515]/95 to-[#151515] p-3"
+          className="relative flex flex-col justify-between bg-gradient-to-b from-[#090909]/95 to-[#090909] p-3"
           style={{ height: 'var(--ad-card-info-height, 80px)' }}
         >
           <div className="space-y-2">
-            <div className="h-4 w-3/4 rounded bg-[#222222] overflow-hidden relative">
+            <div className="h-4 w-3/4 rounded bg-[#121212] overflow-hidden relative">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-16 rounded bg-[#222222] overflow-hidden relative">
+              <div className="h-3 w-16 rounded bg-[#121212] overflow-hidden relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
               </div>
-              <div className="h-3 w-20 rounded bg-[#222222] overflow-hidden relative">
+              <div className="h-3 w-20 rounded bg-[#121212] overflow-hidden relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
               </div>
             </div>
           </div>
-          <div className="mt-2 h-5 w-24 rounded bg-[#222222] overflow-hidden relative">
+          <div className="mt-2 h-5 w-24 rounded bg-[#121212] overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
           </div>
           
@@ -393,10 +447,12 @@ export default function Ads({
   onOpenAd,
   createOnMount,
   onCreateConsumed,
+  isAuthed,
 }: {
   onOpenAd?: (ad: StoredAd) => void
   createOnMount?: boolean
   onCreateConsumed?: () => void
+  isAuthed?: boolean
 }) {
   const [createOpen, setCreateOpen] = useState(false)
   const [items, setItems] = useState<StoredAd[]>([])
@@ -408,6 +464,10 @@ export default function Ads({
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
   const [contactWarningOpen, setContactWarningOpen] = useState(false)
   const [contactWarningLocked, setContactWarningLocked] = useState(false)
+  const [authWarningOpen, setAuthWarningOpen] = useState(false)
+  const [authWarningLocked, setAuthWarningLocked] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [activeFilters, setActiveFilters] = useState<FilterState | null>(null)
 
   const [userCity, setUserCity] = useState<string | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
@@ -442,40 +502,54 @@ export default function Ads({
   }
 
   const handleCreateClick = () => {
+    if (!isAuthed) {
+      setContactWarningOpen(false)
+      setAuthWarningOpen(true)
+      return
+    }
     void (async () => {
       const ok = await checkHasContacts()
       if (ok) {
         setCreateOpen(true)
         return
       }
+      setAuthWarningOpen(false)
       setContactWarningOpen(true)
     })()
   }
 
   useEffect(() => {
-    if (!contactWarningOpen) return
-    setContactWarningLocked(true)
+    if (!contactWarningOpen && !authWarningOpen) return
+    const isLocked = contactWarningOpen ? setContactWarningLocked : setAuthWarningLocked
+    isLocked(true)
     const t = setTimeout(() => {
-      setContactWarningLocked(false)
+      isLocked(false)
     }, 2000)
     return () => {
       clearTimeout(t)
     }
-  }, [contactWarningOpen])
+  }, [contactWarningOpen, authWarningOpen])
 
   useEffect(() => {
     if (createOnMount && !createOpen) {
+      if (!isAuthed) {
+        setContactWarningOpen(false)
+        setAuthWarningOpen(true)
+        if (onCreateConsumed) onCreateConsumed()
+        return
+      }
       void (async () => {
         const ok = await checkHasContacts()
         if (ok) {
           setCreateOpen(true)
         } else {
+          setAuthWarningOpen(false)
           setContactWarningOpen(true)
         }
         if (onCreateConsumed) onCreateConsumed()
       })()
     }
-  }, [createOnMount, createOpen, onCreateConsumed])
+  }, [createOnMount, createOpen, onCreateConsumed, isAuthed])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -587,11 +661,47 @@ export default function Ads({
 
   const searchPlaceholder = userCity ? `Поиск в ${toPrepositionalCity(userCity)}` : 'Поиск в Кадуе'
 
-  const normalizedQuery = searchQuery.trim().toLowerCase()
-  const visibleItems =
-    normalizedQuery.length === 0
-      ? items
-      : items.filter((ad) => ad.title.toLowerCase().includes(normalizedQuery))
+  const visibleItems = useMemo(() => {
+    let filtered = items
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+
+    if (normalizedQuery.length > 0) {
+      filtered = filtered.filter((ad) => ad.title.toLowerCase().includes(normalizedQuery))
+    }
+
+    if (activeFilters) {
+      if (activeFilters.categories.length > 0) {
+        filtered = filtered.filter((ad) => ad.category && activeFilters.categories.includes(ad.category as any))
+      }
+      if (activeFilters.conditions.length > 0) {
+        filtered = filtered.filter((ad) => {
+          if (!ad.condition) return false
+          const condOption = CONDITION_OPTIONS.find(opt => opt.label === ad.condition)
+          return condOption && activeFilters.conditions.includes(condOption.id as any)
+        })
+      }
+      if (activeFilters.minPrice) {
+        const min = parseInt(activeFilters.minPrice)
+        if (!isNaN(min)) {
+          filtered = filtered.filter((ad) => {
+            const price = parseInt(ad.price.replace(/\D/g, ''))
+            return !isNaN(price) && price >= min
+          })
+        }
+      }
+      if (activeFilters.maxPrice) {
+        const max = parseInt(activeFilters.maxPrice)
+        if (!isNaN(max)) {
+          filtered = filtered.filter((ad) => {
+            const price = parseInt(ad.price.replace(/\D/g, ''))
+            return !isNaN(price) && price <= max
+          })
+        }
+      }
+    }
+
+    return filtered
+  }, [items, searchQuery, activeFilters])
   return (
     <div className="relative h-full w-full">
       <div
@@ -662,6 +772,7 @@ export default function Ads({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 40 }}
                     transition={{ duration: 0.22, ease: 'easeOut' }}
+                    onClick={() => setFiltersOpen(true)}
                   >
                     <img
                       src="/interface/filter.svg"
@@ -719,7 +830,7 @@ export default function Ads({
                     key={category.name}
                     type="button"
                     disabled={category.disabled}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full font-sf-ui-medium text-sm transition-all duration-200 ${category.disabled ? 'opacity-40 grayscale cursor-not-allowed' : selectedCategory === category.name ? 'scale-105' : 'hover:scale-105'} active:scale-95`}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full font-ttc-demibold text-sm transition-all duration-200 ${category.disabled ? 'opacity-40 grayscale cursor-not-allowed' : selectedCategory === category.name ? 'scale-105' : 'hover:scale-105'} active:scale-95`}
                     style={{
                       backgroundColor: category.disabled 
                         ? 'rgba(255,255,255,0.05)' 
@@ -786,6 +897,7 @@ export default function Ads({
                       condition={ad.condition ?? undefined}
                       location={ad.location ?? undefined}
                       createdAt={ad.createdAt}
+                      specs={ad.specs}
                       onDelete={isOwn ? () => deleteAdById(ad.id) : undefined}
                       isOwn={isOwn}
                       onClick={() => {
@@ -807,7 +919,19 @@ export default function Ads({
         />
       )}
       <AnimatePresence>
-        {contactWarningOpen && (
+        {filtersOpen && (
+          <AdsFilters
+            onClose={() => setFiltersOpen(false)}
+            onApply={(filters) => {
+              setActiveFilters(filters)
+              setFiltersOpen(false)
+            }}
+            initialFilters={activeFilters || { categories: [], conditions: [], minPrice: '', maxPrice: '' }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {contactWarningOpen && isAuthed && (
           <>
             {/* Затемнение фона - на весь экран, но ниже навигации и самого уведомления */}
             <motion.div
@@ -856,6 +980,58 @@ export default function Ads({
                    />
                  </div>
                </motion.button>
+             </div>
+          </>
+        )}
+
+        {authWarningOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-[85]"
+              initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
+              animate={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+              exit={{ backgroundColor: 'rgba(0,0,0,0)' }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              onClick={() => {
+                if (authWarningLocked) return
+                setAuthWarningOpen(false)
+              }}
+            />
+            
+             <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
+               <motion.div
+                 className="relative mb-[calc(var(--nav-bottom-offset,12px)+var(--bottom-nav-height,96px)+15px)] w-[340px] max-w-[94%] rounded-2xl bg-[#1C1C1E] px-5 py-6 text-center shadow-2xl flex flex-col items-center pointer-events-auto"
+                 initial={{ translateY: 40, opacity: 0 }}
+                 animate={{ translateY: 0, opacity: 1 }}
+                 exit={{ translateY: 40, opacity: 0 }}
+                 transition={{ duration: 0.25, ease: 'easeOut' }}
+               >
+                 <div className="text-[17px] leading-[1.3] text-white font-sf-ui-medium mb-6">
+                   Чтобы публиковать объявления нужен аккаунт
+                 </div>
+                 
+                 <button
+                   type="button"
+                   className="h-[44px] w-full rounded-[10px] bg-white text-black font-vk-demi text-[15px] mb-3"
+                   onClick={() => {
+                     setAuthWarningOpen(false)
+                     window.dispatchEvent(new Event('trigger-auth'))
+                   }}
+                 >
+                   Зарегистрироваться
+                 </button>
+                 
+                 <button
+                   type="button"
+                   className="text-[12px] text-white/70 font-sf-ui-light"
+                   onClick={() => {
+                     setAuthWarningOpen(false)
+                     window.dispatchEvent(new CustomEvent('trigger-auth', { detail: { screen: 'login' } }))
+                   }}
+                 >
+                   У меня уже есть аккаунт
+                 </button>
+               </motion.div>
              </div>
           </>
         )}

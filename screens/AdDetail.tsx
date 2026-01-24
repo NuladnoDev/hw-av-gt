@@ -1,11 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore react-slick не имеет встроенных типов
-import Slider from 'react-slick'
-import { motion } from 'motion/react'
-import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from 'motion/react'
+import { ChevronDown, ChevronLeft, ChevronRight, X, Sparkles, Star, ThumbsUp, CircleAlert, ShieldCheck, Share2, Flag } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 import type { StoredAd } from './ads'
 
@@ -14,6 +11,20 @@ const CONDITION_COLORS: Record<string, string> = {
   Отличное: 'text-green-400',
   Хорошее: 'text-yellow-400',
   'Не очень': 'text-orange-400',
+}
+
+const CONDITION_DESCRIPTIONS: Record<string, string> = {
+  'Новое': 'Есть чек, сохранена оригинальная упаковка',
+  'Отличное': 'Целостность товара сохранена, нет дефектов',
+  'Хорошее': 'Есть небольшие дефекты, потёртости и т.п',
+  'Не очень': 'Есть видимые дефекты, неисправности',
+}
+
+const CONDITION_ICONS: Record<string, React.ReactNode> = {
+  'Новое': <Sparkles className="w-5 h-5" />,
+  'Отличное': <Star className="w-5 h-5" />,
+  'Хорошее': <ThumbsUp className="w-5 h-5" />,
+  'Не очень': <CircleAlert className="w-5 h-5" />,
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -51,6 +62,30 @@ const getShortUrl = (url: string): string => {
   return `${withoutProtocol.slice(0, 20)}…${withoutProtocol.slice(-7)}`
 }
 
+const Dot = ({ index, scrollXProgress, total }: { index: number; scrollXProgress: any; total: number }) => {
+  const range = [
+    (index - 1) / (total - 1),
+    index / (total - 1),
+    (index + 1) / (total - 1)
+  ]
+  
+  const widthTransform = useTransform(scrollXProgress, range, [6, 16, 6])
+  const opacityTransform = useTransform(scrollXProgress, range, [0.3, 1, 0.3])
+  
+  const width = useSpring(widthTransform, { stiffness: 300, damping: 30 })
+  const opacity = useSpring(opacityTransform, { stiffness: 300, damping: 30 })
+
+  return (
+    <motion.div
+      style={{
+        width,
+        opacity,
+      }}
+      className="h-1.5 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.3)]"
+    />
+  )
+}
+
 export default function AdDetail({
   ad,
   onClose,
@@ -63,11 +98,18 @@ export default function AdDetail({
   const [currentSlide, setCurrentSlide] = useState(0)
   const [showAllSpecs, setShowAllSpecs] = useState(false)
   const [showFullDescription, setShowFullDescription] = useState(false)
+  const [showConditionInfo, setShowConditionInfo] = useState(false)
   const [expandedSpecIndex, setExpandedSpecIndex] = useState<number | null>(null)
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [sellerAvatar, setSellerAvatar] = useState<string | null>(null)
   const [contactsVisible, setContactsVisible] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const imageScrollRef = useRef<HTMLDivElement | null>(null)
   const contactsRef = useRef<HTMLDivElement | null>(null)
+
+  const { scrollXProgress } = useScroll({
+    container: imageScrollRef,
+  })
 
   const images =
     ad.imageUrls && ad.imageUrls.length > 0
@@ -76,48 +118,14 @@ export default function AdDetail({
         ? [ad.imageUrl]
         : []
 
-  const NextArrow = (props: any) => {
-    const { onClick } = props
-    if (images.length <= 1) return null
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 backdrop-blur-sm transition-colors hover:bg-black/70"
-      >
-        <ChevronRight className="h-5 w-5 text-white" />
-      </button>
-    )
-  }
-
-  const PrevArrow = (props: any) => {
-    const { onClick } = props
-    if (images.length <= 1) return null
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 backdrop-blur-sm transition-colors hover:bg-black/70"
-      >
-        <ChevronLeft className="h-5 w-5 text-white" />
-      </button>
-    )
-  }
-
-  const sliderSettings = {
-    dots: true,
-    infinite: images.length > 1,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    arrows: images.length > 1,
-    nextArrow: <NextArrow />,
-    prevArrow: <PrevArrow />,
-    beforeChange: (_: number, next: number) => setCurrentSlide(next),
-    customPaging: () => (
-      <div className="w-2 h-2 rounded-full bg-gray-600" />
-    ),
-    dotsClass: 'slick-dots !bottom-4',
+  const scrollImages = (direction: 'left' | 'right') => {
+    if (!imageScrollRef.current) return
+    const container = imageScrollRef.current
+    const scrollAmount = container.clientWidth
+    container.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth'
+    })
   }
 
   const conditionColor =
@@ -222,7 +230,7 @@ export default function AdDetail({
         if (client) {
           const { data, error } = await client
             .from('profiles')
-            .select('contacts')
+            .select('contacts, avatar_url')
             .eq('id', userId)
             .maybeSingle()
           if (!error && data) {
@@ -231,6 +239,9 @@ export default function AdDetail({
             )
             if (dbContacts.length > 0) {
               next = dbContacts
+            }
+            if ((data as { avatar_url?: string }).avatar_url) {
+              setSellerAvatar((data as { avatar_url: string }).avatar_url)
             }
           }
         }
@@ -250,9 +261,6 @@ export default function AdDetail({
   if (categoryLabel) {
     specs.push({ label: 'Категория', value: categoryLabel })
   }
-  if (ad.condition) {
-    specs.push({ label: 'Состояние', value: ad.condition })
-  }
   if (locationText) {
     specs.push({ label: 'Город', value: locationText })
   }
@@ -271,38 +279,54 @@ export default function AdDetail({
 
   return (
     <motion.div
-      className="absolute inset-0 z-40 flex flex-col bg-[#0a0a0a] text-white"
-      initial={{ opacity: 0, scale: 0.9, borderRadius: 24 }}
-      animate={{ opacity: 1, scale: 1, borderRadius: 0 }}
-      exit={{ opacity: 0, scale: 0.9, borderRadius: 24 }}
-      transition={{ duration: 0.22, ease: 'easeOut' }}
+      className="absolute inset-0 z-40 flex flex-col bg-[#0A0A0A] text-white"
+      initial={{ opacity: 0, x: '100%' }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: '100%' }}
+      transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
     >
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between px-4 pt-4 pb-3 bg-[#0a0a0a]/95 backdrop-blur-sm">
+        {/* Header */}
+        <div 
+          className="flex items-center justify-between px-6 bg-[#0A0A0A]/80 backdrop-blur-xl z-50 sticky top-0"
+          style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        >
           <button
             type="button"
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+            className="flex items-center justify-center h-10 w-10 -ml-2 rounded-full active:bg-white/10 transition-colors"
             onClick={onClose}
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <button
-            type="button"
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-            onClick={onClose}
-          >
-            <X className="w-6 h-6" />
-          </button>
+          
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="flex items-center justify-center h-10 w-10 -mr-2 rounded-full active:bg-white/10 transition-colors"
+              onClick={onClose}
+            >
+              <X className="w-5 h-5 opacity-60" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-hidden" ref={scrollRef}>
-          <div className="pt-2">
-            <div className="relative">
-              {images.length > 0 ? (
-                <Slider {...sliderSettings}>
+          {/* Images */}
+          <div className="relative group overflow-hidden">
+            {images.length > 0 ? (
+              <>
+                <div 
+                  ref={imageScrollRef}
+                  className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hidden"
+                  onScroll={(e) => {
+                    const container = e.currentTarget
+                    const slide = Math.round(container.scrollLeft / container.clientWidth)
+                    if (slide !== currentSlide) setCurrentSlide(slide)
+                  }}
+                >
                   {images.map((src, index) => (
-                    <div key={index} className="relative">
-                      <div className="aspect-square bg-black">
+                    <div key={index} className="min-w-full snap-center outline-none">
+                      <div className="aspect-[4/5] bg-zinc-950">
                         <img
                           src={src}
                           alt={ad.title}
@@ -311,362 +335,333 @@ export default function AdDetail({
                       </div>
                     </div>
                   ))}
-                </Slider>
-              ) : (
-                <div className="aspect-square bg-zinc-900 flex items-center justify-center">
-                  <span className="text-sm text-zinc-500">
-                    Без изображения
-                  </span>
                 </div>
-              )}
 
-              {images.length > 0 && (
-                <div className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-sm backdrop-blur-sm">
-                  {currentSlide + 1} / {images.length}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="px-4 pb-24 font-vk-demi">
-            <div className="py-5">
-              <div className="flex items-center justify-between gap-3">
-                <div
-                  className="font-bold bg-gradient-to-r from-[#FFFFFF] to-[#FFFFFF] bg-clip-text text-transparent"
-                  style={{ fontSize: 'var(--ad-detail-price-size, 30px)' }}
-                >
-                  {ad.price} ₽
-                </div>
-                <button
-                  type="button"
-                  className="flex items-center justify-center rounded-full bg-[#1f1f1f] px-3 py-1.5"
-                  onClick={() => {
-                    if (onOpenSellerProfile) onOpenSellerProfile(ad)
-                  }}
-                >
-                  <span
-                    className="text-white"
-                    style={{ fontSize: 'var(--ad-detail-tag-size, 12px)' }}
-                  >
-                    @{sellerTag}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div
-              className="space-y-3 pb-5 border-b"
-              style={{ borderColor: 'var(--ad-detail-divider-color, #2f2f2f)' }}
-            >
-              <h1
-                className="font-semibold"
-                style={{ fontSize: 'var(--ad-detail-title-size, 18px)' }}
-              >
-                {ad.title}
-              </h1>
-              <div className="flex items-center gap-2">
-                <span
-                  className="text-gray-400"
-                  style={{ fontSize: 'var(--ad-detail-meta-size, 13px)' }}
-                >
-                  Состояние:
-                </span>
-                {ad.condition && (
-                  <span
-                    className={`${conditionColor} font-medium`}
-                    style={{ fontSize: 'var(--ad-detail-meta-size, 13px)' }}
-                  >
-                    {ad.condition}
-                  </span>
-                )}
-              </div>
-              <div
-                className="text-gray-400"
-                style={{ fontSize: 'var(--ad-detail-meta-size, 12px)' }}
-              >
-                {locationText}
-                {publishedText && ` • ${publishedText}`}
-              </div>
-            </div>
-
-            <div
-              className="py-5 border-b"
-              style={{ borderColor: 'var(--ad-detail-divider-color, #2f2f2f)' }}
-            >
-              <h2
-                className="mb-4 font-semibold"
-                style={{
-                  fontSize: 'var(--ad-detail-section-title-size, 16px)',
-                }}
-              >
-                Характеристики
-              </h2>
-              <div className="space-y-3">
-                {mainSpecs.map((spec, idx) => (
-                  <div key={spec.label} className="flex flex-col">
-                    <div
-                      className="flex items-start justify-between cursor-pointer py-1"
-                      onClick={() =>
-                        setExpandedSpecIndex(expandedSpecIndex === idx ? null : idx)
-                      }
+                {images.length > 1 && (
+                  <>
+                    {/* Navigation Arrows */}
+                    <button
+                      type="button"
+                      onClick={() => scrollImages('left')}
+                      className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 hidden md:flex hover:bg-black/70"
                     >
-                      <span
-                        className="text-gray-400 shrink-0 mr-4 mt-0.5"
-                        style={{
-                          fontSize: 'var(--ad-detail-label-size, 13px)',
-                        }}
-                      >
-                        {spec.label}
-                      </span>
-                      <div className="flex-1 min-w-0 text-right overflow-hidden">
-                        <motion.div
-                          initial={false}
-                          animate={{ height: 'auto' }}
-                          className="flex flex-col items-end"
-                        >
-                          <span
-                            className={`text-white transition-colors duration-300 ${
-                              expandedSpecIndex === idx
-                                ? 'whitespace-normal break-words'
-                                : 'truncate block w-full'
-                            }`}
-                            style={{
-                              fontSize: 'var(--ad-detail-value-size, 13px)',
-                              color:
-                                expandedSpecIndex !== idx && spec.value.length > 25
-                                  ? 'rgba(255, 255, 255, 0.9)'
-                                  : 'white',
-                            }}
-                          >
-                            {spec.value}
-                          </span>
-                        </motion.div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {hasExtraSpecs && (
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      height: showAllSpecs ? 'auto' : 0,
-                      opacity: showAllSpecs ? 1 : 0,
-                    }}
-                    transition={{ duration: 0.24, ease: 'easeOut' }}
-                    className="overflow-hidden"
-                  >
-                    <div className="space-y-3 pt-2">
-                      {extraSpecs.map((spec, idx) => {
-                        const globalIdx = mainSpecs.length + idx
+                      <ChevronLeft className="h-5 w-5 text-white" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollImages('right')}
+                      className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 hidden md:flex hover:bg-black/70"
+                    >
+                      <ChevronRight className="h-5 w-5 text-white" />
+                    </button>
+
+                    {/* Dots Indicator */}
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                      {images.map((_, i) => {
+                        // Logic for real-time liquid dots
                         return (
-                          <div key={spec.label} className="flex flex-col">
-                            <div
-                              className="flex items-start justify-between cursor-pointer py-1"
-                              onClick={() =>
-                                setExpandedSpecIndex(
-                                  expandedSpecIndex === globalIdx ? null : globalIdx
-                                )
-                              }
-                            >
-                              <span
-                                className="text-gray-400 shrink-0 mr-4 mt-0.5"
-                                style={{
-                                  fontSize: 'var(--ad-detail-label-size, 13px)',
-                                }}
-                              >
-                                {spec.label}
-                              </span>
-                              <div className="flex-1 min-w-0 text-right overflow-hidden">
-                                <motion.div
-                                  initial={false}
-                                  animate={{ height: 'auto' }}
-                                  className="flex flex-col items-end"
-                                >
-                                  <span
-                                    className={`text-white transition-colors duration-300 ${
-                                      expandedSpecIndex === globalIdx
-                                        ? 'whitespace-normal break-words'
-                                        : 'truncate block w-full'
-                                    }`}
-                                    style={{
-                                      fontSize: 'var(--ad-detail-value-size, 13px)',
-                                      color:
-                                        expandedSpecIndex !== globalIdx && spec.value.length > 25
-                                          ? 'rgba(255, 255, 255, 0.9)'
-                                          : 'white',
-                                    }}
-                                  >
-                                    {spec.value}
-                                  </span>
-                                </motion.div>
-                              </div>
-                            </div>
+                          <div key={i} className="flex items-center justify-center h-4">
+                            <Dot 
+                              index={i} 
+                              scrollXProgress={scrollXProgress} 
+                              total={images.length} 
+                            />
                           </div>
                         )
                       })}
                     </div>
-                  </motion.div>
+                  </>
                 )}
-                {hasExtraSpecs && (
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-center gap-2 text-gray-400"
-                      style={{ fontSize: 'var(--ad-detail-meta-size, 12px)' }}
-                      onClick={() => setShowAllSpecs((v) => !v)}
-                    >
-                      <span className="flex-1 h-px bg-[#2f2f2f]" />
-                      <span>{showAllSpecs ? 'Свернуть' : 'Показать ещё'}</span>
-                      <ChevronDown
-                        className={`w-4 h-4 transition-transform ${
-                          showAllSpecs ? 'rotate-180' : ''
-                        }`}
-                      />
-                      <span className="flex-1 h-px bg-[#2f2f2f]" />
-                    </button>
+              </>
+            ) : (
+              <div className="aspect-[4/5] bg-zinc-900 flex items-center justify-center">
+                <span className="text-sm text-zinc-500 font-sf-ui-medium">
+                  Без изображения
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="px-6 pb-32">
+            {/* Price & Seller */}
+            <div className="py-6 flex flex-col gap-4">
+              <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-1">
+                  <div className="text-[32px] font-ttc-bold leading-none tracking-tight">
+                    {ad.price.toLocaleString('ru-RU')} ₽
                   </div>
+                  {categoryLabel && (
+                    <div className="text-[13px] text-white/40 font-sf-ui-medium">
+                      {categoryLabel}
+                    </div>
+                  )}
+                </div>
+
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  className="flex items-center gap-2 rounded-2xl bg-white/5 border border-white/5 p-2 pr-4 hover:bg-white/10 transition-colors"
+                  onClick={() => {
+                    if (onOpenSellerProfile) onOpenSellerProfile(ad)
+                  }}
+                >
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[12px] font-ttc-bold">
+                    {sellerAvatar ? (
+                      <img src={sellerAvatar} alt={sellerTag} className="w-full h-full object-cover" />
+                    ) : (
+                      sellerTag.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-[13px] font-sf-ui-medium text-white/90">
+                      @{sellerTag}
+                    </span>
+                    <span className="text-[10px] text-white/40 font-sf-ui-light uppercase tracking-wider">
+                      Продавец
+                    </span>
+                  </div>
+                </motion.button>
+              </div>
+              
+              <h1 className="text-[22px] font-ttc-bold leading-[1.2] text-white/95">
+                {ad.title}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                {categoryLabel && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                    <span className="text-[12px] font-ttc-demibold uppercase tracking-wider">{categoryLabel}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-white/40">
+                  <span className="text-[12px] font-sf-ui-medium uppercase tracking-wider">{locationText}</span>
+                  {publishedText && (
+                    <>
+                      <div className="w-1 h-1 rounded-full bg-white/20" />
+                      <span className="text-[12px] font-sf-ui-medium uppercase tracking-wider">{publishedText}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {ad.condition && (
+                <div className="mt-2 flex flex-col overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.05]">
+                  <button 
+                    type="button"
+                    onClick={() => setShowConditionInfo(!showConditionInfo)}
+                    className="p-4 flex items-center justify-between active:bg-white/[0.05] transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-2.5 rounded-xl ${
+                        ad.condition === 'Новое' ? 'bg-emerald-500/10 text-emerald-400' : 
+                        ad.condition === 'Отличное' ? 'bg-green-500/10 text-green-400' :
+                        ad.condition === 'Хорошее' ? 'bg-yellow-500/10 text-yellow-400' :
+                        ad.condition === 'Не очень' ? 'bg-orange-500/10 text-orange-400' : 'bg-white/5 text-white/60'
+                      }`}>
+                        {CONDITION_ICONS[ad.condition] || <Sparkles className="w-5 h-5" />}
+                      </div>
+                      <div className="flex flex-col gap-0.5 items-start">
+                        <div className="text-[15px] font-ttc-bold text-white/90">{ad.condition}</div>
+                        <div className="text-[11px] text-indigo-400 font-sf-ui-medium uppercase tracking-wider">Нажми, чтобы узнать больше</div>
+                      </div>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: showConditionInfo ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <ChevronDown className="w-5 h-5 text-white/20" />
+                    </motion.div>
+                  </button>
+                  
+                  <AnimatePresence>
+                    {showConditionInfo && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-4 pt-0">
+                          <div className="h-px w-full bg-white/[0.05] mb-4" />
+                          {CONDITION_DESCRIPTIONS[ad.condition] && (
+                            <div className="text-[13px] text-white/60 font-sf-ui-light leading-relaxed">
+                              {CONDITION_DESCRIPTIONS[ad.condition]}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+
+            {/* Characteristics */}
+            <div className="space-y-4 py-6 border-t border-white/5">
+              <h2 className="text-[17px] font-ttc-bold text-white/90">
+                Характеристики
+              </h2>
+              <div className="grid gap-y-3.5">
+                {mainSpecs.map((spec, idx) => (
+                  <div key={spec.label} className="flex items-baseline justify-between gap-4">
+                    <span className="text-[14px] text-white/40 font-sf-ui-light whitespace-nowrap">
+                      {spec.label}
+                    </span>
+                    <div className="h-px flex-1 bg-white/5 mb-1" />
+                    <span className="text-[14px] text-white/90 font-sf-ui-medium text-right">
+                      {spec.value}
+                    </span>
+                  </div>
+                ))}
+
+                <AnimatePresence initial={false}>
+                  {showAllSpecs && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                      className="overflow-hidden grid gap-y-3.5"
+                    >
+                      {extraSpecs.map((spec, idx) => (
+                        <div key={spec.label} className="flex items-baseline justify-between gap-4">
+                          <span className="text-[14px] text-white/40 font-sf-ui-light whitespace-nowrap">
+                            {spec.label}
+                          </span>
+                          <div className="h-px flex-1 bg-white/5 mb-1" />
+                          <span className="text-[14px] text-white/90 font-sf-ui-medium text-right">
+                            {spec.value}
+                          </span>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {hasExtraSpecs && (
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 text-[13px] text-indigo-400 font-sf-ui-medium pt-2 active:opacity-60 transition-opacity"
+                    onClick={() => setShowAllSpecs(!showAllSpecs)}
+                  >
+                    {showAllSpecs ? 'Свернуть' : `Показать все (${specs.length})`}
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showAllSpecs ? 'rotate-180' : ''}`} />
+                  </button>
                 )}
               </div>
             </div>
 
+            {/* Description */}
             {descriptionText && (
-              <div className="py-5">
-                <h2
-                  className="mb-3 font-semibold"
-                  style={{
-                    fontSize: 'var(--ad-detail-section-title-size, 16px)',
-                  }}
-                >
+              <div className="space-y-4 py-6 border-t border-white/5">
+                <h2 className="text-[17px] font-ttc-bold text-white/90">
                   Описание
                 </h2>
                 <div className="relative">
                   <p
-                    className={`text-gray-300 leading-relaxed transition-all duration-300 ${
-                      !showFullDescription ? 'line-clamp-3' : ''
+                    className={`text-[15px] text-white/70 font-sf-ui-light leading-relaxed transition-all duration-300 ${
+                      !showFullDescription && descriptionText.length > 200 ? 'line-clamp-4' : ''
                     }`}
-                    style={{
-                      fontSize: 'var(--ad-detail-body-size, 14px)',
-                    }}
-                    onClick={() => setShowFullDescription(!showFullDescription)}
                   >
                     {descriptionText}
                   </p>
-                  {!showFullDescription && descriptionText.length > 150 && (
+                  {!showFullDescription && descriptionText.length > 200 && (
                     <button
                       type="button"
-                      className="mt-1 text-blue-400 text-sm font-medium hover:text-blue-300 transition-colors"
+                      className="mt-2 text-[14px] text-indigo-400 font-sf-ui-medium active:opacity-60 transition-opacity"
                       onClick={() => setShowFullDescription(true)}
                     >
-                      Показать полностью
+                      Читать полностью
                     </button>
                   )}
-                  {showFullDescription && descriptionText.length > 150 && (
+                  {showFullDescription && descriptionText.length > 200 && (
                     <button
                       type="button"
-                      className="mt-1 text-blue-400 text-sm font-medium hover:text-blue-300 transition-colors"
+                      className="mt-2 text-[14px] text-indigo-400 font-sf-ui-medium active:opacity-60 transition-opacity"
                       onClick={() => setShowFullDescription(false)}
                     >
-                      Скрыть
+                      Свернуть
                     </button>
                   )}
                 </div>
+
+                <div className="mt-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-start gap-4">
+                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="text-[14px] font-ttc-bold text-white/90">Безопасность</div>
+                    <div className="text-[12px] text-white/40 font-sf-ui-light leading-relaxed">
+                      Никогда не переводите предоплату. Встречайтесь в людных местах для проверки товара и документов.
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-            {contactsVisible && (
-              <motion.div
-                ref={contactsRef}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="py-5 border-t"
-                style={{
-                  borderColor: 'var(--ad-detail-divider-color, #2f2f2f)',
-                }}
-              >
-                <h2
-                  className="mb-4 font-semibold"
-                  style={{
-                    fontSize: 'var(--ad-detail-section-title-size, 16px)',
-                  }}
-                >
-                  Способы связи
-                </h2>
-                {contacts.length > 0 ? (
-                  <div className="space-y-3">
-                    {contacts.map((contact) => {
-                      const key = `${contact.type}-${contact.url}`
-                      const label =
-                        contact.type === 'vk' ? 'ВКонтакте' : 'Telegram'
-                      const iconSrc =
-                        contact.type === 'vk'
-                          ? '/interface/vk.svg'
-                          : '/interface/telegram.svg'
-                      const short = getShortUrl(contact.url)
-                      return (
-                        <a
-                          key={key}
-                          href={contact.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-between rounded-xl bg-[#111111] px-4 py-3"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="flex items-center justify-center overflow-hidden"
-                              style={{
-                                width:
-                                  'var(--ad-detail-contact-avatar-size, 32px)',
-                                height:
-                                  'var(--ad-detail-contact-avatar-size, 32px)',
-                              }}
-                            >
-                              <img
-                                src={iconSrc}
-                                alt={label}
-                                className="h-full w-full object-contain"
-                              />
-                            </div>
-                            <span
-                              className="text-white font-sf-ui-light"
-                              style={{
-                                fontSize:
-                                  'var(--ad-detail-contact-label-size, 15px)',
-                              }}
-                            >
-                              {label}
-                            </span>
-                          </div>
-                          <span className="max-w-[160px] truncate text-right text-xs text-white/60">
-                            {short}
-                          </span>
-                        </a>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-[13px] text-gray-400">
-                    У продавца пока нет указанных способов связи.
+
+            {/* Contacts Section */}
+            <div 
+              ref={contactsRef}
+              className={`mt-6 space-y-4 py-6 border-t border-white/5 transition-all duration-500 ${contactsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+              <h2 className="text-[17px] font-ttc-bold text-white/90">
+                Способы связи
+              </h2>
+              {contacts.length > 0 ? (
+                <div className="grid gap-3">
+                  {contacts.map((c, i) => (
+                    <a
+                      key={i}
+                      href={c.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 active:scale-[0.98] transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.type === 'telegram' ? 'bg-[#24A1DE]/10 text-[#24A1DE]' : 'bg-[#0077FF]/10 text-[#0077FF]'}`}>
+                          <img 
+                            src={c.type === 'telegram' ? '/interface/telegram.svg' : '/interface/vk.svg'} 
+                            alt={c.type}
+                            className="w-5 h-5"
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[15px] font-sf-ui-medium capitalize">{c.type}</span>
+                          <span className="text-[12px] text-white/40 font-sf-ui-light">{getShortUrl(c.url)}</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-white/20" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
+                  <p className="text-[14px] text-white/40 font-sf-ui-light">
+                    Продавец не указал способы связи в профиле
                   </p>
-                )}
-              </motion.div>
+                </div>
             )}
+
+            <div className="mt-8 flex items-center justify-center gap-4 border-t border-white/[0.05] pt-8">
+              <button 
+                type="button"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-white/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
+              >
+                <Share2 className="w-4 h-4" />
+                Поделиться
+              </button>
+              <button 
+                type="button"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 border border-white/5 text-red-400/60 text-[14px] font-sf-ui-medium active:scale-95 transition-all"
+              >
+                <Flag className="w-4 h-4" />
+                Пожаловаться
+              </button>
+            </div>
           </div>
         </div>
-
-        <div className="bg-[#0a0a0a] px-4 py-3">
-          <button
-            type="button"
-            className="flex w-full items-center justify-center rounded-xl text-white font-semibold font-vk-demi transition-transform active:scale-95"
-            style={{
-              fontSize: 'var(--ad-detail-button-size, 15px)',
-              width: 'var(--ad-detail-button-width, 100%)',
-              height: 'var(--ad-detail-button-height, 56px)',
-              background: 'var(--ad-detail-button-bg, var(--feed-create-bg))',
-            }}
-            onClick={onClose}
-          >
-            Написать продавцу
-          </button>
         </div>
       </div>
     </motion.div>

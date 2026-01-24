@@ -57,6 +57,7 @@ export default function Profile({
   isOwnProfile = true,
   viewUserId,
   onOpenProfileById,
+  isAuthed,
 }: {
   profileTab: 'ads' | 'about' | 'friends'
   setProfileTab: (t: 'ads' | 'about' | 'friends') => void
@@ -65,6 +66,7 @@ export default function Profile({
   isOwnProfile?: boolean
   viewUserId?: string
   onOpenProfileById?: (id: string) => void
+  isAuthed?: boolean
 }) {
   const [tagText, setTagText] = useState<string>(typeof userTag === 'string' ? userTag.replace(/^@/, '') : '')
   const [tagEditing, setTagEditing] = useState(false)
@@ -786,6 +788,38 @@ export default function Profile({
     await upsertProfile({ hobbies: next })
   }
 
+  if (isOwnProfile && !isAuthed) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center bg-[#0A0A0A]">
+        <div className="mb-6 flex h-[120px] w-[120px] items-center justify-center rounded-full bg-white/5">
+          <img
+            src="/interface/adv.svg"
+            alt="sales"
+            className="h-16 w-16 opacity-80"
+            style={{ filter: 'invert(1)' }}
+          />
+        </div>
+        <h2 className="text-[20px] leading-[1.3] font-sf-ui-medium text-white mb-8">
+          Зарегистрируйтесь и пользуйтесь полным функционалом сайта!
+        </h2>
+        <button
+          type="button"
+          className="h-[48px] w-full rounded-[12px] bg-white text-black font-vk-demi text-[16px] mb-4"
+          onClick={() => window.dispatchEvent(new Event('trigger-auth'))}
+        >
+          Создать аккаунт
+        </button>
+        <button
+          type="button"
+          className="text-[14px] text-white/80 font-sf-ui-light"
+          onClick={() => window.dispatchEvent(new CustomEvent('trigger-auth', { detail: { screen: 'login' } }))}
+        >
+          У меня уже есть аккаунт. Войти
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div
       className="h-full w-full relative"
@@ -973,6 +1007,10 @@ export default function Profile({
                   }}
                   whileTap={{ scale: 0.96 }}
                   onClick={async () => {
+                    if (!isAuthed) {
+                      window.dispatchEvent(new Event('trigger-auth'))
+                      return
+                    }
                     if (!viewerId || !userId) {
                       console.warn('Follow button clicked but missing viewerId or userId:', { viewerId, userId })
                       return
@@ -1067,6 +1105,10 @@ export default function Profile({
                     }}
                     whileTap={{ scale: 0.96 }}
                     onClick={async () => {
+                      if (!isAuthed) {
+                        window.dispatchEvent(new Event('trigger-auth'))
+                        return
+                      }
                       if (!viewerId || !userId) {
                         return
                       }

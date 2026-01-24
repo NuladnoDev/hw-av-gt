@@ -21,6 +21,27 @@ export default function Home() {
   const [tagError, setTagError] = useState<string>('')
   const [passwordError, setPasswordError] = useState<string>('')
 
+  const [showAuth, setShowAuth] = useState(false)
+
+  useEffect(() => {
+    const handleTriggerAuth = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail
+      if (detail?.screen === 'login') {
+        setScreen('login')
+      } else {
+        setScreen('hello')
+      }
+      setShowAuth(true)
+    }
+    const handleCloseAuth = () => setShowAuth(false)
+    window.addEventListener('trigger-auth', handleTriggerAuth)
+    window.addEventListener('close-auth', handleCloseAuth)
+    return () => {
+      window.removeEventListener('trigger-auth', handleTriggerAuth)
+      window.removeEventListener('close-auth', handleCloseAuth)
+    }
+  }, [])
+
   useEffect(() => {
     const media = window.matchMedia('(max-width: 768px)')
     const check = () => setIsMobile(media.matches)
@@ -57,6 +78,9 @@ export default function Home() {
       const a = window.localStorage.getItem('hw-auth')
       const authed = !!a
       setIsAuthed(authed)
+      if (authed) {
+        setShowAuth(false)
+      }
       if (!authed) {
         setScreen('hello')
         setRegTag('')
@@ -177,8 +201,11 @@ export default function Home() {
       </div>
     )
   }
-  if (isAuthed) {
-    return <HomeScreen />
+  if (isAuthed && !showAuth) {
+    return <HomeScreen isAuthed={true} />
+  }
+  if (!showAuth && isAuthed === false) {
+    return <HomeScreen isAuthed={false} />
   }
   if (screen === 'tag') {
     return (
