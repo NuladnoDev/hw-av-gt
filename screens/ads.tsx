@@ -384,7 +384,7 @@ export function AdCard({
 
           <div className="flex items-baseline justify-between mt-3">
             <div className="text-[19px] text-white font-ttc-demibold tracking-tight">
-              {price.toLocaleString('ru-RU')} <span className="text-[15px] font-sf-ui-medium opacity-70">₽</span>
+              {Number(price).toLocaleString('ru-RU')} <span className="text-[15px] font-sf-ui-medium opacity-70">₽</span>
             </div>
             {publishedText && (
               <span className="text-[11px] text-white/30 font-sf-ui-medium uppercase">

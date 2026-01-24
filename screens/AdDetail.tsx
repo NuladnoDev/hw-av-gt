@@ -388,7 +388,7 @@ export default function AdDetail({
               <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-1">
                   <div className="text-[32px] font-ttc-bold leading-none tracking-tight">
-                    {ad.price.toLocaleString('ru-RU')} ₽
+                    {Number(ad.price).toLocaleString('ru-RU')} ₽ 
                   </div>
                   {categoryLabel && (
                     <div className="text-[13px] text-white/40 font-sf-ui-medium">
