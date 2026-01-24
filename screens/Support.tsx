@@ -72,13 +72,13 @@ export default function Support({ onClose }: { onClose: () => void }) {
       
       if (error) {
         console.error('Error loading messages:', error)
-        return
+        return null
       }
 
-      if (isMounted) {
-        setMessages(data || [])
-        scrollToBottom()
-      }
+      if (!isMounted) return null
+
+      setMessages(data || [])
+      scrollToBottom()
 
       // 2. Subscribe to new messages
       const channel = client
@@ -91,7 +91,6 @@ export default function Support({ onClose }: { onClose: () => void }) {
         }, (payload) => {
           if (isMounted) {
             setMessages(prev => {
-              // Avoid duplicates if real-time fires for own message
               if (prev.some(m => m.id === payload.new.id)) return prev
               return [...prev, payload.new as Message]
             })
@@ -110,12 +109,13 @@ export default function Support({ onClose }: { onClose: () => void }) {
     return () => {
       isMounted = false
       channelPromise.then(channel => {
-        if (channel && client) {
-          try {
-            client.removeChannel(channel)
-          } catch (e) {
-            console.warn('Error removing channel:', e)
-          }
+        if (channel) {
+          // Даем небольшую задержку перед отпиской, чтобы WebSocket успел открыться
+          setTimeout(() => {
+            client.removeChannel(channel).catch(e => {
+              // Игнорируем ошибки при удалении, так как это обычно означает, что соединение уже закрыто
+            })
+          }, 100)
         }
       })
     }
@@ -154,7 +154,7 @@ export default function Support({ onClose }: { onClose: () => void }) {
     setIsModerator(isMod)
 
     if (isMod) {
-      // Fetch all tickets with profiles
+      // Fetch all tickets with profiles and last message
       console.log('Support: Fetching all tickets for moderator...')
       const { data: allTickets, error: fetchError } = await client
         .from('support_tickets')
@@ -163,6 +163,10 @@ export default function Support({ onClose }: { onClose: () => void }) {
           profiles (
             tag,
             avatar_url
+          ),
+          support_messages (
+            message,
+            created_at
           )
         `)
         .order('updated_at', { ascending: false })
@@ -173,21 +177,34 @@ export default function Support({ onClose }: { onClose: () => void }) {
         console.log('Support: Tickets fetched:', allTickets?.length)
       }
       
-      setTickets(allTickets || [])
+      // Map tickets to include the last message text
+      const ticketsWithLastMsg = (allTickets || []).map((ticket: any) => {
+        const msgs = ticket.support_messages || []
+        const lastMsg = msgs.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0]
+        return {
+          ...ticket,
+          lastMessage: lastMsg?.message || 'Нет сообщений'
+        }
+      })
+      
+      setTickets(ticketsWithLastMsg)
       setLoading(false)
     } else {
-      // Fetch or create user's ticket
-      const { data: userTicket } = await client
+      // Fetch user's ticket (last one created)
+      const { data: userTicket, error: ticketError } = await client
         .from('support_tickets')
         .select('*')
         .eq('user_id', uid)
-        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
 
       if (userTicket) {
         setActiveTicket(userTicket)
       } else {
-        // Create new ticket if none open
+        // Create new ticket if none exists
         const { data: newTicket, error: createError } = await client
           .from('support_tickets')
           .insert({ user_id: uid })
@@ -202,6 +219,30 @@ export default function Support({ onClose }: { onClose: () => void }) {
       }
       setLoading(false)
     }
+  }
+
+  const handleCloseTicket = async () => {
+    if (!activeTicket || sending) return
+    const client = getSupabase()
+    if (!client) return
+
+    setSending(true)
+    const { error } = await client
+      .from('support_tickets')
+      .update({ status: 'closed', updated_at: new Date().toISOString() })
+      .eq('id', activeTicket.id)
+
+    if (error) {
+      console.error('Error closing ticket:', error)
+      alert('Ошибка при закрытии обращения')
+    } else {
+      setActiveTicket(prev => prev ? { ...prev, status: 'closed' } : null)
+      // If moderator, refresh list
+      if (isModerator) {
+        init()
+      }
+    }
+    setSending(false)
   }
 
   useEffect(() => {
@@ -325,7 +366,20 @@ export default function Support({ onClose }: { onClose: () => void }) {
               {activeTicket ? (isModerator ? `@${activeTicket.profiles?.tag}` : 'Поддержка') : ''}
             </span>
           </div>
-          <div className="w-10" />
+          {activeTicket && isModerator && activeTicket.status === 'open' && (
+            <button 
+              onClick={handleCloseTicket}
+              className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 active:scale-95 transition-all"
+            >
+              <span className="text-[12px] text-red-400 font-sf-ui-medium">Закрыть</span>
+            </button>
+          )}
+          {!isModerator && activeTicket && (
+            <div className="w-10" />
+          )}
+          {!activeTicket && (
+            <div className="w-10" />
+          )}
         </div>
 
         {/* Content */}
@@ -344,12 +398,15 @@ export default function Support({ onClose }: { onClose: () => void }) {
                   <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
                     <User className="w-6 h-6 text-blue-400" />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-ttc-bold text-white/90">@{ticket.profiles?.tag}</span>
-                      <span className="text-[11px] text-white/30">{new Date(ticket.created_at).toLocaleDateString()}</span>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-ttc-bold text-white/90 truncate">@{ticket.profiles?.tag}</span>
+                      <span className="text-[11px] text-white/30 shrink-0">{new Date(ticket.created_at).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[13px] text-white/50 truncate font-sf-ui-light mb-2">
+                      {(ticket as any).lastMessage}
+                    </p>
+                    <div className="flex items-center gap-2">
                       <span className={`text-[11px] px-2 py-0.5 rounded-full ${ticket.status === 'open' ? 'bg-green-500/10 text-green-400' : 'bg-white/10 text-white/40'}`}>
                         {ticket.status === 'open' ? 'Открыт' : 'Закрыт'}
                       </span>
@@ -368,11 +425,19 @@ export default function Support({ onClose }: { onClose: () => void }) {
             // Chat View
             <>
               {/* Warning Message */}
-              <div className="mx-2 mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                <p className="text-[13px] text-amber-200/70 font-sf-ui-medium leading-relaxed text-center">
-                  Пожалуйста, пишите только по делу. За спам или неадекватное поведение — блокировка без возможности восстановления.
-                </p>
-              </div>
+              {activeTicket?.status === 'open' ? (
+                <div className="mx-2 mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-[13px] text-amber-200/70 font-sf-ui-medium leading-relaxed text-center">
+                    Пожалуйста, пишите только по делу. За спам или неадекватное поведение — блокировка без возможности восстановления.
+                  </p>
+                </div>
+              ) : activeTicket?.status === 'closed' ? (
+                <div className="mx-2 mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+                  <p className="text-[13px] text-red-200/70 font-sf-ui-medium leading-relaxed text-center">
+                    Это обращение закрыто. Вы можете просматривать историю сообщений, но отправка новых недоступна.
+                  </p>
+                </div>
+              ) : null}
 
               {messages.map((msg, i) => {
                 const isOwn = msg.sender_id === userId
@@ -413,40 +478,49 @@ export default function Support({ onClose }: { onClose: () => void }) {
         {/* Input Area */}
         {activeTicket && (
           <div className="p-4 border-t border-white/5 bg-[#0A0A0A] safe-area-bottom">
-            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-2 pr-3 focus-within:border-blue-500/50 transition-colors">
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/5 active:scale-90 transition-all text-white/40"
-              >
-                <ImageIcon className="w-5 h-5" />
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Напишите сообщение..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-white text-[15px] font-sf-ui-light py-2"
-              />
-              <button 
-                onClick={handleSendMessage}
-                disabled={!newMessage.trim() || sending}
-                className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
-                  newMessage.trim() && !sending 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                    : 'bg-white/5 text-white/20'
-                }`}
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
+            {activeTicket.status === 'open' ? (
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-2 pr-3 focus-within:border-blue-500/50 transition-colors">
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/5 active:scale-90 transition-all text-white/40"
+                >
+                  <ImageIcon className="w-5 h-5" />
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={sending}
+                />
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Напишите сообщение..."
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-white text-[15px] font-sf-ui-light py-2"
+                  disabled={sending}
+                />
+                <button 
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim() || sending}
+                  className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
+                    newMessage.trim() && !sending 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                      : 'bg-white/5 text-white/20'
+                  }`}
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-2 px-4 bg-white/5 rounded-2xl border border-white/5">
+                <span className="text-[14px] text-white/30 font-sf-ui-medium">Обращение закрыто</span>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,15 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'motion/react'
-import { Plus, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Plus, X, Trash2, Camera, ChevronRight, AlertCircle, Check } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 import type { StoredAd, AdSpecItem } from './ads'
 import { AdsCategory, AdsCondition, CONDITION_OPTIONS } from './Ads_Create'
-
-type AdsEditStep = 2 | 3 | 4 | 5 | 6 | 7
-
-const EDIT_STEPS: AdsEditStep[] = [2, 3, 4, 5, 6, 7]
 
 export default function AdsEdit({
   ad,
@@ -19,7 +15,7 @@ export default function AdsEdit({
   onClose: () => void
 }) {
   const [scale, setScale] = useState(1)
-  const [step, setStep] = useState<AdsEditStep>(2)
+  const [activeTab, setActiveTab] = useState<'info' | 'specs'>('info')
 
   const initialImages = ad.imageUrls && ad.imageUrls.length > 0 ? ad.imageUrls : ad.imageUrl ? [ad.imageUrl] : []
 
@@ -77,6 +73,7 @@ export default function AdsEdit({
 
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [savePhase, setSavePhase] = useState<'idle' | 'running' | 'full'>('idle')
   const [showSaveAnimation, setShowSaveAnimation] = useState(false)
   const [resultMode, setResultMode] = useState<'save' | 'delete'>('save')
@@ -424,817 +421,343 @@ export default function AdsEdit({
     }
   }
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const detail = {
-      showNextInNav: true,
-      enabled: canSave && !saving && !deleting,
-      label: 'Сохранить',
-      mode: 'edit' as const,
-    }
-    const ev = new CustomEvent('ads-create-nav-state', { detail })
-    window.dispatchEvent(ev)
-  }, [canSave, saving, deleting])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined
-    const handler = () => {
-      void handleSaveClick()
-    }
-    window.addEventListener('ads-create-nav-next', handler)
-    return () => {
-      window.removeEventListener('ads-create-nav-next', handler)
-    }
-  }, [handleSaveClick, canSave, saving])
-
-  useEffect(() => {
-    return () => {
-      if (typeof window === 'undefined') return
-      const ev = new CustomEvent('ads-create-nav-state', {
-        detail: { showNextInNav: false, enabled: false, mode: null },
-      })
-      window.dispatchEvent(ev)
-    }
-  }, [])
-
-  const navItems: { id: AdsEditStep; label: string }[] = [
-    { id: 2, label: 'Фото' },
-    { id: 3, label: 'Название' },
-    { id: 4, label: 'Состояние' },
-    { id: 5, label: 'Характеристики' },
-    { id: 6, label: 'Описание' },
-    { id: 7, label: 'Цена' },
-  ]
-
   return (
     <div className="fixed inset-0 z-[120] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
-        <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
-
-        <div
-          className="absolute left-0 w-full bg-[#0A0A0A]"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
-        >
-          <div className="relative h-full w-full">
+      <div className="relative h-full w-full max-w-[375px] bg-[#0A0A0A] flex flex-col overflow-hidden">
+        
+        {/* Header */}
+        <div className="sticky top-0 z-[130] w-full bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/5 safe-area-top">
+          <div className="flex h-[56px] items-center justify-between px-6">
             <button
-              type="button"
               onClick={onClose}
-              className="absolute left-6 top-0 flex h-full items-center"
-              aria-label="Закрыть"
+              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 active:scale-90 transition-all"
             >
-              <img
-                src="/interface/x-01.svg"
-                alt="close"
-                className="h-[22px] w-[22px]"
-                style={{ filter: 'invert(1) brightness(1.6)' }}
-              />
+              <X className="w-6 h-6 text-white/40" />
+            </button>
+            <span className="text-[17px] font-sf-ui-medium text-white/90">Редактирование</span>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-10 h-10 -mr-2 flex items-center justify-center rounded-full hover:bg-red-500/10 active:scale-90 transition-all group"
+            >
+              <Trash2 className="w-5 h-5 text-white/20 group-hover:text-red-500 transition-colors" />
             </button>
           </div>
         </div>
 
-        <div
-          className="absolute left-0 w-full px-6 overflow-y-auto pb-6"
-          style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-            height: 'calc(812px - 56px - 88px - var(--home-header-offset))',
-          }}
-        >
-          <div className="pt-2">
-            <div className="mb-4">
-              <div className="text-[20px] leading-[1.2em] text-white font-ttc-bold mb-3">
-                Редактирование объявления
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar pb-32">
+          <div className="px-6 py-6 space-y-8">
+            
+            {/* Photos Section */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[14px] font-sf-ui-medium text-white/30 uppercase tracking-wider">Фотографии</h3>
+                <span className="text-[12px] text-white/20">{images.length}/6</span>
               </div>
-              <div className="flex gap-3 overflow-x-auto scrollbar-hidden py-1.5">
-                {navItems.map((item) => {
-                  const active = step === item.id
+              <div className="grid grid-cols-3 gap-3">
+                {images.map((src, index) => (
+                  <div key={src} className="relative aspect-square rounded-2xl overflow-hidden bg-white/5 group">
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removeImageAt(index)}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center active:scale-90 transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <X className="w-3.5 h-3.5 text-white" />
+                    </button>
+                    {index === 0 && (
+                      <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-blue-600 rounded-lg backdrop-blur-sm">
+                        <span className="text-[9px] text-white font-sf-ui-bold uppercase">Главное</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {images.length < 6 && (
+                  <button
+                    onClick={openFilePicker}
+                    className="aspect-square rounded-2xl border-2 border-dashed border-white/5 bg-white/[0.02] flex flex-col items-center justify-center gap-2 hover:bg-white/[0.04] active:scale-95 transition-all"
+                  >
+                    <Camera className="w-6 h-6 text-white/20" />
+                    <span className="text-[11px] text-white/20 font-sf-ui-medium">Добавить</span>
+                  </button>
+                )}
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                multiple
+                onChange={(e) => handlePickedFiles(e.target.files)}
+              />
+            </section>
+
+            {/* Main Info */}
+            <section className="space-y-5">
+              <h3 className="text-[14px] font-sf-ui-medium text-white/30 uppercase tracking-wider">Основное</h3>
+              
+              <div className="space-y-1.5">
+                <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Название</label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Что продаете?"
+                  className="w-full h-[52px] bg-white/5 border border-white/5 rounded-2xl px-5 text-[16px] text-white placeholder:text-white/20 focus:border-blue-500/30 focus:bg-white/[0.07] transition-all outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Цена</label>
+                <div className="relative">
+                  <input
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0"
+                    type="number"
+                    className="w-full h-[52px] bg-white/5 border border-white/5 rounded-2xl px-5 pr-12 text-[16px] text-white placeholder:text-white/20 focus:border-blue-500/30 focus:bg-white/[0.07] transition-all outline-none font-sf-ui-bold"
+                  />
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 font-sf-ui-medium">₽</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Описание</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Опишите товар подробнее..."
+                  className="w-full min-h-[120px] bg-white/5 border border-white/5 rounded-2xl p-5 text-[15px] text-white placeholder:text-white/20 focus:border-blue-500/30 focus:bg-white/[0.07] transition-all outline-none resize-none leading-relaxed"
+                />
+              </div>
+            </section>
+
+            {/* Condition Selection */}
+            <section className="space-y-4">
+              <h3 className="text-[14px] font-sf-ui-medium text-white/30 uppercase tracking-wider">Состояние</h3>
+              <div className="grid grid-cols-1 gap-2">
+                {CONDITION_OPTIONS.map((opt) => {
+                  const isSelected = condition === opt.id
                   return (
                     <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setStep(item.id)}
-                      className="relative flex items-center justify-center rounded-full px-5 py-2"
-                      style={{
-                        backgroundColor: active ? '#FFFFFF' : 'rgba(255,255,255,0.04)',
-                      }}
+                      key={opt.id}
+                      onClick={() => setCondition(opt.id)}
+                      className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                        isSelected 
+                          ? 'bg-white/10 border-white/20 scale-[1.02]' 
+                          : 'bg-white/5 border-transparent opacity-60 grayscale hover:opacity-100 hover:grayscale-0'
+                      }`}
                     >
-                      <span
-                        className="text-[14px] font-sf-ui-medium"
-                        style={{
-                          color: active ? '#000000' : '#FFFFFFB3',
-                        }}
-                      >
-                        {item.label}
-                      </span>
+                      <div className="flex items-center gap-4">
+                        <div 
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-[18px]"
+                          style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
+                        >
+                          {opt.icon}
+                        </div>
+                        <div className="text-left">
+                          <p className="text-[15px] font-sf-ui-medium text-white">{opt.label}</p>
+                          <p className="text-[12px] text-white/40 leading-tight">{opt.description}</p>
+                        </div>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-white/10'
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white stroke-[4]" />}
+                      </div>
                     </button>
                   )
                 })}
               </div>
-            </div>
+            </section>
 
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-            >
-              {step === 2 && (
-                <div className="pt-2">
-                  <div className="mb-4">
-                    <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
-                      Внешний вид
+            {/* Dynamic Specs */}
+            <section className="space-y-5">
+              <h3 className="text-[14px] font-sf-ui-medium text-white/30 uppercase tracking-wider">Характеристики</h3>
+              
+              <div className="grid grid-cols-1 gap-5">
+                {category === 'nicotine' && (
+                  <>
+                    <SpecInput label="Бренд" value={brand} onChange={setBrand} placeholder="HQD, Elf Bar..." />
+                    <SpecInput label="Тип устройства" value={nicotineFormat} onChange={setNicotineFormat} placeholder="POD-система..." />
+                    <div className="grid grid-cols-2 gap-4">
+                      <SpecInput label="Объем" value={nicotineTankVolume} onChange={setNicotineTankVolume} placeholder="2 мл" />
+                      <SpecInput label="Аккумулятор" value={nicotineBatteryCapacity} onChange={setNicotineBatteryCapacity} placeholder="500 мАч" />
                     </div>
-                    <div className="mt-1 text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
-                      Первое фото будет обложкой объявления
+                    <div className="grid grid-cols-2 gap-4">
+                      <SpecInput label="Крепость" value={nicotineStrength} onChange={setNicotineStrength} placeholder="20 мг" />
+                      <SpecInput label="Затяжки" value={nicotinePuffs} onChange={setNicotinePuffs} placeholder="1500" />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {images.map((src, index) => (
-                      <div key={src} className="relative w-full overflow-hidden rounded-2xl" style={{ aspectRatio: '1 / 1' }}>
-                        <button
-                          type="button"
-                          onClick={() => setPreviewImage(src)}
-                          className="block h-full w-full active:opacity-80 transition-opacity"
-                        >
-                          <img src={src} alt="preview" className="h-full w-full object-cover" />
-                        </button>
-                        {index === 0 && (
-                          <div className="absolute left-3 top-3 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-sm pointer-events-none">
-                            <span className="text-xs text-white font-sf-ui-light">
-                              Обложка
-                            </span>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeImageAt(index)}
-                          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-red-500/90 shadow-lg backdrop-blur-sm active:scale-90 transition-transform"
-                        >
-                          <X size={16} className="text-white" />
-                        </button>
-                      </div>
-                    ))}
-                    {images.length < 6 && (
-                      <button
-                        type="button"
-                        onClick={openFilePicker}
-                        className="group relative w-full aspect-square rounded-2xl border-2 border-dashed border-white/20 bg-white/5 active:scale-95 active:bg-white/10 transition-all duration-300"
-                      >
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 transition-all duration-300">
-                            <Plus size={24} className="text-white/60" />
-                          </div>
-                          <span className="text-sm text-white/60 font-sf-ui-light">
-                            Добавить фото
-                          </span>
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                  <div className="mt-6 text-center">
-                    <span className="text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
-                      {images.length} / 6 фото
-                    </span>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handlePickedFiles(e.target.files)}
-                  />
-                </div>
-              )}
+                    <SpecInput label="Вкус" value={nicotineFlavor} onChange={setNicotineFlavor} placeholder="Манго..." />
+                    <SpecInput label="Цвет" value={color} onChange={setColor} placeholder="Черный..." />
+                  </>
+                )}
 
-              {step === 3 && (
-                <div className="pt-2">
-                  <div className="mb-4">
-                    <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
-                      Название товара
+                {category === 'things' && (
+                  <>
+                    <SpecInput label="Бренд" value={brand} onChange={setBrand} placeholder="Apple, Samsung..." />
+                    <SpecInput label="Модель" value={thingsModel} onChange={setThingsModel} placeholder="iPhone 13..." />
+                    <div className="grid grid-cols-2 gap-4">
+                      <SpecInput label="Память" value={thingsMemory} onChange={setThingsMemory} placeholder="128 ГБ" />
+                      <SpecInput label="Экран" value={thingsDiagonal} onChange={setThingsDiagonal} placeholder='6.1"' />
                     </div>
-                  </div>
-                  <div className="mb-4 text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                    Укажите короткое и понятное название вашего товара.
-                  </div>
-                  <input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Название товара"
-                    className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                  />
-                </div>
-              )}
-
-              {step === 4 && (
-                <div className="pt-2">
-                  <div className="mb-4">
-                    <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
-                      Состояние
+                    <div className="grid grid-cols-2 gap-4">
+                      <SpecInput label="Год" value={thingsYear} onChange={setThingsYear} placeholder="2022" />
+                      <SpecInput label="Гарантия" value={thingsWarranty} onChange={setThingsWarranty} placeholder="6 мес." />
                     </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {CONDITION_OPTIONS.map((opt) => {
-                      const selected = condition === opt.id
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setCondition(opt.id)}
-                          className="w-full rounded-2xl bg-white/0 py-4 px-5 text-left transition-all duration-300 group hover:bg-white/5 active:bg-white/10"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div
-                              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full transition-all duration-300"
-                              style={{
-                                backgroundColor: `${opt.color}26`,
-                                color: opt.color,
-                              }}
-                            >
-                              {opt.icon}
-                            </div>
-                            <div className="flex-1">
-                              <div className="mb-1 text-[20px] text-white font-sf-ui-light">
-                                {opt.label}
-                              </div>
-                              <div className="text-[16px] leading-[20px] text-white/60 font-sf-ui-light">
-                                {opt.description}
-                              </div>
-                            </div>
-                            <div className="mt-1 flex-shrink-0">
-                              <div
-                                className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-                                  selected
-                                    ? 'border-white bg-white'
-                                    : 'border-white/30 group-hover:border-white/50'
-                                }`}
-                              >
-                                {selected && (
-                                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: '#0A0A0A' }} />
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+                    <SpecInput label="Комплект" value={thingsKit} onChange={setThingsKit} placeholder="Полный..." />
+                    <SpecInput label="Цвет" value={color} onChange={setColor} placeholder="Space Gray..." />
+                  </>
+                )}
 
-              {step === 5 && (
-                <div className="pt-2">
-                  <div className="mb-4">
-                    <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
-                      Характеристики
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    {category === 'nicotine' && (
-                      <>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Бренд/Производитель
-                          </div>
-                          <input
-                            value={brand}
-                            onChange={(e) => setBrand(e.target.value)}
-                            placeholder="HQD, Elf Bar и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Тип устройства
-                          </div>
-                          <input
-                            value={nicotineFormat}
-                            onChange={(e) => setNicotineFormat(e.target.value)}
-                            placeholder="Одноразовая, POD-система и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Объем жидкости
-                            </div>
-                            <input
-                              value={nicotineTankVolume}
-                              onChange={(e) => setNicotineTankVolume(e.target.value)}
-                              placeholder="2 мл"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Емкость аккумулятора
-                            </div>
-                            <input
-                              value={nicotineBatteryCapacity}
-                              onChange={(e) => setNicotineBatteryCapacity(e.target.value)}
-                              placeholder="500 мАч"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Крепость никотина
-                            </div>
-                            <input
-                              value={nicotineStrength}
-                              onChange={(e) => setNicotineStrength(e.target.value)}
-                              placeholder="20 мг/мл"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Количество затяжек
-                            </div>
-                            <input
-                              value={nicotinePuffs}
-                              onChange={(e) => setNicotinePuffs(e.target.value)}
-                              placeholder="1500"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Вкус
-                          </div>
-                          <input
-                            value={nicotineFlavor}
-                            onChange={(e) => setNicotineFlavor(e.target.value)}
-                            placeholder="Арбуз, манго и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Цвет
-                          </div>
-                          <input
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                            placeholder="Черный, голубой и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                      </>
-                    )}
+                {category === 'service' && (
+                  <>
+                    <SpecInput label="Вид услуги" value={serviceType} onChange={setServiceType} placeholder="Ремонт..." />
+                    <SpecInput label="Опыт" value={serviceExperience} onChange={setServiceExperience} placeholder="3 года" />
+                    <SpecInput label="Формат" value={serviceFormat} onChange={setServiceFormat} placeholder="Выезд..." />
+                    <SpecInput label="Регион" value={serviceRegion} onChange={setServiceRegion} placeholder="Кадуй..." />
+                  </>
+                )}
 
-                    {category === 'things' && (
-                      <>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Бренд
-                          </div>
-                          <input
-                            value={brand}
-                            onChange={(e) => setBrand(e.target.value)}
-                            placeholder="Apple, Samsung и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Модель
-                          </div>
-                          <input
-                            value={thingsModel}
-                            onChange={(e) => setThingsModel(e.target.value)}
-                            placeholder="iPhone 13, Galaxy S21 и т.п."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Память
-                            </div>
-                            <input
-                              value={thingsMemory}
-                              onChange={(e) => setThingsMemory(e.target.value)}
-                              placeholder="128 ГБ"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Диагональ
-                            </div>
-                            <input
-                              value={thingsDiagonal}
-                              onChange={(e) => setThingsDiagonal(e.target.value)}
-                              placeholder='6.1"'
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Год выпуска
-                            </div>
-                            <input
-                              value={thingsYear}
-                              onChange={(e) => setThingsYear(e.target.value)}
-                              placeholder="2022"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Гарантия
-                            </div>
-                            <input
-                              value={thingsWarranty}
-                              onChange={(e) => setThingsWarranty(e.target.value)}
-                              placeholder="Осталось 6 месяцев"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Комплектация
-                          </div>
-                          <input
-                            value={thingsKit}
-                            onChange={(e) => setThingsKit(e.target.value)}
-                            placeholder="Коробка, зарядка, чехол и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Цвет
-                          </div>
-                          <input
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                            placeholder="Черный, синий и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                      </>
-                    )}
+                {category === 'job' && (
+                  <>
+                    <SpecInput label="Должность" value={jobPosition} onChange={setJobPosition} placeholder="Продавец..." />
+                    <SpecInput label="Зарплата" value={jobSalary} onChange={setJobSalary} placeholder="50 000 ₽" />
+                    <SpecInput label="Занятость" value={jobEmploymentType} onChange={setJobEmploymentType} placeholder="Полная..." />
+                    <SpecInput label="График" value={jobSchedule} onChange={setJobSchedule} placeholder="2/2..." />
+                    <SpecInput label="Формат" value={jobFormat} onChange={setJobFormat} placeholder="Офис..." />
+                  </>
+                )}
 
-                    {category === 'service' && (
-                      <>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Вид услуги
-                          </div>
-                          <input
-                            value={serviceType}
-                            onChange={(e) => setServiceType(e.target.value)}
-                            placeholder="Ремонт техники, грузоперевозки и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Опыт работы
-                          </div>
-                          <input
-                            value={serviceExperience}
-                            onChange={(e) => setServiceExperience(e.target.value)}
-                            placeholder="3 года"
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Формат работы
-                          </div>
-                          <input
-                            value={serviceFormat}
-                            onChange={(e) => setServiceFormat(e.target.value)}
-                            placeholder="На выезд, в мастерской и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Стоимость
-                            </div>
-                            <input
-                              value={servicePrice}
-                              onChange={(e) => setServicePrice(e.target.value)}
-                              placeholder="1000 ₽"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Регион
-                            </div>
-                            <input
-                              value={serviceRegion}
-                              onChange={(e) => setServiceRegion(e.target.value)}
-                              placeholder="Кадуй, Вологодская область"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {category === 'job' && (
-                      <>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Должность
-                          </div>
-                          <input
-                            value={jobPosition}
-                            onChange={(e) => setJobPosition(e.target.value)}
-                            placeholder="Продавец, курьер и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Зарплата
-                            </div>
-                            <input
-                              value={jobSalary}
-                              onChange={(e) => setJobSalary(e.target.value)}
-                              placeholder="40000 ₽"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Уровень занятости
-                            </div>
-                            <input
-                              value={jobEmploymentType}
-                              onChange={(e) => setJobEmploymentType(e.target.value)}
-                              placeholder="Полная, частичная и др."
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              График
-                            </div>
-                            <input
-                              value={jobSchedule}
-                              onChange={(e) => setJobSchedule(e.target.value)}
-                              placeholder="5/2, сменный и др."
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                          <div>
-                            <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                              Формат работы
-                            </div>
-                            <input
-                              value={jobFormat}
-                              onChange={(e) => setJobFormat(e.target.value)}
-                              placeholder="Офис, удаленно, гибрид"
-                              className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Требуемый опыт
-                          </div>
-                          <input
-                            value={jobExperience}
-                            onChange={(e) => setJobExperience(e.target.value)}
-                            placeholder="Без опыта, от 1 года и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {category === 'other' && (
-                      <>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Тип товара
-                          </div>
-                          <input
-                            value={otherType}
-                            onChange={(e) => setOtherType(e.target.value)}
-                            placeholder="Игрушки, аксессуары и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Бренд
-                          </div>
-                          <input
-                            value={brand}
-                            onChange={(e) => setBrand(e.target.value)}
-                            placeholder="Название бренда"
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Цвет
-                          </div>
-                          <input
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                            placeholder="Черный, красный и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                            Дополнительно
-                          </div>
-                          <textarea
-                            value={otherDetails}
-                            onChange={(e) => setOtherDetails(e.target.value)}
-                            placeholder="Любая дополнительная информация о товаре"
-                            className="min-h-[96px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 py-3 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light resize-none"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {step === 6 && (
-                <div className="pt-2">
-                  <div className="mb-4">
-                    <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
-                      Описание
-                    </div>
-                  </div>
-                  <div className="mb-3 text-[14px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                    Расскажите подробнее о товаре, услуге или вакансии.
-                  </div>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Напишите, что важно знать перед покупкой"
-                    className="min-h-[140px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 py-3 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light resize-none"
-                  />
-                </div>
-              )}
-
-              {step === 7 && (
-                <div className="pt-2">
-                  <div className="mb-4">
-                    <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
-                      Цена
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
-                        Стоимость
-                      </div>
-                      <div className="relative w-full">
-                        <input
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          inputMode="decimal"
-                          placeholder="0"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-4 pr-10 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
-                        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[16px] leading-[1.4em] text-[#A1A1A1] font-sf-ui-light">
-                          ₽
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
+                {category === 'other' && (
+                  <>
+                    <SpecInput label="Тип" value={otherType} onChange={setOtherType} placeholder="Настольная игра..." />
+                    <SpecInput label="Бренд" value={brand} onChange={setBrand} placeholder="Hasbro..." />
+                    <SpecInput label="Цвет" value={color} onChange={setColor} placeholder="Разноцветный..." />
+                  </>
+                )}
+              </div>
+            </section>
           </div>
         </div>
 
-        <div
-          className="absolute left-0 w-full bg-[#0A0A0A] px-6"
-          style={{ height: '88px', bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))' }}
-        >
-          <div className="absolute -top-[0.5px] left-0 w-full" style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }} />
-          <div className="flex h-full w-full items-center gap-3">
-            <button
-              type="button"
-              onClick={handleSaveClick}
-              disabled={!canSave || saving || deleting}
-              className="flex w-1/2 items-center justify-center rounded-[10px] bg-white"
-              style={{ height: 52, opacity: canSave && !saving && !deleting ? 1 : 0.5 }}
-            >
-              {saving ? (
-                <div className="relative w-full max-w-[180px] h-[6px] rounded-full bg-white/40 overflow-hidden">
-                  {savePhase === 'running' && <div className="ads-publish-progress-fill" />}
-                  {savePhase === 'full' && (
-                    <div
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: 'linear-gradient(90deg, #6e9b7d 0%, #34975f 100%)' }}
-                    />
-                  )}
-                </div>
-              ) : (
-                <span className="text-[16px] font-semibold leading-[1.25em] tracking-[0.015em] text-black font-vk-demi">
-                  Сохранить
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={handleDeleteClick}
-              disabled={saving || deleting}
-              className="flex w-1/2 items-center justify-center rounded-[10px] border border-red-500/70 bg-[#181818]"
-              style={{ height: 52, opacity: !saving && !deleting ? 1 : 0.5 }}
-            >
-              <span className="text-[16px] font-semibold leading-[1.25em] tracking-[0.015em] text-red-400 font-vk-demi">
-                Удалить
-              </span>
-            </button>
-          </div>
+        {/* Bottom Actions */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent safe-area-bottom">
+          <button
+            onClick={handleSaveClick}
+            disabled={!canSave || saving}
+            className={`w-full h-[56px] rounded-2xl font-sf-ui-bold text-[16px] shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${
+              canSave && !saving
+                ? 'bg-white text-black shadow-white/10'
+                : 'bg-white/5 text-white/20 grayscale'
+            }`}
+          >
+            {saving ? (
+              <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+            ) : (
+              'Сохранить изменения'
+            )}
+          </button>
         </div>
-        <div
-          className="absolute left-0 w-full bg-[#0A0A0A]"
-          style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
-        />
-        {previewImage && (
-          <div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md px-6"
-            onClick={() => setPreviewImage(null)}
-          >
-            <button
-              type="button"
-              className="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200"
-              onClick={() => setPreviewImage(null)}
-            >
-              <X size={24} className="text-white" />
-            </button>
-            <div className="w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
-              <img
-                src={previewImage}
-                alt="preview"
-                className="h-auto max-h-[80vh] w-full rounded-2xl object-contain"
-              />
-            </div>
-          </div>
-        )}
-        {showSaveAnimation && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-[-100px] bg-black/95 flex items-center justify-center z-[9999]"
-          >
-            <div className="flex flex-col items-center">
+
+        {/* Delete Confirmation Modal */}
+        <AnimatePresence>
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4">
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-                className="relative w-40 h-40 mb-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                className="relative w-full max-w-[340px] bg-[#141414] rounded-[32px] p-8 border border-white/5 shadow-2xl"
               >
-                <svg
-                  className="absolute inset-0 w-full h-full"
-                  viewBox="0 0 100 100"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <motion.path
-                    d="M 20 50 L 40 70 L 80 25"
-                    stroke="white"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5, delay: 0.3, ease: 'easeInOut' }}
-                  />
-                </svg>
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertCircle className="w-8 h-8 text-red-500" />
+                </div>
+                <h4 className="text-[20px] font-sf-ui-bold text-white text-center mb-2">Удалить объявление?</h4>
+                <p className="text-[14px] text-white/40 text-center mb-8 leading-relaxed">
+                  Это действие нельзя будет отменить. Объявление исчезнет из ленты и вашего профиля.
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleDeleteClick}
+                    className="w-full h-[52px] bg-red-500 text-white rounded-2xl font-sf-ui-bold active:scale-95 transition-all"
+                  >
+                    Да, удалить
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="w-full h-[52px] bg-white/5 text-white/60 rounded-2xl font-sf-ui-medium active:scale-95 transition-all"
+                  >
+                    Отмена
+                  </button>
+                </div>
               </motion.div>
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.5 }}
-                className="text-white text-[20px] font-ttc-bold"
-              >
-                {resultMode === 'delete' ? 'Объявление удалено' : 'Изменения сохранены'}
-              </motion.p>
             </div>
-          </motion.div>
-        )}
+          )}
+        </AnimatePresence>
+
+        {/* Save/Delete Success Animation Overlay */}
+        <AnimatePresence>
+          {showSaveAnimation && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[300] bg-[#0A0A0A] flex flex-col items-center justify-center"
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+                className="flex flex-col items-center"
+              >
+                <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-6">
+                  <Check className="w-12 h-12 text-white" />
+                </div>
+                <h2 className="text-[24px] font-sf-ui-bold text-white mb-2">
+                  {resultMode === 'delete' ? 'Удалено' : 'Готово!'}
+                </h2>
+                <p className="text-white/40 font-sf-ui-medium">
+                  {resultMode === 'delete' ? 'Объявление успешно удалено' : 'Изменения вступили в силу'}
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
+
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+      `}</style>
+    </div>
+  )
+}
+
+function SpecInput({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder: string }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">{label}</label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full h-[52px] bg-white/5 border border-white/5 rounded-2xl px-5 text-[15px] text-white placeholder:text-white/20 focus:border-blue-500/30 focus:bg-white/[0.07] transition-all outline-none"
+      />
     </div>
   )
 }
