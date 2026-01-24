@@ -423,14 +423,14 @@ export default function AdDetail({
                 </motion.button>
               </div>
               
-              <h1 className="text-[22px] font-ttc-bold leading-[1.2] text-white/95">
+              <h1 className="text-[22px] font-ttc-bold leading-[1.2] text-white/95 translate-y-[1px]">
                 {ad.title}
               </h1>
 
               <div className="flex flex-wrap items-center gap-2.5">
                 {categoryLabel && (
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                    <span className="text-[12px] font-ttc-demibold uppercase tracking-wider">{categoryLabel}</span>
+                    <span className="text-[12px] font-ttc-demibold uppercase tracking-wider translate-y-[1px]">{categoryLabel}</span>
                   </div>
                 )}
                 
@@ -462,7 +462,7 @@ export default function AdDetail({
                         {CONDITION_ICONS[ad.condition] || <Sparkles className="w-5 h-5" />}
                       </div>
                       <div className="flex flex-col gap-0.5 items-start">
-                        <div className="text-[15px] font-ttc-bold text-white/90">{ad.condition}</div>
+                        <div className="text-[15px] font-ttc-bold text-white/90 translate-y-[1px]">{ad.condition}</div>
                         <div className="text-[11px] text-indigo-400 font-sf-ui-medium uppercase tracking-wider">Нажми, чтобы узнать больше</div>
                       </div>
                     </div>

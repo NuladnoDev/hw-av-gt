@@ -307,7 +307,7 @@ export function AdCard({
         >
           <div className="flex flex-col gap-0.5">
             <h3
-              className="line-clamp-1 text-white font-ttc-demibold tracking-tight"
+              className="line-clamp-1 text-white font-ttc-demibold tracking-tight translate-y-[1px]"
               style={{ fontSize: 16, lineHeight: '20px' }}
             >
               {displayTitle}
@@ -383,7 +383,7 @@ export function AdCard({
           </AnimatePresence>
 
           <div className="flex items-baseline justify-between mt-3">
-            <div className="text-[19px] text-white font-ttc-demibold tracking-tight">
+            <div className="text-[19px] text-white font-ttc-demibold tracking-tight translate-y-[1px]">
               {Number(price).toLocaleString('ru-RU')} <span className="text-[15px] font-sf-ui-medium opacity-70">₽</span>
             </div>
             {publishedText && (
@@ -830,7 +830,7 @@ export default function Ads({
                     key={category.name}
                     type="button"
                     disabled={category.disabled}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full font-ttc-demibold text-sm transition-all duration-200 ${category.disabled ? 'opacity-40 grayscale cursor-not-allowed' : selectedCategory === category.name ? 'scale-105' : 'hover:scale-105'} active:scale-95`}
+                    className={`flex-shrink-0 flex items-center justify-center px-4 py-2 rounded-full font-ttc-demibold text-sm transition-all duration-200 ${category.disabled ? 'opacity-40 grayscale cursor-not-allowed' : selectedCategory === category.name ? 'scale-105' : 'hover:scale-105'} active:scale-95`}
                     style={{
                       backgroundColor: category.disabled 
                         ? 'rgba(255,255,255,0.05)' 
@@ -853,7 +853,7 @@ export default function Ads({
                       console.log('Category clicked:', category.name)
                     }}
                   >
-                    {category.name}
+                    <span className="translate-y-[1px]">{category.name}</span>
                   </motion.button>
                 ))}
               </div>
