@@ -824,18 +824,18 @@ export default function Ads({
           <div className="mt-3 w-full relative">
             {/* Left fade gradient – только вокруг карусели */}
             <div 
-              className="absolute left-0 top-0 bottom-0 z-10 pointer-events-none"
+              className="absolute left-[-24px] top-0 bottom-0 z-10 pointer-events-none"
               style={{
-                background: 'linear-gradient(to right, #000000, transparent)',
-                width: 32,
+                background: 'linear-gradient(to right, #0A0A0A, transparent)',
+                width: 48,
               }}
             />
             {/* Right fade gradient – только вокруг карусели */}
             <div 
-              className="absolute right-0 top-0 bottom-0 z-10 pointer-events-none"
+              className="absolute right-[-24px] top-0 bottom-0 z-10 pointer-events-none"
               style={{
-                background: 'linear-gradient(to left, #000000, transparent)',
-                width: 32,
+                background: 'linear-gradient(to left, #0A0A0A, transparent)',
+                width: 48,
               }}
             />
             <div 

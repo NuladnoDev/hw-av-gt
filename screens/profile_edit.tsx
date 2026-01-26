@@ -621,7 +621,7 @@ export default function ProfileEdit({
                 style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}
               >
                 <div className="leading-[1.6em] font-sf-ui-light mb-1" style={{ fontSize: 'var(--profile-edit-label-size)', color: tagError ? 'var(--profile-tag-error-color)' : '#ffffff' }}>
-                  {tagError ? tagError : 'Тег пользователя'}
+                  {tagError ? tagError : 'Тег ерользователя'}
                 </div>
                 <input
                   value={tagText}
