@@ -471,6 +471,23 @@ export default function Ads({
 
   const [userCity, setUserCity] = useState<string | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [showCategories, setShowCategories] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-show-categories')
+      return saved !== null ? saved === 'true' : true
+    }
+    return true
+  })
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail && typeof e.detail.show === 'boolean') {
+        setShowCategories(e.detail.show)
+      }
+    }
+    window.addEventListener('settings-categories-updated', handleUpdate)
+    return () => window.removeEventListener('settings-categories-updated', handleUpdate)
+  }, [])
 
   const checkHasContacts = async (): Promise<boolean> => {
     if (typeof window === 'undefined') return true
@@ -741,18 +758,32 @@ export default function Ads({
             style={{ width: 355, height: 54 }}
           >
             <motion.div
-              className="flex h-full items-center"
+              className="flex h-full items-center backdrop-blur-xl relative overflow-hidden group"
               style={{
                 width: 355,
-                borderRadius: 10,
-                background: 'linear-gradient(90deg, #111111 0%, #1A1A1A 100%)',
+                borderRadius: 24,
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 paddingLeft: 16,
                 paddingRight: 0,
-                overflow: 'hidden',
               }}
             >
+              {/* Glass Shine Effect */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute inset-0 opacity-10 bg-gradient-to-tr from-transparent via-white/5 to-white/10" />
+                <motion.div 
+                  animate={{
+                    opacity: isSearchActive ? 0.15 : 0.05,
+                    background: isSearchActive 
+                      ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)'
+                      : 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 70%)'
+                  }}
+                  className="absolute inset-0 transition-opacity duration-300"
+                />
+              </div>
+
               <motion.div
-                className="flex h-full items-center"
+                className="flex h-full items-center relative z-10"
                 style={{
                   width: 209.21,
                   paddingRight: 16,
@@ -773,7 +804,7 @@ export default function Ads({
                   placeholder={searchPlaceholder}
                   className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
                   style={{
-                    fontSize: 15,
+                    fontSize: 16,
                     lineHeight: '18px',
                     color: '#A8A8A8',
                   }}
@@ -785,13 +816,13 @@ export default function Ads({
                 {!isSearchActive && (
                   <motion.button
                     type="button"
-                    className="flex h-full items-center justify-center"
+                    className="flex h-full items-center justify-center relative z-10"
                     style={{
                       width: 135,
                       height: 54,
                         borderRadius: 0,
-                        borderLeft: '1px solid rgba(255,255,255,0.05)',
-                        backgroundColor: 'rgba(0,0,0,0.02)',
+                        borderLeft: '1px solid rgba(255,255,255,0.1)',
+                        backgroundColor: 'transparent',
                       }}
                     initial={{ opacity: 0, x: 24 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -821,81 +852,111 @@ export default function Ads({
           </div>
 
           {/* Category Carousel */}
-          <div className="mt-3 w-full relative">
-            {/* Left fade gradient – только вокруг карусели */}
-            <div 
-              className="absolute left-[-24px] top-0 bottom-0 z-10 pointer-events-none"
-              style={{
-                background: 'linear-gradient(to right, #0A0A0A, transparent)',
-                width: 48,
-              }}
-            />
-            {/* Right fade gradient – только вокруг карусели */}
-            <div 
-              className="absolute right-[-24px] top-0 bottom-0 z-10 pointer-events-none"
-              style={{
-                background: 'linear-gradient(to left, #0A0A0A, transparent)',
-                width: 48,
-              }}
-            />
-            <div 
-              className="flex overflow-x-auto scrollbar-hidden category-carousel px-1" 
-              style={{ width: 355, margin: '0 auto' }}
-            >
-              <div className="flex gap-2 py-1">
-                {[
-                  { name: 'Новые', color: '#FF6B6B' },
-                  { name: 'Подтверждённые', color: '#F9CA24' },
-                  { name: 'Популярные', color: '#32CD32' },
-                  { name: 'Бесплатно', color: '#6C5CE7' },
-                  { name: 'Обмен', color: '#A29BFE' },
-                  { name: 'Аукцион', color: '#FD79A8', disabled: true }
-                ].map((category, index) => (
-                  <motion.button
-                    key={category.name}
-                    type="button"
-                    disabled={category.disabled}
-                    className={`flex-shrink-0 flex items-center justify-center px-4 py-2 rounded-full font-ttc-demibold text-sm transition-all duration-200 ${category.disabled ? 'opacity-40 grayscale cursor-not-allowed' : selectedCategory === category.name ? 'scale-105' : 'hover:scale-105'} active:scale-95`}
-                    style={{
-                      backgroundColor: category.disabled 
-                        ? 'rgba(255,255,255,0.05)' 
-                        : selectedCategory === category.name ? category.color + '40' : category.color + '20',
-                      border: `1px solid ${category.disabled 
-                        ? 'rgba(255,255,255,0.1)' 
-                        : selectedCategory === category.name ? category.color : category.color + '40'}`,
-                      color: category.disabled 
-                        ? 'rgba(255,255,255,0.3)' 
-                        : selectedCategory === category.name ? '#FFFFFF' : category.color,
-                      boxShadow: category.disabled 
-                        ? 'none' 
-                        : selectedCategory === category.name ? `0 4px 12px ${category.color}30` : `0 2px 8px ${category.color}20`,
-                    }}
-                    whileHover={category.disabled ? {} : { scale: selectedCategory === category.name ? 1.05 : 1.05 }}
-                    whileTap={category.disabled ? {} : { scale: 0.95 }}
-                    onClick={() => {
-                      if (category.disabled) return
-                      setSelectedCategory(selectedCategory === category.name ? null : category.name)
-                      console.log('Category clicked:', category.name)
-                    }}
-                  >
-                    <span className="translate-y-[1px]">{category.name}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <AnimatePresence>
+            {showCategories && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                animate={{ height: 'auto', opacity: 1, marginTop: 14 }}
+                exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="w-full relative overflow-hidden"
+              >
+                {/* Left fade gradient – только вокруг карусели */}
+                <div 
+                  className="absolute left-[-24px] top-0 bottom-0 z-10 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(to right, #0A0A0A, transparent)',
+                    width: 48,
+                  }}
+                />
+                {/* Right fade gradient – только вокруг карусели */}
+                <div 
+                  className="absolute right-[-24px] top-0 bottom-0 z-10 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(to left, #0A0A0A, transparent)',
+                    width: 48,
+                  }}
+                />
+                <div 
+                  className="flex overflow-x-auto scrollbar-hidden category-carousel px-1" 
+                  style={{ width: 355, margin: '0 auto' }}
+                >
+                  <div className="flex gap-2 py-1">
+                    {[
+                      { name: 'Новые', color: '#FF6B6B' },
+                      { name: 'Подтверждённые', color: '#F9CA24' },
+                      { name: 'Популярные', color: '#32CD32' },
+                      { name: 'Бесплатно', color: '#6C5CE7' },
+                      { name: 'Обмен', color: '#A29BFE' },
+                      { name: 'Аукцион', color: '#FD79A8', disabled: true }
+                    ].map((category, index) => (
+                      <motion.button
+                        key={category.name}
+                        type="button"
+                        disabled={category.disabled}
+                        className={`flex-shrink-0 flex items-center justify-center px-4 py-2 rounded-full font-ttc-demibold text-sm transition-all duration-300 backdrop-blur-xl relative overflow-hidden ${
+                          category.disabled 
+                            ? 'opacity-40 grayscale cursor-not-allowed' 
+                            : selectedCategory === category.name 
+                              ? 'scale-105 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.3)]' 
+                              : 'hover:scale-105 hover:bg-white/[0.05]'
+                        } active:scale-95`}
+                        style={{
+                          backgroundColor: category.disabled 
+                            ? 'rgba(255,255,255,0.03)' 
+                            : selectedCategory === category.name 
+                              ? `${category.color}40` 
+                              : `${category.color}15`,
+                          border: `1px solid ${category.disabled 
+                            ? 'rgba(255,255,255,0.08)' 
+                            : selectedCategory === category.name 
+                              ? category.color 
+                              : `${category.color}40`}`,
+                          color: category.disabled 
+                            ? 'rgba(255,255,255,0.3)' 
+                            : '#FFFFFF',
+                        }}
+                        whileHover={category.disabled ? {} : { y: -1 }}
+                        whileTap={category.disabled ? {} : { scale: 0.95 }}
+                        onClick={() => {
+                          if (category.disabled) return
+                          setSelectedCategory(selectedCategory === category.name ? null : category.name)
+                          console.log('Category clicked:', category.name)
+                        }}
+                      >
+                        {/* Glass Shine Effect */}
+                        {!category.disabled && (
+                          <div className="absolute inset-0 pointer-events-none">
+                            <div className={`absolute inset-0 opacity-20 bg-gradient-to-tr from-transparent via-white/10 to-white/20`} />
+                            {selectedCategory === category.name && (
+                              <motion.div 
+                                layoutId="category-glow"
+                                className="absolute inset-0 blur-md opacity-30"
+                                style={{ backgroundColor: category.color }}
+                              />
+                            )}
+                          </div>
+                        )}
+                        <span className="relative z-10 translate-y-[1px]">{category.name}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       <div
-        className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hidden"
+        className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hidden transition-all duration-300"
         style={{
-          top: 'calc(var(--feed-controls-top) + 70px + 60px)', // Added extra space for carousel
+          top: showCategories ? 'calc(var(--feed-controls-top) + 128px)' : 'calc(var(--feed-controls-top) + 72px)',
           paddingLeft: ADS_SIDE_PADDING,
           paddingRight: ADS_SIDE_PADDING,
           paddingBottom: 16,
         }}
-        >
+      >
           <div
             className="grid grid-cols-2 pb-4"
             style={{

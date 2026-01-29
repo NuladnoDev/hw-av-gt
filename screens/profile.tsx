@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Search, Package } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
@@ -94,6 +94,18 @@ export default function Profile({
   const [profileInfoLoading, setProfileInfoLoading] = useState(true)
   const [isVerified, setIsVerified] = useState(false)
   const [isQuality, setIsQuality] = useState(false)
+  const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const showToast = (message: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast({ message, visible: true })
+    window.dispatchEvent(new CustomEvent('profile-toast-visible', { detail: true }))
+    toastTimerRef.current = setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }))
+      window.dispatchEvent(new CustomEvent('profile-toast-visible', { detail: false }))
+    }, 2500)
+  }
 
   const renderTextWithLinks = (text: string) => {
     if (!text) return text
@@ -838,11 +850,31 @@ export default function Profile({
           '--profile-avatar-size': '110px',
           '--profile-cover-height': '90px',
           '--profile-avatar-top-offset': '0px',
-          '--profile-border-radius': '12px',
-          '--profile-button-radius': '10px',
+          '--profile-border-radius': '32px',
+          '--profile-button-radius': '20px',
         } as React.CSSProperties
       }
     >
+      <AnimatePresence>
+        {toast.visible && (
+          <motion.div
+            initial={{ y: -50, opacity: 0, x: '-50%' }}
+            animate={{ y: -46, opacity: 1, x: '-50%' }}
+            exit={{ y: -50, opacity: 0, x: '-50%' }}
+            className="absolute left-1/2 z-[9999] flex items-center justify-center px-5 py-2 backdrop-blur-3xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
+              borderRadius: '20px',
+              top: '10px',
+              minWidth: '180px',
+            }}
+          >
+            <span className="text-white text-[14px] font-sf-ui-semibold tracking-tight whitespace-nowrap">
+              {toast.message}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div
         className="absolute left-0 w-full"
         style={{ top: '0px', height: 'var(--profile-cover-height)' }}
@@ -1001,8 +1033,8 @@ export default function Profile({
                   className="h-11 flex items-center justify-center font-vk-demi"
                   style={{
                     flex: isSubscribed ? 3 : 4,
-                    backgroundColor: '#FFFFFF',
-                    color: '#000000',
+                    backgroundColor: isSubscribed ? '#007AFF' : '#FFFFFF',
+                    color: isSubscribed ? '#FFFFFF' : '#000000',
                     fontSize: 14,
                     borderRadius: 'var(--profile-button-radius)',
                   }}
@@ -1025,6 +1057,7 @@ export default function Profile({
                     setIsSubscribed(nextSubscribed)
                     setNotificationsEnabled(nextNotifications)
                     writeLocalFollow(viewerId, userId, nextSubscribed, nextNotifications)
+                    showToast(nextSubscribed ? 'Подписка оформлена' : 'Вы отписались')
 
                     const client = getSupabase()
                     console.log('Follow action:', { 
@@ -1120,6 +1153,7 @@ export default function Profile({
                       // Update UI immediately
                       setNotificationsEnabled(next)
                       writeLocalFollow(viewerId, userId, true, next)
+                      showToast(next ? 'Уведомления включены' : 'Уведомления выключены')
 
                       if (next) {
                         // Attempt to ensure subscription but don't block if it fails
@@ -1386,13 +1420,7 @@ export default function Profile({
                 }}
               >
                 <div className="space-y-4">
-                  <div>
-                    <div
-                      className="mb-2 font-ttc-bold text-white"
-                      style={{ fontSize: 'var(--profile-public-title-size)' }}
-                    >
-                      Описание профиля
-                    </div>
+                  <div className="mt-1">
                     {editMode ? (
                       <textarea
                         value={description}
@@ -1683,7 +1711,7 @@ export default function Profile({
               </div>
             ) : profileTab === 'friends' ? (
               <div
-                className="mx-auto w-full border border-[#2B2B2B] bg-[#111111]/80 p-4"
+                className="mx-auto w-full border border-white/[0.05] bg-[#111111]/60 backdrop-blur-xl p-4"
                 style={{
                   maxWidth: 'var(--profile-max-width, 380px)',
                   marginLeft: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
@@ -1696,26 +1724,26 @@ export default function Profile({
                   <div className="flex flex-col gap-2 py-2">
                     {Array.from({ length: 4 }).map((_, index) => (
                       <div
-                        key={index}
-                        className="flex items-center gap-3 w-full px-2.5 py-2"
-                        style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                      >
-                        <div
-                          className="relative overflow-hidden"
-                          style={{
-                            borderRadius: '999px',
-                            background: '#151515',
-                            width: 'var(--profile-subscription-avatar-size, 48px)',
-                            height: 'var(--profile-subscription-avatar-size, 48px)',
-                          }}
+                          key={index}
+                          className="flex items-center gap-4 w-full px-3 py-2"
+                          style={{ borderRadius: '20px' }}
                         >
+                          <div
+                            className="relative overflow-hidden"
+                            style={{
+                              borderRadius: '999px',
+                              background: '#151515',
+                              width: '40px',
+                              height: '40px',
+                            }}
+                          >
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
                         </div>
                         <div className="flex flex-col flex-1 gap-2">
-                          <div className="relative h-4 w-32 rounded bg-[#222222] overflow-hidden">
+                          <div className="relative h-4 w-32 rounded-full bg-[#222222] overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
                           </div>
-                          <div className="relative h-3 w-24 rounded bg-[#222222] overflow-hidden">
+                          <div className="relative h-3 w-24 rounded-full bg-[#222222] overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
                           </div>
                         </div>
@@ -1727,7 +1755,7 @@ export default function Profile({
                     Пока ни на кого не подписан
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1">
                     {subscriptions.map((sub) => {
                       const base = sub.id || sub.tag || 'user'
                       let sum = 0
@@ -1739,9 +1767,9 @@ export default function Profile({
                         <motion.button
                           key={sub.id}
                           type="button"
-                          className="flex items-center gap-3 w-full px-2.5 py-2"
-                          style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                          whileTap={{ scale: 0.97 }}
+                          className="flex items-center gap-4 w-full px-3 py-2 transition-colors active:bg-white/[0.05]"
+                          style={{ borderRadius: '24px' }}
+                          whileTap={{ scale: 0.98 }}
                           onClick={() => {
                             if (onOpenProfileById) {
                               onOpenProfileById(sub.id)
@@ -1754,12 +1782,13 @@ export default function Profile({
                           }}
                         >
                           <div
-                            className="flex items-center justify-center text-white"
+                            className="flex items-center justify-center text-white shadow-lg shadow-black/20"
                             style={{
                               borderRadius: '999px',
                               background: grad,
-                              width: 'var(--profile-subscription-avatar-size, 48px)',
-                              height: 'var(--profile-subscription-avatar-size, 48px)',
+                              width: '40px',
+                              height: '40px',
+                              flexShrink: 0
                             }}
                           >
                             {sub.avatarUrl ? (
@@ -1767,29 +1796,28 @@ export default function Profile({
                               <img
                                 src={sub.avatarUrl}
                                 alt={sub.tag}
-                                className="object-cover"
-                                style={{
-                                  borderRadius: '999px',
-                                  width: 'var(--profile-subscription-avatar-size, 48px)',
-                                  height: 'var(--profile-subscription-avatar-size, 48px)',
-                                }}
+                                className="object-cover rounded-full w-full h-full"
                               />
                             ) : (
                               <span
-                                className="font-ttc-bold"
-                                style={{ fontSize: 'var(--profile-subscription-avatar-letter-size, 18px)' }}
+                                className="font-ttc-bold text-[18px] leading-none"
                               >
                                 {letter}
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-col items-start">
+                          <div className="flex flex-col items-start min-w-0">
                             <span
-                              className="text-white font-vk-demi"
-                              style={{ fontSize: 'var(--profile-subscription-tag-size, 18px)' }}
+                              className="text-white font-sf-ui-medium text-[17px] leading-tight truncate w-full"
                             >
-                              @{sub.tag}
+                              {sub.tag}
                             </span>
+                            <span className="text-white/40 font-sf-ui-light text-[13px]">
+                              id: {sub.id.slice(0, 8)}...
+                            </span>
+                          </div>
+                          <div className="ml-auto">
+                            <img src="/interface/str.svg" className="w-4 h-4 opacity-20 rotate-180" style={{ filter: 'brightness(0) invert(1)' }} />
                           </div>
                         </motion.button>
                       )

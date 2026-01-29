@@ -35,6 +35,22 @@ export default function Setting({
   const [isDarkTheme, setIsDarkTheme] = useState(true)
   const [subNotifs, setSubNotifs] = useState(true)
   const [newPostNotifs, setNewPostNotifs] = useState(true)
+  const [showCustomNotifs, setShowCustomNotifs] = useState(false)
+  const [followedUsers, setFollowedUsers] = useState<{ id: string; tag: string; enabled: boolean }[]>([])
+  const [hapticEnabled, setHapticEnabled] = useState(true)
+  const [soundsEnabled, setSoundsEnabled] = useState(true)
+  const [showCategories, setShowCategories] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-show-categories')
+      return saved !== null ? saved === 'true' : true
+    }
+    return true
+  })
+
+  useEffect(() => {
+    localStorage.setItem('hw-show-categories', showCategories.toString())
+    window.dispatchEvent(new CustomEvent('settings-categories-updated', { detail: { show: showCategories } }))
+  }, [showCategories])
 
   const cardStyle = "bg-[#111111] border border-white/[0.05] rounded-[32px] overflow-hidden"
   const itemStyle = "flex w-full items-center justify-between px-4 py-[18px] text-left bg-transparent active:bg-white/[0.05] transition-colors"
@@ -105,6 +121,28 @@ export default function Setting({
 
         if (!tagFromDb && (!saved?.tag || saved.tag.trim().length === 0) && p?.tag && p.tag.trim().length > 0) {
           setTagText(p.tag.trim())
+        }
+
+        // Fetch following users
+        if (client && supabaseId) {
+          const { data: following, error } = await client
+            .from('subscriptions')
+            .select(`
+              following_id,
+              profiles!subscriptions_following_id_fkey (
+                tag
+              )
+            `)
+            .eq('follower_id', supabaseId)
+
+          if (!error && following) {
+            const formatted = following.map((f: any) => ({
+              id: f.following_id,
+              tag: f.profiles?.tag || 'user',
+              enabled: true
+            }))
+            setFollowedUsers(formatted)
+          }
         }
       } catch {}
     })()
@@ -229,7 +267,7 @@ export default function Setting({
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" style={{ objectPosition: 'center' }} />
                   ) : (
-                    <span className="text-white font-ttc-bold text-[26px] leading-none">
+                    <span className="text-white font-ttc-bold text-[26px] leading-none mt-[2px]">
                       {initialLetter}
                     </span>
                   )}
@@ -372,57 +410,76 @@ export default function Setting({
                 </div>
               </div>
 
-              <div className="flex-1 px-6 mt-4 space-y-6">
-                {/* Main Toggle */}
+              <div className="flex-1 px-6 mt-4 space-y-4">
+                {/* Main Toggle Card */}
                 <div className={cardStyle}>
-                  <div className="p-4 flex items-center justify-between">
+                  <div className="p-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl ${notificationsEnabled ? 'bg-indigo-500/10 text-indigo-400' : 'bg-white/5 text-white/20'}`}>
-                        <Bell className="w-5 h-5" />
+                      <div className={`p-2.5 rounded-2xl ${notificationsEnabled ? 'bg-indigo-500/10 text-indigo-400' : 'bg-white/5 text-white/20'}`}>
+                        <Bell className="w-6 h-6" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[15px] font-sf-ui-medium text-white">Все уведомления</span>
-                        <span className="text-[12px] text-white/40 font-sf-ui-light">Глобальный переключатель</span>
+                        <span className="text-[16px] font-sf-ui-medium text-white">Все уведомления</span>
+                        <span className="text-[13px] text-white/40 font-sf-ui-light">Глобальный переключатель</span>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? 'bg-blue-500' : 'bg-white/10'}`}
+                      className={`w-12 h-6 rounded-full transition-all relative overflow-hidden ${
+                        notificationsEnabled 
+                          ? 'bg-blue-600 shadow-[inset_0_1px_3px_rgba(255,255,255,0.2),0_4px_12px_rgba(37,99,235,0.3)]' 
+                          : 'bg-white/10'
+                      }`}
                     >
+                      {notificationsEnabled && (
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
+                      )}
                       <motion.div
                         animate={{ x: notificationsEnabled ? 26 : 4 }}
-                        className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                        className={`absolute top-1 w-4 h-4 rounded-full shadow-sm transition-colors ${
+                          notificationsEnabled ? 'bg-white' : 'bg-white/40'
+                        }`}
                       />
                     </button>
                   </div>
+                </div>
 
-                  <AnimatePresence>
-                    {notificationsEnabled && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="h-[1px] bg-white/[0.03] mx-4" />
-                        <div className="p-4 space-y-4">
-                          <div className="text-[11px] text-white/30 font-sf-ui-bold uppercase tracking-widest pl-2">Настройки подписок</div>
+                {/* Subscriptions Settings Card */}
+                <AnimatePresence>
+                  {notificationsEnabled && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0, y: -10 }}
+                      animate={{ height: 'auto', opacity: 1, y: 0 }}
+                      exit={{ height: 0, opacity: 0, y: -10 }}
+                      className="overflow-hidden"
+                    >
+                      <div className={cardStyle}>
+                        <div className="px-5 py-6 space-y-7">
                           
                           {/* Subscription Toggle */}
                           <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                              <span className="text-[15px] font-sf-ui-medium text-white/90">Новые подписчики</span>
-                              <span className="text-[12px] text-white/40 font-sf-ui-light">Когда кто-то подписывается на вас</span>
+                              <span className="text-[16px] font-sf-ui-medium text-white/90">Новые подписчики</span>
+                              <span className="text-[13px] text-white/40 font-sf-ui-light">Когда кто-то подписывается на вас</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => setSubNotifs(!subNotifs)}
-                              className={`w-10 h-5 rounded-full transition-colors relative ${subNotifs ? 'bg-blue-500/60' : 'bg-white/5'}`}
+                              className={`w-10 h-5 rounded-full transition-all relative overflow-hidden ${
+                                subNotifs 
+                                  ? 'bg-blue-600/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' 
+                                  : 'bg-white/5'
+                              }`}
                             >
+                              {subNotifs && (
+                                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
+                              )}
                               <motion.div
                                 animate={{ x: subNotifs ? 22 : 2 }}
-                                className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
+                                className={`absolute top-0.5 w-4 h-4 rounded-full shadow-sm transition-colors ${
+                                  subNotifs ? 'bg-white' : 'bg-white/20'
+                                }`}
                               />
                             </button>
                           </div>
@@ -430,28 +487,108 @@ export default function Setting({
                           {/* New Posts Toggle */}
                           <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                              <span className="text-[15px] font-sf-ui-medium text-white/90">Новые публикации</span>
-                              <span className="text-[12px] text-white/40 font-sf-ui-light">От людей, на которых вы подписаны</span>
+                              <span className="text-[16px] font-sf-ui-medium text-white/90">Новые публикации</span>
+                              <span className="text-[13px] text-white/40 font-sf-ui-light">От людей, на которых вы подписаны</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => setNewPostNotifs(!newPostNotifs)}
-                              className={`w-10 h-5 rounded-full transition-colors relative ${newPostNotifs ? 'bg-blue-500/60' : 'bg-white/5'}`}
+                              className={`w-10 h-5 rounded-full transition-all relative overflow-hidden ${
+                                newPostNotifs 
+                                  ? 'bg-blue-600/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' 
+                                  : 'bg-white/5'
+                              }`}
                             >
+                              {newPostNotifs && (
+                                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
+                              )}
                               <motion.div
                                 animate={{ x: newPostNotifs ? 22 : 2 }}
-                                className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
+                                className={`absolute top-0.5 w-4 h-4 rounded-full shadow-sm transition-colors ${
+                                  newPostNotifs ? 'bg-white' : 'bg-white/20'
+                                }`}
                               />
                             </button>
                           </div>
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                      </div>
+
+                      {/* Custom Notifications Settings Card */}
+                      <div className={`${cardStyle} mt-4`}>
+                        <div className="px-5 py-6 space-y-4">
+                          <button 
+                            type="button"
+                            onClick={() => setShowCustomNotifs(!showCustomNotifs)}
+                            className="flex w-full items-center justify-between group"
+                          >
+                            <div className="flex flex-col text-left">
+                              <span className="text-[16px] font-sf-ui-medium text-white/90">Настроить уведомления</span>
+                              <span className="text-[13px] text-white/40 font-sf-ui-light">Выбрать отдельных пользователей</span>
+                            </div>
+                            <motion.img 
+                              animate={{ rotate: showCustomNotifs ? 180 : 0 }}
+                              src="/interface/str.svg" 
+                              className="w-4 h-4 opacity-20 group-hover:opacity-40 transition-opacity"
+                              style={{ filter: 'brightness(0) invert(1)' }}
+                            />
+                          </button>
+
+                          <AnimatePresence>
+                            {showCustomNotifs && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="space-y-2 pt-4 border-t border-white/[0.03]">
+                                  {followedUsers.map((user) => (
+                                    <div key={user.id} className="flex items-center justify-between py-1">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
+                                          <span className="text-[12px] text-white/40 font-bold">
+                                            {user.tag.charAt(0).toUpperCase()}
+                                          </span>
+                                        </div>
+                                        <span className="text-[15px] text-white/80 font-sf-ui-light">
+                                          {user.tag}
+                                        </span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setFollowedUsers(prev => prev.map(u => 
+                                            u.id === user.id ? { ...u, enabled: !u.enabled } : u
+                                          ))
+                                        }}
+                                        className={`w-9 h-4.5 rounded-full transition-all relative overflow-hidden ${
+                                          user.enabled 
+                                            ? 'bg-blue-600/80' 
+                                            : 'bg-white/5'
+                                        }`}
+                                      >
+                                        <motion.div
+                                          animate={{ x: user.enabled ? 20 : 2 }}
+                                          className={`absolute top-0.5 w-3.5 h-3.5 rounded-full shadow-sm transition-colors ${
+                                            user.enabled ? 'bg-white' : 'bg-white/20'
+                                          }`}
+                                        />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                  )}
+                </AnimatePresence>
 
                 {!notificationsEnabled && (
-                  <div className="p-8 text-center space-y-3">
+                  <div className="pt-8 text-center space-y-3">
                     <div className="w-16 h-16 rounded-full bg-white/[0.03] flex items-center justify-center mx-auto mb-4">
                       <BellRing className="w-8 h-8 text-white/10 stroke-[1.5px]" />
                     </div>
@@ -582,6 +719,96 @@ export default function Setting({
                         className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
                       />
                     </button>
+                  </div>
+                </div>
+
+                {/* Haptics & Sounds Card */}
+                <div className={cardStyle}>
+                  <div className="px-5 py-6 space-y-7">
+                    {/* Sounds Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[16px] font-sf-ui-medium text-white/90">Звуковые эффекты</span>
+                        <span className="text-[13px] text-white/40 font-sf-ui-light">Звуки при лайках и сообщениях</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSoundsEnabled(!soundsEnabled)}
+                        className={`w-10 h-5 rounded-full transition-all relative overflow-hidden ${
+                          soundsEnabled 
+                            ? 'bg-blue-600/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' 
+                            : 'bg-white/5'
+                        }`}
+                      >
+                        {soundsEnabled && (
+                          <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
+                        )}
+                        <motion.div
+                          animate={{ x: soundsEnabled ? 22 : 2 }}
+                          className={`absolute top-0.5 w-4 h-4 rounded-full shadow-sm transition-colors ${
+                            soundsEnabled ? 'bg-white' : 'bg-white/20'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Haptics Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[16px] font-sf-ui-medium text-white/90">Тактильная отдача</span>
+                        <span className="text-[13px] text-white/40 font-sf-ui-light">Вибрация при взаимодействиях</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setHapticEnabled(!hapticEnabled)}
+                        className={`w-10 h-5 rounded-full transition-all relative overflow-hidden ${
+                          hapticEnabled 
+                            ? 'bg-blue-600/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' 
+                            : 'bg-white/5'
+                        }`}
+                      >
+                        {hapticEnabled && (
+                          <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
+                        )}
+                        <motion.div
+                          animate={{ x: hapticEnabled ? 22 : 2 }}
+                          className={`absolute top-0.5 w-4 h-4 rounded-full shadow-sm transition-colors ${
+                            hapticEnabled ? 'bg-white' : 'bg-white/20'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Show Categories Toggle - Separate Card */}
+                <div className={cardStyle}>
+                  <div className="px-5 py-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[16px] font-sf-ui-medium text-white/90">Категории</span>
+                        <span className="text-[13px] text-white/40 font-sf-ui-light">Карусель на главной странице</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCategories(!showCategories)}
+                        className={`w-10 h-5 rounded-full transition-all relative overflow-hidden ${
+                          showCategories 
+                            ? 'bg-blue-600/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' 
+                            : 'bg-white/5'
+                        }`}
+                      >
+                        {showCategories && (
+                          <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />
+                        )}
+                        <motion.div
+                          animate={{ x: showCategories ? 22 : 2 }}
+                          className={`absolute top-0.5 w-4 h-4 rounded-full shadow-sm transition-colors ${
+                            showCategories ? 'bg-white' : 'bg-white/20'
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

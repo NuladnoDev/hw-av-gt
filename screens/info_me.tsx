@@ -304,6 +304,14 @@ export default function InfoMe({ onClose }: InfoMeProps) {
   const openCitySelector = () => {
     setCitySearch('')
     setCitySelectorOpen(true)
+    // Dispatch event to hide bottom nav
+    window.dispatchEvent(new CustomEvent('hide-bottom-nav'))
+  }
+
+  const closeCitySelector = () => {
+    setCitySelectorOpen(false)
+    // Dispatch event to show bottom nav
+    window.dispatchEvent(new CustomEvent('show-bottom-nav'))
   }
 
   return (
@@ -519,7 +527,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
           <div className="absolute inset-0 z-20 flex h-full w-full items-end justify-center">
             <div
               className="absolute inset-0 bg-black/40 overlay-in"
-              onClick={() => setCitySelectorOpen(false)}
+              onClick={closeCitySelector}
             />
             <div
               className="relative flex w-full flex-col bottom-sheet-in"
@@ -532,88 +540,35 @@ export default function InfoMe({ onClose }: InfoMeProps) {
               onClick={(e) => e.stopPropagation()}
             >
               <div
-                className="flex w-full items-end justify-center"
-                style={{ height: 'var(--city-header-height, 100px)' }}
+                className="flex w-full items-start justify-center pt-2"
+                style={{ height: 'var(--city-header-height, 12px)' }}
               >
-                <div className="relative w-full" style={{ height: 'var(--city-search-container-height, 52px)' }}>
-                  <div className="absolute left-0 top-0 flex h-full w-full items-center justify-center">
-                    <div
-                      className="font-ttc-bold text-white"
-                      style={{
-                        fontSize: 'var(--city-search-title-size, 21px)',
-                        lineHeight: '26px',
-                        letterSpacing: '-0.41px',
-                      }}
-                    >
-                      Место проживания
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCitySelectorOpen(false)}
-                      className="absolute right-3 top-0 flex h-full items-center justify-center"
-                      aria-label="Закрыть"
-                    >
-                      <img
-                        src="/interface/x-01.svg"
-                        alt="close"
-                        className="h-6 w-6"
-                        style={{
-                          opacity: 'var(--city-search-clear-icon-opacity, 0.9)',
-                          filter: 'var(--city-search-clear-icon-filter, invert(72%) sepia(4%) saturate(0%) hue-rotate(163deg) brightness(90%) contrast(88%))',
-                        }}
-                      />
-                    </button>
-                  </div>
-                </div>
+                <div className="w-10 h-1 rounded-full bg-white/20" />
               </div>
               <div
-                className="flex w-full items-center px-3"
-                style={{ height: 'var(--city-search-container-height, 52px)' }}
+                className="px-6 mb-4 mt-1"
               >
-                <div
-                  className="relative w-full"
-                  style={{ height: 'var(--city-search-height, 36px)' }}
-                >
+                <div className="relative">
                   <input
+                    type="text"
                     value={citySearch}
                     onChange={(e) => setCitySearch(e.target.value)}
-                    placeholder="Поиск"
-                    className="h-full w-full pl-9 pr-9 leading-[22px] outline-none font-sf-ui-light placeholder:text-[#818C99]"
-                    style={{
-                      borderRadius: 'var(--city-search-radius, 10px)',
-                      backgroundColor: 'var(--city-search-bg, rgba(255, 255, 255, 0.03))',
-                      fontSize: 'var(--city-search-text-size, 17px)',
-                      color: 'var(--city-search-text-color, #ffffff)',
-                    }}
+                    placeholder="Поиск города"
+                    className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl px-5 py-2.5 text-white font-sf-ui-light outline-none placeholder:text-white/20 focus:bg-white/[0.15] transition-all"
                   />
-                  <img
-                    src="/interface/Search Icon.svg"
-                    alt="search"
-                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
-                    style={{ opacity: 'var(--city-search-icon-opacity, 0.8)' }}
-                  />
-                  {citySearch.trim().length > 0 && (
+                  {citySearch && (
                     <button
                       type="button"
                       onClick={() => setCitySearch('')}
-                      className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center"
-                      aria-label="Очистить поиск"
+                      className="absolute right-4 top-1/2 -translate-y-1/2"
                     >
-                      <img
-                        src="/interface/x-01.svg"
-                        alt="clear"
-                        className="h-[18px] w-[18px]"
-                        style={{
-                          opacity: 'var(--city-search-clear-icon-opacity, 0.9)',
-                          filter: 'var(--city-search-clear-icon-filter, invert(72%) sepia(4%) saturate(0%) hue-rotate(163deg) brightness(90%) contrast(88%))',
-                        }}
-                      />
+                      <img src="/interface/x-01.svg" alt="clear" className="w-5 h-5 opacity-40" />
                     </button>
                   )}
                 </div>
               </div>
               <div
-                className="flex-1 overflow-y-auto"
+                className="flex-1 overflow-y-auto scrollbar-hide"
                 style={{ paddingTop: 'var(--city-list-padding-top, 4px)' }}
               >
                 {cityResults.map((name) => (
@@ -622,20 +577,29 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                     type="button"
                     onClick={() => {
                       setCity(name)
-                      setCitySelectorOpen(false)
+                      closeCitySelector()
                     }}
-                    className="flex w-full items-center"
+                    className="flex w-full items-center justify-between group"
                     style={{
-                      height: 'var(--city-item-height, 48px)',
-                      paddingLeft: 'var(--city-item-horizontal-padding, 12px)',
-                      paddingRight: 'var(--city-item-horizontal-padding, 12px)',
+                      height: 'var(--city-item-height, 52px)',
+                      paddingLeft: '32px',
+                      paddingRight: '24px',
                     }}
                   >
                     <div
-                      className="leading-[22px] text-white font-sf-ui-light"
+                      className="leading-[22px] text-white font-sf-ui-light transition-colors group-active:text-white/60"
                       style={{ fontSize: 'var(--city-item-text-size, 17px)' }}
                     >
                       {name}
+                    </div>
+                    <div
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                        city === name ? 'border-[#0095f6] bg-[#0095f6]' : 'border-white/20'
+                      }`}
+                    >
+                      {city === name && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                      )}
                     </div>
                   </button>
                 ))}

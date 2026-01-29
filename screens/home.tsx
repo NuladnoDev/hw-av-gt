@@ -77,6 +77,29 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [userSearchLoading, setUserSearchLoading] = useState(false)
   const [phoneOpen, setPhoneOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
+  const [navVisible, setNavVisible] = useState(true)
+  const [profileToastActive, setProfileToastActive] = useState(false)
+
+  useEffect(() => {
+    const handleToastVisible = (e: Event) => {
+      setProfileToastActive((e as CustomEvent).detail)
+    }
+    window.addEventListener('profile-toast-visible', handleToastVisible)
+    return () => window.removeEventListener('profile-toast-visible', handleToastVisible)
+  }, [])
+
+  useEffect(() => {
+    const hideNav = () => setNavVisible(false)
+    const showNav = () => setNavVisible(true)
+
+    window.addEventListener('hide-bottom-nav', hideNav)
+    window.addEventListener('show-bottom-nav', showNav)
+
+    return () => {
+      window.removeEventListener('hide-bottom-nav', hideNav)
+      window.removeEventListener('show-bottom-nav', showNav)
+    }
+  }, [])
   const [adsNavNextVisible, setAdsNavNextVisible] = useState(false)
   const [adsNavNextEnabled, setAdsNavNextEnabled] = useState(false)
   const [adsNavNextLabel, setAdsNavNextLabel] = useState('Далее')
@@ -516,7 +539,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 </button>
               </div>
               <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
-                <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
+                <div 
+                  className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold transition-opacity duration-200"
+                  style={{ opacity: profileToastActive ? 0 : 1 }}
+                >
                   Профиль
                 </div>
               </div>
@@ -981,169 +1007,177 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
 
         {/* profile content moved to Profile component */}
 
-        <div
-          className="absolute left-0 w-full bg-[#0A0A0A] z-[90]"
-          style={{
-            height: 'var(--bottom-nav-height, 96px)',
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))',
-          }}
-        >
-          <div className="absolute inset-x-0 bottom-3 px-4">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-[24px] bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.3)]" />
-              <div className="relative flex items-center gap-1 p-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (projectInfoOpen) {
-                      const ev = new Event('project-check-updates')
-                      window.dispatchEvent(ev)
-                      return
-                    }
-                    if (adsNavNextVisible) {
-                      if (!adsNavNextEnabled) return
-                      if (adsNavNextMode === 'detail') {
-                        const ev = new Event('ad-detail-purchase')
-                        window.dispatchEvent(ev)
-                      } else {
-                        const ev = new Event('ads-create-nav-next')
-                        window.dispatchEvent(ev)
-                      }
-                      return
-                    }
-                    closeAllWindows()
-                    setViewProfileMode('own')
-                    setViewProfileUserId(null)
-                    setProfileReturnAd(null)
-                    setProfileStack([])
-                    if (tab === 'ads') {
-                      setAdsCreateRequested(true)
-                      return
-                    }
-                    setTab('ads')
-                  }}
-                  className="relative flex-[7] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-50"
-                  style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
-                >
-                  {tab === 'ads' && adsNavNextMode !== 'edit' && (
-                    <motion.div
-                      layoutId="bottom-nav-active-tab"
-                      className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-                      transition={{
-                        type: 'spring',
-                        stiffness: 500,
-                        damping: 30,
-                        mass: 0.8,
+        <AnimatePresence>
+          {navVisible && (
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="absolute left-0 w-full bg-[#0A0A0A] z-[90]"
+              style={{
+                height: 'var(--bottom-nav-height, 96px)',
+                bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))',
+              }}
+            >
+              <div className="absolute inset-x-0 bottom-3 px-4">
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-[24px] bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.3)]" />
+                  <div className="relative flex items-center gap-1 p-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (projectInfoOpen) {
+                          const ev = new Event('project-check-updates')
+                          window.dispatchEvent(ev)
+                          return
+                        }
+                        if (adsNavNextVisible) {
+                          if (!adsNavNextEnabled) return
+                          if (adsNavNextMode === 'detail') {
+                            const ev = new Event('ad-detail-purchase')
+                            window.dispatchEvent(ev)
+                          } else {
+                            const ev = new Event('ads-create-nav-next')
+                            window.dispatchEvent(ev)
+                          }
+                          return
+                        }
+                        closeAllWindows()
+                        setViewProfileMode('own')
+                        setViewProfileUserId(null)
+                        setProfileReturnAd(null)
+                        setProfileStack([])
+                        if (tab === 'ads') {
+                          setAdsCreateRequested(true)
+                          return
+                        }
+                        setTab('ads')
                       }}
-                    />
-                  )}
-                  <AnimatePresence mode="wait" initial={false}>
-                    {adsNavNextVisible ? (
-                      <motion.div
-                        key="ads-next"
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="relative z-10 flex items-center justify-center"
-                        style={{ opacity: adsNavNextEnabled ? 1 : 0.4 }}
-                      >
-                        <span
-                          className={`font-semibold text-[17.8px] ${
-                            adsNavNextMode === 'edit' ? 'text-white' : 'text-black'
-                          }`}
-                        >
-                          {adsNavNextLabel}
-                        </span>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="ads-default"
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 6 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="relative z-10 flex flex-col items-center justify-center gap-1"
-                      >
-                        {tab === 'ads' ? (
-                          <>
-                            <img
-                              src="/interface/plus-02-black.svg"
-                              alt=""
-                              className="w-[24px] h-[24px] translate-y-[2px]"
-                            />
-                            <span className="font-semibold text-[13.5px] text-black">
-                              Создать обьявление
+                      className="relative flex-[7] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-50"
+                      style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
+                    >
+                      {tab === 'ads' && adsNavNextMode !== 'edit' && (
+                        <motion.div
+                          layoutId="bottom-nav-active-tab"
+                          className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                          transition={{
+                            type: 'spring',
+                            stiffness: 500,
+                            damping: 30,
+                            mass: 0.8,
+                          }}
+                        />
+                      )}
+                      <AnimatePresence mode="wait" initial={false}>
+                        {adsNavNextVisible ? (
+                          <motion.div
+                            key="ads-next"
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.18, ease: 'easeOut' }}
+                            className="relative z-10 flex items-center justify-center"
+                            style={{ opacity: adsNavNextEnabled ? 1 : 0.4 }}
+                          >
+                            <span
+                              className={`font-semibold text-[17.8px] ${
+                                adsNavNextMode === 'edit' ? 'text-white' : 'text-black'
+                              }`}
+                            >
+                              {adsNavNextLabel}
                             </span>
-                          </>
-                        ) : projectInfoOpen ? (
-                          <>
-                            <RefreshCcw
-                              className="w-6 h-6 transition-all duration-200 text-white/70"
-                              strokeWidth={2.5}
-                            />
-                            <span className="font-medium text-[12px] text-white/70">
-                              Проверить обновления
-                            </span>
-                          </>
+                          </motion.div>
                         ) : (
-                          <>
-                            <ShoppingBag
-                              className="w-6 h-6 transition-all duration-200 text-white/70"
-                              strokeWidth={2.5}
-                            />
-                            <span className="font-medium text-[12px] text-white/70">
-                              Объявления
-                            </span>
-                          </>
+                          <motion.div
+                            key="ads-default"
+                            initial={{ opacity: 0, y: -6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 6 }}
+                            transition={{ duration: 0.18, ease: 'easeOut' }}
+                            className="relative z-10 flex flex-col items-center justify-center gap-1"
+                          >
+                            {tab === 'ads' ? (
+                              <>
+                                <img
+                                  src="/interface/plus-02-black.svg"
+                                  alt=""
+                                  className="w-[24px] h-[24px] translate-y-[2px]"
+                                />
+                                <span className="font-semibold text-[13.5px] text-black">
+                                  Создать обьявление
+                                </span>
+                              </>
+                            ) : projectInfoOpen ? (
+                              <>
+                                <RefreshCcw
+                                  className="w-6 h-6 transition-all duration-200 text-white/70"
+                                  strokeWidth={2.5}
+                                />
+                                <span className="font-medium text-[12px] text-white/70">
+                                  Проверить обновления
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <ShoppingBag
+                                  className="w-6 h-6 transition-all duration-200 text-white/70"
+                                  strokeWidth={2.5}
+                                />
+                                <span className="font-medium text-[12px] text-white/70">
+                                  Объявления
+                                </span>
+                              </>
+                            )}
+                          </motion.div>
                         )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeAllWindows()
-                    setTab('profile')
-                    setViewProfileMode('own')
-                    setViewProfileUserId(null)
-                    setProfileReturnAd(null)
-                    setProfileStack([])
-                  }}
-                  className="relative flex-[3] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-50"
-                  style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
-                >
-                  {tab === 'profile' && (
-                    <motion.div
-                      layoutId="bottom-nav-active-tab"
-                      className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-                      transition={{
-                        type: 'spring',
-                        stiffness: 500,
-                        damping: 30,
-                        mass: 0.8,
+                      </AnimatePresence>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeAllWindows()
+                        setTab('profile')
+                        setViewProfileMode('own')
+                        setViewProfileUserId(null)
+                        setProfileReturnAd(null)
+                        setProfileStack([])
                       }}
-                    />
-                  )}
-                  <User
-                    className={`w-6 h-6 transition-all duration-200 relative z-10 ${
-                      tab === 'profile' ? 'text-black scale-110' : 'text-white/70'
-                    }`}
-                    strokeWidth={2.5}
-                  />
-                  <span
-                    className={`font-medium text-[12px] transition-all duration-200 relative z-10 ${
-                      tab === 'profile' ? 'text-black' : 'text-white/70'
-                    }`}
-                  >
-                    Профиль
-                  </span>
-                </button>
+                      className="relative flex-[3] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-50"
+                      style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
+                    >
+                      {tab === 'profile' && (
+                        <motion.div
+                          layoutId="bottom-nav-active-tab"
+                          className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                          transition={{
+                            type: 'spring',
+                            stiffness: 500,
+                            damping: 30,
+                            mass: 0.8,
+                          }}
+                        />
+                      )}
+                      <User
+                        className={`w-6 h-6 transition-all duration-200 relative z-10 ${
+                          tab === 'profile' ? 'text-black scale-110' : 'text-white/70'
+                        }`}
+                        strokeWidth={2.5}
+                      />
+                      <span
+                        className={`font-medium text-[12px] transition-all duration-200 relative z-10 ${
+                          tab === 'profile' ? 'text-black' : 'text-white/70'
+                        }`}
+                      >
+                        Профиль
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div
           className="absolute left-0 w-full bg-[#0A0A0A]"
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
