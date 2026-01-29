@@ -517,7 +517,7 @@ export default function Setting({
 
                 <button
                   type="button"
-                  className="w-full max-w-[280px] py-4 rounded-2xl bg-white/5 border border-white/5 text-white/40 font-sf-ui-medium text-[16px] active:scale-[0.98] transition-all cursor-not-allowed"
+                  className="w-full max-w-[280px] py-4 rounded-[26px] bg-white/5 border border-white/5 text-white/40 font-sf-ui-medium text-[16px] active:scale-[0.98] transition-all cursor-not-allowed"
                 >
                   Скоро
                 </button>
@@ -561,26 +561,28 @@ export default function Setting({
 
               <div className="flex-1 px-6 mt-4 space-y-6">
                 {/* Theme Toggle */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl ${isDarkTheme ? 'bg-indigo-500/10 text-indigo-400' : 'bg-orange-500/10 text-orange-400'}`}>
-                      {isDarkTheme ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                <div className={cardStyle}>
+                  <div className="p-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl ${isDarkTheme ? 'bg-indigo-500/10 text-indigo-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                        {isDarkTheme ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[15px] font-sf-ui-medium text-white">Тёмная тема</span>
+                        <span className="text-[12px] text-white/40 font-sf-ui-light">Переключение темы оформления</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-[15px] font-sf-ui-medium text-white">Тёмная тема</span>
-                      <span className="text-[12px] text-white/40 font-sf-ui-light">Переключение темы оформления</span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsDarkTheme(!isDarkTheme)}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${isDarkTheme ? 'bg-blue-500' : 'bg-white/10'}`}
+                    >
+                      <motion.div
+                        animate={{ x: isDarkTheme ? 26 : 4 }}
+                        className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                      />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsDarkTheme(!isDarkTheme)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${isDarkTheme ? 'bg-blue-500' : 'bg-white/10'}`}
-                  >
-                    <motion.div
-                      animate={{ x: isDarkTheme ? 26 : 4 }}
-                      className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
-                    />
-                  </button>
                 </div>
               </div>
             </motion.div>
