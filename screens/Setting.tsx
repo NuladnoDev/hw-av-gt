@@ -32,13 +32,26 @@ export default function Setting({
   const [showAppearance, setShowAppearance] = useState(false)
   const [showVerification, setShowVerification] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [isDarkTheme, setIsDarkTheme] = useState(true)
   const [subNotifs, setSubNotifs] = useState(true)
   const [newPostNotifs, setNewPostNotifs] = useState(true)
   const [showCustomNotifs, setShowCustomNotifs] = useState(false)
   const [followedUsers, setFollowedUsers] = useState<{ id: string; tag: string; enabled: boolean }[]>([])
   const [hapticEnabled, setHapticEnabled] = useState(true)
   const [soundsEnabled, setSoundsEnabled] = useState(true)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-theme')
+      return (saved as 'dark' | 'light') || 'dark'
+    }
+    return 'dark'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('hw-theme', theme)
+    window.dispatchEvent(new CustomEvent('theme-updated', { detail: theme }))
+  }, [theme])
+
   const [showCategories, setShowCategories] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('hw-show-categories')
@@ -52,9 +65,9 @@ export default function Setting({
     window.dispatchEvent(new CustomEvent('settings-categories-updated', { detail: { show: showCategories } }))
   }, [showCategories])
 
-  const cardStyle = "bg-[#111111] border border-white/[0.05] rounded-[32px] overflow-hidden"
-  const itemStyle = "flex w-full items-center justify-between px-4 py-[18px] text-left bg-transparent active:bg-white/[0.05] transition-colors"
-  const labelStyle = "leading-[1.4em] text-white font-sf-ui-regular text-[15px]"
+  const cardStyle = "bg-[var(--bg-secondary)] border border-[var(--border-light)] rounded-[32px] overflow-hidden"
+  const itemStyle = "flex w-full items-center justify-between px-4 py-[18px] text-left bg-transparent active:bg-[var(--border-light)] transition-colors"
+  const labelStyle = "leading-[1.4em] text-[var(--text-primary)] font-sf-ui-regular text-[15px]"
   const iconBgStyle = "w-8 h-8 flex items-center justify-center"
 
   useEffect(() => {
@@ -274,7 +287,7 @@ export default function Setting({
                   )}
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="text-[19px] font-sf-ui-medium text-white leading-tight truncate">
+                  <span className="text-[19px] font-sf-ui-medium text-[var(--text-primary)] leading-tight truncate">
                     {tagText && tagText.trim().length > 0 ? tagText.trim() : 'user'}
                   </span>
                   <div 
@@ -292,7 +305,7 @@ export default function Setting({
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -5 }}
                           transition={{ duration: 0.15, ease: 'easeOut' }}
-                          className="text-[12px] text-white/40 font-sf-ui-light break-all pr-2"
+                          className="text-[12px] text-[var(--text-secondary)] font-sf-ui-light break-all pr-2"
                         >
                           {showRealId ? (userId ?? 'id пользователя') : (prettyId ?? 'id пользователя')}
                         </motion.div>
@@ -353,7 +366,7 @@ export default function Setting({
               <button type="button" className={itemStyle} onClick={() => setShowAppearance(true)}>
                 <div className="flex items-center gap-3">
                   <div className={iconBgStyle}>
-                    <Monitor className="w-[18px] h-[18px] text-white/80" strokeWidth={1.5} />
+                    <Monitor className="w-[18px] h-[18px] text-[var(--text-primary)] opacity-80" strokeWidth={1.5} />
                   </div>
                   <span className={labelStyle}>Вид сайта</span>
                 </div>
@@ -375,6 +388,19 @@ export default function Setting({
                 </div>
               </button>
             </div>
+
+            {/* Placeholder for more settings */}
+            <div className={`${cardStyle} mt-6 opacity-40`}>
+              <div className="flex items-center justify-between px-4 py-[18px]">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-2xl bg-[var(--text-tertiary)]/10" />
+                  <div className="w-24 h-4 bg-[var(--text-tertiary)]/20 rounded-full" />
+                </div>
+                <div className="w-10 h-5 rounded-full bg-[var(--border-light)] relative">
+                  <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -385,11 +411,11 @@ export default function Setting({
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute inset-0 z-[60] bg-[#0A0A0A] flex flex-col"
+              className="absolute inset-0 z-[60] bg-[var(--bg-primary)] flex flex-col"
             >
               {/* Notifications Header */}
               <div 
-                className="flex items-center px-6 bg-[#0A0A0A]"
+                className="flex items-center px-6 bg-[var(--bg-primary)]"
                 style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
               >
                 <button
@@ -401,11 +427,11 @@ export default function Setting({
                     src="/interface/str.svg"
                     alt="back"
                     className="h-[22px] w-[22px]"
-                    style={{ filter: 'brightness(0) invert(1)' }}
+                    style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
                   />
                 </button>
                 <div className="flex-1 text-center pr-6">
-                  <div className="text-[20px] font-bold text-white font-ttc-bold">
+                  <div className="text-[20px] font-bold text-[var(--text-primary)] font-ttc-bold">
                     Уведомления
                   </div>
                 </div>
@@ -416,12 +442,12 @@ export default function Setting({
                 <div className={cardStyle}>
                   <div className="p-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2.5 rounded-2xl ${notificationsEnabled ? 'bg-indigo-500/10 text-indigo-400' : 'bg-white/5 text-white/20'}`}>
+                      <div className={`p-2.5 rounded-2xl ${notificationsEnabled ? 'bg-indigo-500/10 text-indigo-400' : 'bg-[var(--border-light)] text-[var(--text-tertiary)]'}`}>
                         <Bell className="w-6 h-6" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[16px] font-sf-ui-medium text-white">Все уведомления</span>
-                        <span className="text-[13px] text-white/40 font-sf-ui-light">Глобальный переключатель</span>
+                        <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Все уведомления</span>
+                        <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light">Глобальный переключатель</span>
                       </div>
                     </div>
                     <button
@@ -430,7 +456,7 @@ export default function Setting({
                       className={`w-12 h-6 rounded-full transition-all relative overflow-hidden ${
                         notificationsEnabled 
                           ? 'bg-blue-600 shadow-[inset_0_1px_3px_rgba(255,255,255,0.2),0_4px_12px_rgba(37,99,235,0.3)]' 
-                          : 'bg-white/10'
+                          : 'bg-[var(--border-light)]'
                       }`}
                     >
                       {notificationsEnabled && (
@@ -439,7 +465,7 @@ export default function Setting({
                       <motion.div
                         animate={{ x: notificationsEnabled ? 26 : 4 }}
                         className={`absolute top-1 w-4 h-4 rounded-full shadow-sm transition-colors ${
-                          notificationsEnabled ? 'bg-white' : 'bg-white/40'
+                          notificationsEnabled ? 'bg-white' : 'bg-[var(--text-tertiary)]'
                         }`}
                       />
                     </button>
@@ -671,11 +697,11 @@ export default function Setting({
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute inset-0 z-[60] bg-[#0A0A0A] flex flex-col"
+              className="absolute inset-0 z-[60] bg-[var(--bg-primary)] flex flex-col"
             >
               {/* Appearance Header */}
               <div 
-                className="flex items-center px-6 bg-[#0A0A0A]"
+                className="flex items-center px-6 bg-[var(--bg-primary)]"
                 style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
               >
                 <button
@@ -687,11 +713,11 @@ export default function Setting({
                     src="/interface/str.svg"
                     alt="back"
                     className="h-[22px] w-[22px]"
-                    style={{ filter: 'brightness(0) invert(1)' }}
+                    style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
                   />
                 </button>
                 <div className="flex-1 text-center pr-6">
-                  <div className="text-[20px] font-bold text-white font-ttc-bold">
+                  <div className="text-[20px] font-bold text-[var(--text-primary)] font-ttc-bold">
                     Вид сайта
                   </div>
                 </div>
@@ -702,22 +728,21 @@ export default function Setting({
                 <div className={cardStyle}>
                   <div className="p-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl ${isDarkTheme ? 'bg-indigo-500/10 text-indigo-400' : 'bg-orange-500/10 text-orange-400'}`}>
-                        {isDarkTheme ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                      <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                        {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[15px] font-sf-ui-medium text-white">Тёмная тема</span>
-                        <span className="text-[12px] text-white/40 font-sf-ui-light">Переключение темы оформления</span>
+                        <span className="text-[15px] font-sf-ui-medium text-[var(--text-primary)]">Тёмная тема</span>
+                        <span className="text-[12px] text-[var(--text-secondary)] font-sf-ui-light">Переключение темы оформления</span>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setIsDarkTheme(!isDarkTheme)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${isDarkTheme ? 'bg-blue-500' : 'bg-white/10'}`}
+                      className="w-12 h-6 rounded-full bg-[var(--border-light)] relative cursor-not-allowed"
                     >
                       <motion.div
-                        animate={{ x: isDarkTheme ? 26 : 4 }}
-                        className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                        animate={{ x: 26 }}
+                        className="absolute top-1 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30 shadow-sm"
                       />
                     </button>
                   </div>
@@ -729,8 +754,8 @@ export default function Setting({
                     {/* Sounds Toggle */}
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className="text-[16px] font-sf-ui-medium text-white/90">Звуковые эффекты</span>
-                        <span className="text-[13px] text-white/40 font-sf-ui-light">Звуки при лайках и сообщениях</span>
+                        <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Звуковые эффекты</span>
+                        <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light">Звуки при лайках и сообщениях</span>
                       </div>
                       <button
                         type="button"
@@ -738,7 +763,7 @@ export default function Setting({
                         className={`w-10 h-5 rounded-full transition-all relative overflow-hidden ${
                           soundsEnabled 
                             ? 'bg-blue-600/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' 
-                            : 'bg-white/5'
+                            : 'bg-[var(--border-light)]'
                         }`}
                       >
                         {soundsEnabled && (
@@ -747,7 +772,7 @@ export default function Setting({
                         <motion.div
                           animate={{ x: soundsEnabled ? 22 : 2 }}
                           className={`absolute top-0.5 w-4 h-4 rounded-full shadow-sm transition-colors ${
-                            soundsEnabled ? 'bg-white' : 'bg-white/20'
+                            soundsEnabled ? 'bg-white' : 'bg-[var(--text-tertiary)]'
                           }`}
                         />
                       </button>
@@ -756,8 +781,8 @@ export default function Setting({
                     {/* Haptics Toggle */}
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className="text-[16px] font-sf-ui-medium text-white/90">Тактильная отдача</span>
-                        <span className="text-[13px] text-white/40 font-sf-ui-light">Вибрация при взаимодействиях</span>
+                        <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Тактильная отдача</span>
+                        <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light">Вибрация при взаимодействиях</span>
                       </div>
                       <button
                         type="button"
@@ -765,7 +790,7 @@ export default function Setting({
                         className={`w-10 h-5 rounded-full transition-all relative overflow-hidden ${
                           hapticEnabled 
                             ? 'bg-blue-600/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' 
-                            : 'bg-white/5'
+                            : 'bg-[var(--border-light)]'
                         }`}
                       >
                         {hapticEnabled && (
@@ -774,7 +799,7 @@ export default function Setting({
                         <motion.div
                           animate={{ x: hapticEnabled ? 22 : 2 }}
                           className={`absolute top-0.5 w-4 h-4 rounded-full shadow-sm transition-colors ${
-                            hapticEnabled ? 'bg-white' : 'bg-white/20'
+                            hapticEnabled ? 'bg-white' : 'bg-[var(--text-tertiary)]'
                           }`}
                         />
                       </button>
@@ -787,8 +812,8 @@ export default function Setting({
                   <div className="px-5 py-6">
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className="text-[16px] font-sf-ui-medium text-white/90">Категории</span>
-                        <span className="text-[13px] text-white/40 font-sf-ui-light">Карусель на главной странице</span>
+                        <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Категории</span>
+                        <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light">Карусель на главной странице</span>
                       </div>
                       <button
                         type="button"
@@ -796,7 +821,7 @@ export default function Setting({
                         className={`w-10 h-5 rounded-full transition-all relative overflow-hidden ${
                           showCategories 
                             ? 'bg-blue-600/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' 
-                            : 'bg-white/5'
+                            : 'bg-[var(--border-light)]'
                         }`}
                       >
                         {showCategories && (
@@ -805,10 +830,34 @@ export default function Setting({
                         <motion.div
                           animate={{ x: showCategories ? 22 : 2 }}
                           className={`absolute top-0.5 w-4 h-4 rounded-full shadow-sm transition-colors ${
-                            showCategories ? 'bg-white' : 'bg-white/20'
+                            showCategories ? 'bg-white' : 'bg-[var(--text-tertiary)]'
                           }`}
                         />
                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Placeholder/Future Features Card */}
+                <div className={`${cardStyle} opacity-40`}>
+                  <div className="px-5 py-6 space-y-7">
+                    <div className="flex items-center justify-between">
+                      <div className="w-32 h-4 bg-[var(--text-tertiary)]/20 rounded-full" />
+                      <div className="w-10 h-5 rounded-full bg-[var(--border-light)] relative">
+                        <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="w-24 h-4 bg-[var(--text-tertiary)]/20 rounded-full" />
+                      <div className="w-10 h-5 rounded-full bg-[var(--border-light)] relative">
+                        <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="w-40 h-4 bg-[var(--text-tertiary)]/20 rounded-full" />
+                      <div className="w-10 h-5 rounded-full bg-[var(--border-light)] relative">
+                        <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30" />
+                      </div>
                     </div>
                   </div>
                 </div>

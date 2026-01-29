@@ -79,6 +79,19 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [supportOpen, setSupportOpen] = useState(false)
   const [navVisible, setNavVisible] = useState(true)
   const [profileToastActive, setProfileToastActive] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-theme')
+      if (saved === 'light' || saved === 'dark') setTheme(saved)
+    }
+    const handleThemeUpdate = (e: Event) => {
+      setTheme((e as CustomEvent).detail)
+    }
+    window.addEventListener('theme-updated', handleThemeUpdate)
+    return () => window.removeEventListener('theme-updated', handleThemeUpdate)
+  }, [])
 
   useEffect(() => {
     const handleToastVisible = (e: Event) => {
@@ -448,11 +461,11 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     return () => window.removeEventListener('resize', update)
   }, [tab])
   return (
-    <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, willChange: 'transform' }}>
+    <div className="fixed inset-0 flex w-full items-center justify-center bg-[var(--bg-primary)] overflow-hidden">
+      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, fontSmooth: 'antialiased', WebkitFontSmoothing: 'antialiased' } as React.CSSProperties}>
         <div
           className="absolute left-0 top-0 h-[812px] w-[375px]"
-          style={{ backgroundColor: '#0A0A0A' }}
+          style={{ backgroundColor: 'var(--bg-primary)' }}
         />
 
         {tab !== 'profile' ? (
@@ -460,7 +473,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             className="absolute left-0 w-full px-6 flex items-center justify-between"
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
           >
-            <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
+            <div className="text-[28px] font-bold leading-[1em] text-[var(--text-primary)] font-ttc-bold">
               {tab === 'ads' ? 'Объявления' : 'Профиль'}
             </div>
             <div className="flex items-center gap-4">
@@ -474,13 +487,14 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   src="/interface/search-02.svg"
                   alt="search"
                   className="h-[24px] w-[24px]"
+                  style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
                 />
               </button>
             </div>
           </div>
         ) : (
           <div
-            className="absolute left-0 w-full bg-[#0A0A0A]"
+            className="absolute left-0 w-full bg-[var(--bg-primary)]"
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
           >
             <div className="relative h-full w-full">
@@ -501,6 +515,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                     src="/interface/pencil-02.svg"
                     alt="edit"
                     className="h-[22px] w-[22px]"
+                    style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
                   />
                 </button>
               ) : (
@@ -514,6 +529,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                     src="/interface/chevron-left.svg"
                     alt="back"
                     className="h-[22px] w-[22px]"
+                    style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
                   />
                 </button>
               )}
@@ -535,12 +551,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                     src="/interface/dot-vertical.svg"
                     alt="menu"
                     className="h-[22px] w-[22px]"
+                    style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
                   />
                 </button>
               </div>
               <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
                 <div 
-                  className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold transition-opacity duration-200"
+                  className="text-[28px] font-bold leading-[1em] text-[var(--text-primary)] font-ttc-bold transition-opacity duration-200"
                   style={{ opacity: profileToastActive ? 0 : 1 }}
                 >
                   Профиль

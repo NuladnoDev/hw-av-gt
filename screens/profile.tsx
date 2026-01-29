@@ -94,8 +94,21 @@ export default function Profile({
   const [profileInfoLoading, setProfileInfoLoading] = useState(true)
   const [isVerified, setIsVerified] = useState(false)
   const [isQuality, setIsQuality] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-theme')
+      if (saved === 'light' || saved === 'dark') setTheme(saved)
+    }
+    const handleThemeUpdate = (e: Event) => {
+      setTheme((e as CustomEvent).detail)
+    }
+    window.addEventListener('theme-updated', handleThemeUpdate)
+    return () => window.removeEventListener('theme-updated', handleThemeUpdate)
+  }, [])
 
   const showToast = (message: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
@@ -803,28 +816,28 @@ export default function Profile({
 
   if (isOwnProfile && !isAuthed) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center bg-[#0A0A0A]">
-        <div className="mb-6 flex h-[120px] w-[120px] items-center justify-center rounded-full bg-white/5">
+      <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center bg-[var(--bg-primary)]">
+        <div className="mb-6 flex h-[120px] w-[120px] items-center justify-center rounded-full bg-[var(--bg-secondary)]">
           <img
             src="/interface/adv.svg"
             alt="sales"
             className="h-16 w-16 opacity-80"
-            style={{ filter: 'invert(1)' }}
+            style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }}
           />
         </div>
-        <h2 className="text-[20px] leading-[1.3] font-sf-ui-medium text-white mb-8">
+        <h2 className="text-[20px] leading-[1.3] font-sf-ui-medium text-[var(--text-primary)] mb-8">
           Зарегистрируйтесь и пользуйтесь полным функционалом сайта!
         </h2>
         <button
           type="button"
-          className="h-[48px] w-full rounded-[12px] bg-white text-black font-vk-demi text-[16px] mb-4"
+          className="h-[48px] w-full rounded-[12px] bg-[var(--text-primary)] text-[var(--bg-primary)] font-vk-demi text-[16px] mb-4"
           onClick={() => window.dispatchEvent(new Event('trigger-auth'))}
         >
           Создать аккаунт
         </button>
         <button
           type="button"
-          className="text-[14px] text-white/80 font-sf-ui-light"
+          className="text-[14px] text-[var(--text-secondary)] font-sf-ui-light"
           onClick={() => window.dispatchEvent(new CustomEvent('trigger-auth', { detail: { screen: 'login' } }))}
         >
           У меня уже есть аккаунт. Войти
@@ -861,15 +874,17 @@ export default function Profile({
             initial={{ y: -50, opacity: 0, x: '-50%' }}
             animate={{ y: -46, opacity: 1, x: '-50%' }}
             exit={{ y: -50, opacity: 0, x: '-50%' }}
-            className="absolute left-1/2 z-[9999] flex items-center justify-center px-5 py-2 backdrop-blur-3xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+            className="absolute left-1/2 z-[9999] flex items-center justify-center px-5 py-2 backdrop-blur-3xl border border-[var(--border-light)] shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
             style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
+              background: theme === 'dark' 
+                ? 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)'
+                : 'linear-gradient(135deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.03) 100%)',
               borderRadius: '20px',
               top: '10px',
               minWidth: '180px',
             }}
           >
-            <span className="text-white text-[14px] font-sf-ui-semibold tracking-tight whitespace-nowrap">
+            <span className="text-[var(--text-primary)] text-[14px] font-sf-ui-semibold tracking-tight whitespace-nowrap">
               {toast.message}
             </span>
           </motion.div>
@@ -879,7 +894,7 @@ export default function Profile({
         className="absolute left-0 w-full"
         style={{ top: '0px', height: 'var(--profile-cover-height)' }}
       >
-        <div className="h-full w-full" style={{ background: '#0A0A0A' }} />
+        <div className="h-full w-full" style={{ background: 'var(--bg-primary)' }} />
       </div>
       <div
         className="absolute left-1/2 -translate-x-1/2 rounded-full overflow-hidden"
@@ -887,8 +902,8 @@ export default function Profile({
           width: 'var(--profile-avatar-size)',
           height: 'var(--profile-avatar-size)',
           top: 'calc(var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) + var(--profile-avatar-top-offset, 0px))',
-          boxShadow: `0 0 var(--profile-avatar-glow-size) var(--profile-avatar-glow-color), 0 4px 18px rgba(0,0,0,0.35)`,
-          background: avatarUrl ? '#0A0A0A' : gradient,
+          boxShadow: theme === 'dark' ? `0 0 20px rgba(255,255,255,0.15), 0 4px 18px rgba(0,0,0,0.35)` : `0 4px 18px rgba(0,0,0,0.1)`,
+          background: avatarUrl ? 'var(--bg-primary)' : gradient,
         }}
       >
         {avatarUrl ? (
@@ -910,8 +925,9 @@ export default function Profile({
               alt="add"
               className="h-[40px] w-[40px]"
               style={{
-                filter:
-                  'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
+                filter: theme === 'dark' 
+                  ? 'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)'
+                  : 'none',
                 opacity: 0.9,
               }}
             />
@@ -940,7 +956,7 @@ export default function Profile({
                 {isQuality && <QualityBadge size={22} />}
               </div>
               
-              <div className="leading-[2.3em] text-white font-ttc-bold" style={{ fontSize: 'var(--profile-name-size)' }}>
+              <div className="leading-[2.3em] text-[var(--text-primary)] font-ttc-bold" style={{ fontSize: 'var(--profile-name-size)' }}>
                 {tagText && tagText.trim().length > 0 ? tagText : 'user'}
               </div>
 
@@ -958,8 +974,9 @@ export default function Profile({
                       alt="edit-tag"
                       className="h-[18px] w-[18px]"
                       style={{
-                        filter:
-                          'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)',
+                        filter: theme === 'dark'
+                          ? 'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)'
+                          : 'none',
                       }}
                     />
                   </button>
@@ -996,7 +1013,7 @@ export default function Profile({
                       src="/interface/trash-03.svg"
                       alt="trash"
                       className="h-[18px] w-[18px]"
-                      style={{ filter: 'invert(1) brightness(0.7)' }}
+                      style={{ filter: theme === 'dark' ? 'invert(1) brightness(0.7)' : 'brightness(0.5)' }}
                     />
                   </button>
                 )}
@@ -1019,7 +1036,7 @@ export default function Profile({
                     if (next.length > 0) saveTag(next)
                   }
                 }}
-                className="h-[40px] w-[220px] border border-[#2B2B2B] bg-[#111111] px-3 text-[16px] leading-[1.4em] text-white outline-none"
+                className="h-[40px] w-[220px] border border-[var(--border-light)] bg-[var(--bg-secondary)] px-3 text-[16px] leading-[1.4em] text-[var(--text-primary)] outline-none"
                 style={{ borderRadius: 'var(--profile-border-radius)' }}
               />
             </div>

@@ -1,0 +1,67 @@
+:root {
+  /* Common variables (keep from globals.css) */
+  --home-header-offset: 10px;
+  --nav-bottom-offset: 12px;
+  --bottom-nav-height: 96px;
+  --bottom-nav-pill-height: 64px;
+  --profile-cover-height: 80px;
+  --profile-avatar-size: 96px;
+}
+
+/* Light Theme */
+[data-theme='light'] {
+  --bg-primary: #F2F2F7;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #E5E5EA;
+  
+  --text-primary: #000000;
+  --text-secondary: #3C3C43;
+  --text-tertiary: #8E8E93;
+  
+  --accent-blue: #007AFF;
+  --accent-green: #34C759;
+  
+  --border-light: rgba(0, 0, 0, 0.05);
+  --border-medium: rgba(0, 0, 0, 0.1);
+  
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shine: rgba(255, 255, 255, 0.4);
+  
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  
+  /* Profile specific */
+  --profile-empty-button-bg: #E5E5EA;
+  --profile-empty-button-text-color: #000000;
+  --profile-edit-input-bg: #FFFFFF;
+  --profile-avatar-glow-color: rgba(0,0,0,0.1);
+}
+
+/* Dark Theme (Default) */
+[data-theme='dark'], :root:not([data-theme='light']) {
+  --bg-primary: #0A0A0A;
+  --bg-secondary: #111111;
+  --bg-tertiary: #1C1C1E;
+  
+  --text-primary: #FFFFFF;
+  --text-secondary: #A8A8A8;
+  --text-tertiary: #636366;
+  
+  --accent-blue: #007AFF;
+  --accent-green: #6EBC3D;
+  
+  --border-light: rgba(255, 255, 255, 0.05);
+  --border-medium: rgba(255, 255, 255, 0.1);
+  
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shine: rgba(255, 255, 255, 0.1);
+  
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  
+  /* Profile specific */
+  --profile-empty-button-bg: #111111;
+  --profile-empty-button-text-color: #ffffff;
+  --profile-edit-input-bg: #111111;
+  --profile-avatar-glow-color: rgba(255,255,255,0.35);
+}

@@ -208,6 +208,19 @@ export function AdCard({
   specs,
 }: AdCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-theme')
+      if (saved === 'light' || saved === 'dark') setTheme(saved)
+    }
+    const handleThemeUpdate = (e: Event) => {
+      setTheme((e as CustomEvent).detail)
+    }
+    window.addEventListener('theme-updated', handleThemeUpdate)
+    return () => window.removeEventListener('theme-updated', handleThemeUpdate)
+  }, [])
 
   const displayTitle =
     title.length > ADS_TITLE_MAX_LENGTH
@@ -232,7 +245,7 @@ export function AdCard({
       className="relative w-full"
     >
       <div
-        className="relative cursor-pointer overflow-hidden rounded-2xl bg-[#080808] group active:scale-[0.98] transition-all duration-200"
+        className="relative cursor-pointer overflow-hidden rounded-2xl bg-[var(--bg-secondary)] group active:scale-[0.98] transition-all duration-200"
         style={{
           minHeight: `calc(160px + var(--ad-card-info-height, 84px))`,
           borderRadius: '18px',
@@ -302,25 +315,25 @@ export function AdCard({
 
         {/* Info Section */}
         <div
-          className="relative flex flex-col p-3.5 bg-[#080808]/40 backdrop-blur-sm border-t border-white/[0.03]"
+          className="relative flex flex-col p-3.5 bg-[var(--bg-secondary)] backdrop-blur-sm border-t border-[var(--border-light)]"
           style={{ minHeight: 'var(--ad-card-info-height, 84px)' }}
         >
           <div className="flex flex-col gap-0.5">
             <h3
-              className="line-clamp-1 text-white font-ttc-demibold tracking-tight translate-y-[1px]"
+              className="line-clamp-1 text-[var(--text-primary)] font-ttc-demibold tracking-tight translate-y-[1px]"
               style={{ fontSize: 16, lineHeight: '20px' }}
             >
               {displayTitle}
             </h3>
             
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-white/40 font-sf-ui-medium text-[11px] uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-[var(--text-secondary)] font-sf-ui-medium text-[11px] uppercase tracking-wider">
                 {condition && (
                   <span className={
                     condition === 'Новое' ? 'text-emerald-400' : 
                     condition === 'Отличное' ? 'text-green-400' :
                     condition === 'Хорошее' ? 'text-yellow-400' :
-                    condition === 'Не очень' ? 'text-orange-400' : 'text-white/40'
+                    condition === 'Не очень' ? 'text-orange-400' : 'text-[var(--text-secondary)]'
                   }>
                     {condition}
                   </span>
@@ -336,14 +349,14 @@ export function AdCard({
                       setIsExpanded(!isExpanded)
                     }}
                   >
-                    <span className="text-white/40 font-sf-ui-medium text-[11px] uppercase tracking-wider">Детали</span>
+                    <span className="text-[var(--text-secondary)] font-sf-ui-medium text-[11px] uppercase tracking-wider">Детали</span>
                     <motion.svg 
                       width="8" 
                       height="8" 
                       viewBox="0 0 24 24" 
                       fill="none" 
                       xmlns="http://www.w3.org/2000/svg"
-                      className="text-white/40"
+                      className="text-[var(--text-secondary)]"
                       animate={{ rotate: isExpanded ? 180 : 0 }}
                     >
                       <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -365,15 +378,15 @@ export function AdCard({
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                 className="overflow-hidden"
               >
-                <div className="flex flex-col gap-1.5 pt-2 border-t border-white/[0.05]">
+                <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--border-light)]">
                   {specs.slice(0, 4).map((spec, idx) => (
                     <div key={idx} className="flex items-center justify-between text-[11px]">
-                      <span className="text-white/30 font-sf-ui-light line-clamp-1 mr-2">{spec.label}</span>
-                      <span className="text-white/70 font-sf-ui-medium text-right line-clamp-1">{spec.value}</span>
+                      <span className="text-[var(--text-secondary)] opacity-60 font-sf-ui-light line-clamp-1 mr-2">{spec.label}</span>
+                      <span className="text-[var(--text-primary)] opacity-80 font-sf-ui-medium text-right line-clamp-1">{spec.value}</span>
                     </div>
                   ))}
                   {specs.length > 4 && (
-                    <div className="text-[10px] text-white/20 font-sf-ui-light italic mt-0.5">
+                    <div className="text-[10px] text-[var(--text-secondary)] opacity-40 font-sf-ui-light italic mt-0.5">
                       + ещё {specs.length - 4}
                     </div>
                   )}
@@ -383,11 +396,11 @@ export function AdCard({
           </AnimatePresence>
 
           <div className="flex items-baseline justify-between mt-3">
-            <div className="text-[19px] text-white font-ttc-demibold tracking-tight translate-y-[1px]">
+            <div className="text-[19px] text-[var(--text-primary)] font-ttc-demibold tracking-tight translate-y-[1px]">
               {Number(price).toLocaleString('ru-RU')} <span className="text-[15px] font-sf-ui-medium opacity-70">₽</span>
             </div>
             {publishedText && (
-              <span className="text-[11px] text-white/30 font-sf-ui-medium uppercase">
+              <span className="text-[11px] text-[var(--text-secondary)] opacity-50 font-sf-ui-medium uppercase">
                 {publishedText}
               </span>
             )}
@@ -402,41 +415,57 @@ export function AdCard({
 }
 
 export function AdCardSkeleton() {
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-theme')
+      if (saved === 'light' || saved === 'dark') setTheme(saved)
+    }
+    const handleThemeUpdate = (e: Event) => {
+      setTheme((e as CustomEvent).detail)
+    }
+    window.addEventListener('theme-updated', handleThemeUpdate)
+    return () => window.removeEventListener('theme-updated', handleThemeUpdate)
+  }, [])
+
   return (
     <div className="relative w-full">
       <div
-        className="relative overflow-hidden rounded-2xl bg-[#080808]"
+        className="relative overflow-hidden rounded-2xl bg-[var(--bg-secondary)]"
         style={{
           height: `calc(160px + var(--ad-card-info-height, 80px))`,
           borderRadius: '16px',
         }}
       >
-        <div className="relative h-[160px] overflow-hidden bg-[#0A0A0A]">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+        <div className="relative h-[160px] overflow-hidden bg-[var(--bg-primary)] opacity-50">
+          <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
         </div>
         <div
-          className="relative flex flex-col justify-between bg-gradient-to-b from-[#090909]/95 to-[#090909] p-3"
-          style={{ height: 'var(--ad-card-info-height, 80px)' }}
+          className="relative flex flex-col justify-between p-3"
+          style={{ 
+            height: 'var(--ad-card-info-height, 80px)',
+            background: theme === 'dark' 
+              ? 'linear-gradient(to bottom, rgba(9,9,9,0.95), rgba(9,9,9,1))'
+              : 'linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,1))'
+          }}
         >
           <div className="space-y-2">
-            <div className="h-4 w-3/4 rounded bg-[#121212] overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+            <div className={`h-4 w-3/4 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+              <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-16 rounded bg-[#121212] overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+              <div className={`h-3 w-16 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+                <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
               </div>
-              <div className="h-3 w-20 rounded bg-[#121212] overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+              <div className={`h-3 w-20 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+                <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
               </div>
             </div>
           </div>
-          <div className="mt-2 h-5 w-24 rounded bg-[#121212] overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+          <div className={`mt-2 h-5 w-24 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+            <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
           </div>
-          
-          {/* Category Carousel */}
-
         </div>
       </div>
     </div>
@@ -468,6 +497,19 @@ export default function Ads({
   const [authWarningLocked, setAuthWarningLocked] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeFilters, setActiveFilters] = useState<FilterState | null>(null)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-theme')
+      if (saved === 'light' || saved === 'dark') setTheme(saved)
+    }
+    const handleThemeUpdate = (e: Event) => {
+      setTheme((e as CustomEvent).detail)
+    }
+    window.addEventListener('theme-updated', handleThemeUpdate)
+    return () => window.removeEventListener('theme-updated', handleThemeUpdate)
+  }, [])
 
   const [userCity, setUserCity] = useState<string | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
@@ -762,21 +804,25 @@ export default function Ads({
               style={{
                 width: 355,
                 borderRadius: 24,
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+                border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
                 paddingLeft: 16,
                 paddingRight: 0,
               }}
             >
               {/* Glass Shine Effect */}
               <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute inset-0 opacity-10 bg-gradient-to-tr from-transparent via-white/5 to-white/10" />
+                <div className={`absolute inset-0 opacity-10 ${theme === 'dark' ? 'bg-gradient-to-tr from-transparent via-white/5 to-white/10' : 'bg-gradient-to-tr from-transparent via-black/5 to-black/10'}`} />
                 <motion.div 
                   animate={{
                     opacity: isSearchActive ? 0.15 : 0.05,
                     background: isSearchActive 
-                      ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)'
-                      : 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 70%)'
+                      ? theme === 'dark' 
+                        ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)'
+                        : 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.1) 0%, transparent 70%)'
+                      : theme === 'dark'
+                        ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 70%)'
+                        : 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.05) 0%, transparent 70%)'
                   }}
                   className="absolute inset-0 transition-opacity duration-300"
                 />
@@ -796,7 +842,12 @@ export default function Ads({
                 <img
                   src="/interface/search-02.svg"
                   alt=""
-                  style={{ width: 22, height: 22, marginRight: 8 }}
+                  style={{ 
+                    width: 22, 
+                    height: 22, 
+                    marginRight: 8,
+                    filter: theme === 'dark' ? 'none' : 'invert(1) opacity(0.5)'
+                  }}
                 />
                 <input
                   value={searchQuery}
@@ -806,7 +857,7 @@ export default function Ads({
                   style={{
                     fontSize: 16,
                     lineHeight: '18px',
-                    color: '#A8A8A8',
+                    color: theme === 'dark' ? '#A8A8A8' : '#3C3C43',
                   }}
                   onFocus={() => setIsSearchActive(true)}
                   onBlur={() => setIsSearchActive(false)}
@@ -821,7 +872,7 @@ export default function Ads({
                       width: 135,
                       height: 54,
                         borderRadius: 0,
-                        borderLeft: '1px solid rgba(255,255,255,0.1)',
+                        borderLeft: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
                         backgroundColor: 'transparent',
                       }}
                     initial={{ opacity: 0, x: 24 }}
@@ -833,14 +884,19 @@ export default function Ads({
                     <img
                       src="/interface/filter.svg"
                       alt=""
-                      style={{ width: 24, height: 24, marginRight: 8 }}
+                      style={{ 
+                        width: 24, 
+                        height: 24, 
+                        marginRight: 8,
+                        filter: theme === 'dark' ? 'none' : 'invert(1) opacity(0.8)'
+                      }}
                     />
                     <span
                       className="font-vk-demi"
                       style={{
                         fontSize: 15,
                         lineHeight: '19.68px',
-                        color: '#FFFFFF',
+                        color: theme === 'dark' ? '#FFFFFF' : '#000000',
                       }}
                     >
                       Фильтры
@@ -865,7 +921,7 @@ export default function Ads({
                 <div 
                   className="absolute left-[-24px] top-0 bottom-0 z-10 pointer-events-none"
                   style={{
-                    background: 'linear-gradient(to right, #0A0A0A, transparent)',
+                    background: 'linear-gradient(to right, var(--bg-primary), transparent)',
                     width: 48,
                   }}
                 />
@@ -873,7 +929,7 @@ export default function Ads({
                 <div 
                   className="absolute right-[-24px] top-0 bottom-0 z-10 pointer-events-none"
                   style={{
-                    background: 'linear-gradient(to left, #0A0A0A, transparent)',
+                    background: 'linear-gradient(to left, var(--bg-primary), transparent)',
                     width: 48,
                   }}
                 />
@@ -899,22 +955,22 @@ export default function Ads({
                             ? 'opacity-40 grayscale cursor-not-allowed' 
                             : selectedCategory === category.name 
                               ? 'scale-105 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.3)]' 
-                              : 'hover:scale-105 hover:bg-white/[0.05]'
+                              : theme === 'dark' ? 'hover:scale-105 hover:bg-white/[0.05]' : 'hover:scale-105 hover:bg-black/[0.05]'
                         } active:scale-95`}
                         style={{
                           backgroundColor: category.disabled 
-                            ? 'rgba(255,255,255,0.03)' 
+                            ? theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'
                             : selectedCategory === category.name 
                               ? `${category.color}40` 
                               : `${category.color}15`,
                           border: `1px solid ${category.disabled 
-                            ? 'rgba(255,255,255,0.08)' 
+                            ? theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
                             : selectedCategory === category.name 
                               ? category.color 
                               : `${category.color}40`}`,
                           color: category.disabled 
-                            ? 'rgba(255,255,255,0.3)' 
-                            : '#FFFFFF',
+                            ? theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
+                            : theme === 'dark' ? '#FFFFFF' : '#000000',
                         }}
                         whileHover={category.disabled ? {} : { y: -1 }}
                         whileTap={category.disabled ? {} : { scale: 0.95 }}
@@ -927,7 +983,7 @@ export default function Ads({
                         {/* Glass Shine Effect */}
                         {!category.disabled && (
                           <div className="absolute inset-0 pointer-events-none">
-                            <div className={`absolute inset-0 opacity-20 bg-gradient-to-tr from-transparent via-white/10 to-white/20`} />
+                            <div className={`absolute inset-0 opacity-20 ${theme === 'dark' ? 'bg-gradient-to-tr from-transparent via-white/10 to-white/20' : 'bg-gradient-to-tr from-transparent via-black/10 to-black/20'}`} />
                             {selectedCategory === category.name && (
                               <motion.div 
                                 layoutId="category-glow"
