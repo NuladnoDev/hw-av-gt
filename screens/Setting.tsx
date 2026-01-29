@@ -83,10 +83,11 @@ export default function Setting({
         let email: string | null = null
         let tagFromDb: string | undefined
         let avatarFromDb: string | undefined
+        let supabaseId: string | null = null
 
         if (client) {
           const { data } = await client.auth.getUser()
-          const supabaseId = data.user?.id ?? null
+          supabaseId = data.user?.id ?? null
           email = data.user?.email ?? null
           if (supabaseId) {
             const { data: prof } = await client
