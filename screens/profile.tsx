@@ -9,6 +9,7 @@ import { AdCard, AdCardSkeleton, loadAdsFromStorage, deleteAdById, StoredAd } fr
 import AdsEdit from './Ads_Edit'
 import VerifiedBadge from '../components/VerifiedBadge'
 import QualityBadge from '../components/QualityBadge'
+import ModeratorBadge from '../components/ModeratorBadge'
 
 function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -94,6 +95,7 @@ export default function Profile({
   const [profileInfoLoading, setProfileInfoLoading] = useState(true)
   const [isVerified, setIsVerified] = useState(false)
   const [isQuality, setIsQuality] = useState(false)
+  const [isModerator, setIsModerator] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -318,7 +320,7 @@ export default function Profile({
       try {
         const { data: prof, error: err } = await client
           .from('profiles')
-          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts, is_verified, is_quality')
+          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts, is_verified, is_quality, is_moderator')
           .eq('id', idLocal)
           .maybeSingle()
         if (err || !prof) {
@@ -326,6 +328,7 @@ export default function Profile({
         }
         setIsVerified(!!prof.is_verified)
         setIsQuality(!!prof.is_quality)
+        setIsModerator(!!prof.is_moderator)
         const tagFromDb = (prof.tag as string | undefined) ?? undefined
         const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
         const descFromDb = (prof.description as string | undefined) ?? ''
@@ -534,10 +537,11 @@ export default function Profile({
   }, [profileTab, userId, viewUserId, viewerId])
   useEffect(() => {
     const handleUpdated = (e: Event) => {
-      const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string; contacts?: Contact[]; is_verified?: boolean; is_quality?: boolean }>
+      const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string; contacts?: Contact[]; is_verified?: boolean; is_quality?: boolean; is_moderator?: boolean }>
       if (typeof ev.detail?.tag === 'string') setTagText(ev.detail.tag)
       if (typeof ev.detail?.is_verified === 'boolean') setIsVerified(ev.detail.is_verified)
       if (typeof ev.detail?.is_quality === 'boolean') setIsQuality(ev.detail.is_quality)
+      if (typeof ev.detail?.is_moderator === 'boolean') setIsModerator(ev.detail.is_moderator)
       if (typeof ev.detail?.avatar_url === 'string') setAvatarUrl(ev.detail.avatar_url)
       if (typeof ev.detail?.description === 'string') setDescription(ev.detail.description)
       if (typeof ev.detail?.age === 'string') setAge(ev.detail.age)
@@ -953,6 +957,7 @@ export default function Profile({
             <div className="w-full flex items-center justify-center" style={{ marginTop: 'var(--profile-name-margin-top)' }}>
               {/* Левый пустой блок для симметрии (ширина кнопок + отступ) */}
               <div className="flex-1 flex justify-end items-center gap-2 mr-4">
+                {isModerator && <ModeratorBadge size={22} />}
                 {isQuality && <QualityBadge size={22} />}
               </div>
               

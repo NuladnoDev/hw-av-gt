@@ -2,6 +2,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { getSupabase, clearLocalAuth, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
+import ModeratorBadge from '../components/ModeratorBadge'
+import QualityBadge from '../components/QualityBadge'
+import VerifiedBadge from '../components/VerifiedBadge'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  User, 
+  MapPin, 
+  Briefcase, 
+  Heart, 
+  Hash, 
+  Settings, 
+  LogOut, 
+  ChevronRight,
+  Sparkles,
+  Info,
+  AlertTriangle
+} from 'lucide-react'
 
 export default function ProfileEdit({
   onClose,
@@ -23,6 +40,9 @@ export default function ProfileEdit({
   const [city, setCity] = useState<string>('')
   const [political, setPolitical] = useState<string>('')
   const [hobbies, setHobbies] = useState<string>('')
+  const [isVerified, setIsVerified] = useState(false)
+  const [isQuality, setIsQuality] = useState(false)
+  const [isModerator, setIsModerator] = useState(false)
   const [originalTag, setOriginalTag] = useState<string>('')
   const [originalDescription, setOriginalDescription] = useState<string>('')
   const [originalAge, setOriginalAge] = useState<string>('')
@@ -33,6 +53,7 @@ export default function ProfileEdit({
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [selectorClosing, setSelectorClosing] = useState(false)
   const [selectorType, setSelectorType] = useState<'gender' | 'city' | null>(null)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [cityQuery, setCityQuery] = useState('')
   const [cityResults, setCityResults] = useState<string[]>([])
   const [cityLoading, setCityLoading] = useState(false)
@@ -130,6 +151,9 @@ export default function ProfileEdit({
               city?: string
               political?: string
               hobbies?: string
+              is_verified?: boolean
+              is_quality?: boolean
+              is_moderator?: boolean
             }
           >)
         : {}
@@ -137,6 +161,9 @@ export default function ProfileEdit({
       if (!localProf && altId && altId !== id) {
         localProf = profMap[altId]
       }
+      setIsVerified(localProf?.is_verified ?? false)
+      setIsQuality(localProf?.is_quality ?? false)
+      setIsModerator(localProf?.is_moderator ?? false)
       const baseTag =
         localProf?.tag ??
         authTag ??
@@ -170,10 +197,14 @@ export default function ProfileEdit({
       try {
         const { data: prof, error: profError } = await client
           .from('profiles')
-          .select('tag, avatar_url, description, age, gender, city, political, hobbies')
+          .select('tag, avatar_url, description, age, gender, city, political, hobbies, is_verified, is_quality, is_moderator')
           .eq('id', dbId)
           .maybeSingle()
         if (profError || !prof) return
+        
+        setIsVerified(prof.is_verified ?? false)
+        setIsQuality(prof.is_quality ?? false)
+        setIsModerator(prof.is_moderator ?? false)
         const tagFromDb = (prof.tag as string | undefined) ?? undefined
         const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
         const descFromDb = (prof.description as string | undefined) ?? ''
@@ -491,204 +522,239 @@ export default function ProfileEdit({
 
   return (
     <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
-      <div className="relative h-[812px] w-[375px]" style={{ 
-        transform: `scale(${scale})`,
-        '--profile-cover-height': '90px',
-        '--profile-avatar-size': '110px',
-        '--profile-avatar-top-offset': '0px',
-        '--profile-avatar-glow-size': '20px',
-        '--profile-avatar-glow-color': 'rgba(255,255,255,0.1)',
-        '--profile-edit-bottom-height': '80px',
-        '--profile-name-size': '28px',
-        '--profile-name-margin-top': '6px',
-      } as React.CSSProperties}>
-        <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
-
-        <div
-          className="absolute left-0 w-full bg-[#0A0A0A] z-10"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
-        >
-          <div className="relative h-full w-full">
-            <button
-              type="button"
-              onClick={() => {
-                setTagText(originalTag ?? '')
-                setDescription(originalDescription ?? '')
-                setAge(originalAge ?? '')
-                setGender(originalGender ?? '')
-                setPolitical(originalPolitical ?? '')
-                setHobbies(originalHobbies ?? '')
+      <div className="relative h-full w-full max-w-[430px] bg-[#0A0A0A] flex flex-col">
+        {/* Header */}
+        <div className="safe-top h-[64px] flex items-center justify-between px-6 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-20">
+          <button
+            type="button"
+            onClick={() => {
+              if (dirty) {
+                setShowConfirm(true)
+              } else {
                 onClose()
-              }}
-              className="absolute left-6 top-0 flex h-full items-center"
-              aria-label="Закрыть без сохранения"
-            >
-              <img
-                src="/interface/x-01.svg"
-                alt="close"
-                className="h-[22px] w-[22px]"
-                style={{ filter: 'invert(1) brightness(1.6)' }}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                await saveTag()
-                await saveAbout()
-                if (tagText.trim().length > 0) {
-                  setOriginalTag(tagText.trim())
-                }
-                setOriginalDescription(description ?? '')
-                setOriginalAge(age ?? '')
-                setOriginalGender(gender ?? '')
-                setOriginalPolitical(political ?? '')
-                setOriginalHobbies(hobbies ?? '')
-                const ev = new CustomEvent('profile-edit-closed', { detail: { tab: 'about' } })
-                window.dispatchEvent(ev)
-                onClose()
-              }}
-              className="absolute right-6 top-0 flex h-full items-center"
-              disabled={!dirty}
-            >
-              <span className={`text-[16px] leading-[1em] ${dirty ? 'text-white' : 'text-white/60'} font-sf-ui-light`}>Сохр.</span>
-            </button>
-            <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
-              <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
-                Профиль
-              </div>
-            </div>
-            <div className="absolute left-0 bottom-[-0.5px] w-full" style={{ height: '0.5px', background: 'rgba(255,255,255,0.1)' }} />
-          </div>
-        </div>
-        <input
-          ref={avatarInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => handleAvatarFile(e.target.files)}
-        />
-
-        <div
-          className="absolute left-0 w-full"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)', height: 'var(--profile-cover-height)' }}
-        >
-          <div className="h-full w-full" style={{ background: '#0A0A0A' }} />
-        </div>
-          <div className="absolute left-1/2 -translate-x-1/2 rounded-full overflow-hidden"
-            style={{
-              width: 'var(--profile-avatar-size)',
-              height: 'var(--profile-avatar-size)',
-              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) + var(--profile-avatar-top-offset, 0px))',
-              boxShadow: `0 0 var(--profile-avatar-glow-size) var(--profile-avatar-glow-color), 0 4px 18px rgba(0,0,0,0.35)`,
-              background: avatarUrl ? '#0A0A0A' : gradient,
+              }
             }}
-            onClick={() => avatarInputRef.current?.click()}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
           >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
-            ) : (
-              <img
-                src="/interface/image-add.svg"
-                alt="add"
-                className="absolute left-1/2 top-1/2 h-[34px] w-[34px]"
-                style={{ transform: 'translate(-50%, -50%)', filter: 'invert(1) brightness(2)' }}
-              />
-            )}
-          </div>
-        
+            <img
+              src="/interface/x-01.svg"
+              alt="close"
+              className="h-5 w-5 invert brightness-[2]"
+            />
+          </button>
+          
+          <button
+            type="button"
+            onClick={async () => {
+              await saveTag()
+              await saveAbout()
+              onClose()
+            }}
+            disabled={!dirty}
+            className={`px-5 h-10 rounded-full font-sf-ui-medium transition-all ${
+              dirty 
+                ? 'bg-white text-black scale-100 active:scale-95' 
+                : 'bg-white/5 text-white/30 scale-100'
+            }`}
+          >
+            Готово
+          </button>
+        </div>
 
-        <div
-          className="absolute left-0 w-full px-6 overflow-y-auto"
-          style={{
-            top: 'calc(56px + var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px + var(--profile-avatar-top-offset, 0px))',
-            height: 'calc(812px - var(--profile-edit-bottom-height) - 56px - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - 12px - var(--profile-avatar-top-offset, 0px))',
-          }}
-        >
-          <div className="flex w-full flex-col items-center">
-            <div className="leading-[2.3em] text-white font-ttc-bold flex items-center gap-2" style={{ fontSize: 'var(--profile-name-size)', marginTop: 'var(--profile-name-margin-top)' }}>
-              <span>{tagText && tagText.trim().length > 0 ? tagText : 'user'}</span>
-              <button
-                type="button"
-                className="opacity-80"
-                onClick={removeAvatar}
-                aria-label="Удалить фото"
+        <div className="flex-1 overflow-y-auto pb-32">
+          {/* Avatar Section */}
+          <div className="relative pt-10 pb-6 flex flex-col items-center">
+            <div 
+              className="relative group cursor-pointer"
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              <div 
+                className="w-[120px] h-[120px] rounded-full overflow-hidden border-4 border-[#1A1A1A] shadow-2xl relative"
+                style={{ background: avatarUrl ? '#1A1A1A' : gradient }}
               >
-                <img
-                  src="/interface/trash-03.svg"
-                  alt="trash"
-                  className="h-[18px] w-[18px]"
-                  style={{ filter: 'invert(1) brightness(0.7)' }}
-                />
-              </button>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[40px] text-white/50 font-ttc-bold">
+                    {initialLetter}
+                  </div>
+                )}
+                
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Sparkles className="text-white w-8 h-8" />
+                </div>
+              </div>
+
+              {avatarUrl && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeAvatar()
+                  }}
+                  className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                >
+                  <LogOut size={14} className="rotate-180" />
+                </button>
+              )}
             </div>
 
-            <div className="mt-3 w-full" style={{ marginLeft: '-24px', marginRight: '-24px' }}>
-              <div
-                className="mx-auto rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4"
-                style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}
-              >
-                <div className="leading-[1.6em] font-sf-ui-light mb-1" style={{ fontSize: 'var(--profile-edit-label-size)', color: tagError ? 'var(--profile-tag-error-color)' : '#ffffff' }}>
-                  {tagError ? tagError : 'Тег ерользователя'}
+            <div className="mt-4 flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[24px] font-ttc-bold text-white">@{tagText || 'user'}</span>
+                <div className="flex items-center gap-1.5">
+                  {isModerator && <ModeratorBadge size={18} />}
+                  {isQuality && <QualityBadge size={18} />}
+                  {isVerified && <VerifiedBadge size={18} />}
                 </div>
+              </div>
+              <p className="text-white/40 text-[13px] font-sf-ui-light">Нажмите на фото, чтобы изменить</p>
+            </div>
+          </div>
+
+          {/* Form Sections */}
+          <div className="px-6 space-y-6">
+            {/* Tag Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <Hash size={16} className="text-white/40" />
+                <span className="text-[13px] font-sf-ui-medium text-white/40 uppercase tracking-wider">Тег профиля</span>
+              </div>
+              <div className="relative">
                 <input
                   value={tagText}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setTagText(v)
-                    const t = v.trim()
-                    if (t.length === 0) setTagError('введите тег')
-                    else setTagError('')
-                  }}
-                  placeholder="Тег"
-                  className="mb-3 w-full rounded-[10px] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none font-sf-ui-light"
-                  style={{ height: 'var(--profile-edit-input-height)', fontSize: '16px', border: tagError ? '1px solid var(--profile-tag-error-border-color)' : 'none' }}
+                  onChange={(e) => setTagText(e.target.value)}
+                  placeholder="Ваш уникальный тег"
+                  className={`w-full h-[56px] bg-[#1A1A1A] border ${tagError ? 'border-red-500/50' : 'border-white/5'} rounded-[28px] px-6 text-white font-sf-ui-light outline-none focus:border-white/20 transition-colors`}
                 />
-                <div className="leading-[1.7em] font-sf-ui-light mb-2" style={{ fontSize: 'var(--profile-edit-label-size)', color: '#ffffff' }}>Описание профиля</div>
-                <textarea
-                  value={description}
-                  onChange={(e) => {
-                    setDescription(e.target.value)
-                  }}
-                  rows={3}
-                  placeholder=""
-                  className="w-full rounded-[10px] bg-[#0F0F0F] px-3 py-2 leading-[1.4em] text-white outline-none font-sf-ui-light"
-                  style={{ fontSize: '16px', border: 'var(--profile-edit-input-border)' }}
-                />
+                {tagError && <p className="absolute -bottom-5 left-4 text-[11px] text-red-500">{tagError}</p>}
               </div>
+            </div>
+
+            {/* Description Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <Info size={16} className="text-white/40" />
+                <span className="text-[13px] font-sf-ui-medium text-white/40 uppercase tracking-wider">О себе</span>
+              </div>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Расскажите что-нибудь интересное..."
+                className="w-full min-h-[120px] bg-[#1A1A1A] border border-white/5 rounded-[32px] p-6 text-white font-sf-ui-light outline-none focus:border-white/20 transition-colors resize-none"
+              />
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="pt-4 space-y-3">
               <button
                 type="button"
-                className="mt-3 mx-auto block w-full rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4 text-center"
-                style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}
                 onClick={() => {
                   onClose()
-                  const ev = new Event('open-settings')
-                  window.dispatchEvent(ev)
+                  window.dispatchEvent(new Event('open-settings'))
                 }}
+                className="w-full h-[56px] bg-[#1A1A1A] border border-white/5 rounded-[28px] flex items-center justify-between px-6 group hover:bg-white/[0.08] transition-all"
               >
-                <div className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)' }}>Настройки</div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                    <Settings size={20} className="text-white/60" />
+                  </div>
+                  <span className="text-white font-sf-ui-medium">Настройки</span>
+                </div>
+                <ChevronRight size={20} className="text-white/20 group-hover:translate-x-1 transition-transform" />
               </button>
+
               <button
                 type="button"
-                className="mt-3 mx-auto block w-full rounded-[12px] border border-[#2B2B2B] bg-[#111111] p-4 text-center"
-                style={{ width: '107%', position: 'relative', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--profile-logout-bg)' }}
                 onClick={async () => {
                   const client = getSupabase()
-                  if (client) {
-                    await client.auth.signOut()
-                  }
+                  if (client) await client.auth.signOut()
                   await clearLocalAuth()
                   window.dispatchEvent(new Event('local-auth-changed'))
                 }}
+                className="w-full h-[56px] bg-red-500/10 border border-red-500/10 rounded-[28px] flex items-center justify-center gap-2 group hover:bg-red-500/20 transition-all"
               >
-                <div className="leading-[1.7em] text-white font-sf-ui-medium" style={{ fontSize: 'var(--profile-extra-title-size)', color: 'var(--profile-action-text-color)' }}>Выйти</div>
+                <LogOut size={20} className="text-red-500" />
+                <span className="text-red-500 font-sf-ui-medium">Выйти из аккаунта</span>
               </button>
             </div>
           </div>
         </div>
-
-        
- 
       </div>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowConfirm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-[340px] bg-[#1A1A1A]/80 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 shadow-2xl overflow-hidden"
+            >
+              {/* Liquid background effect */}
+              <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[60px] rounded-full" />
+              <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-500/10 blur-[60px] rounded-full" />
+
+              <div className="relative flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6 border border-white/10">
+                  <AlertTriangle className="text-yellow-500 w-8 h-8" />
+                </div>
+                
+                <h2 className="text-[22px] font-ttc-bold text-white mb-3">Несохранённые изменения</h2>
+                <p className="text-white/50 font-sf-ui-light text-[15px] leading-relaxed mb-8">
+                  Вы изменили информацию в профиле. Что вы хотите сделать с этими изменениями?
+                </p>
+
+                <div className="w-full space-y-3">
+                  <button
+                    onClick={async () => {
+                      await saveTag()
+                      await saveAbout()
+                      setShowConfirm(false)
+                      onClose()
+                    }}
+                    className="w-full h-[56px] bg-white text-black rounded-[20px] font-sf-ui-medium text-[16px] active:scale-95 transition-all shadow-lg shadow-white/5"
+                  >
+                    Сохранить
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setTagText(originalTag ?? '')
+                      setDescription(originalDescription ?? '')
+                      setAge(originalAge ?? '')
+                      setGender(originalGender ?? '')
+                      setCity(originalCity ?? '')
+                      setPolitical(originalPolitical ?? '')
+                      setHobbies(originalHobbies ?? '')
+                      setShowConfirm(false)
+                      onClose()
+                    }}
+                    className="w-full h-[56px] bg-white/5 text-white/60 rounded-[20px] font-sf-ui-medium text-[16px] hover:bg-white/10 active:scale-95 transition-all"
+                  >
+                    Отмена
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="w-full py-2 text-white/30 font-sf-ui-light text-[13px] hover:text-white/50 transition-colors"
+                  >
+                    Продолжить редактирование
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

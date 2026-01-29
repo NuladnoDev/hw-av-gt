@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Bell, BellRing, ShieldCheck, Share2, Flag, Monitor, Moon, Sun } from 'lucide-react'
+import { ChevronLeft,
+  Bell,
+  BellRing,
+  ShieldCheck,
+  Share2,
+  Flag,
+  Monitor,
+  Moon,
+  Sun,
+  Trash2,
+  AlertTriangle
+} from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 
@@ -31,6 +42,7 @@ export default function Setting({
   const [showNotifications, setShowNotifications] = useState(false)
   const [showAppearance, setShowAppearance] = useState(false)
   const [showVerification, setShowVerification] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [subNotifs, setSubNotifs] = useState(true)
   const [newPostNotifs, setNewPostNotifs] = useState(true)
@@ -368,7 +380,7 @@ export default function Setting({
                   <div className={iconBgStyle}>
                     <Monitor className="w-[18px] h-[18px] text-[var(--text-primary)] opacity-80" strokeWidth={1.5} />
                   </div>
-                  <span className={labelStyle}>Вид сайта</span>
+                  <span className={labelStyle}>Настройки сайта</span>
                 </div>
               </button>
 
@@ -388,21 +400,77 @@ export default function Setting({
                 </div>
               </button>
             </div>
-
-            {/* Placeholder for more settings */}
-            <div className={`${cardStyle} mt-6 opacity-40`}>
-              <div className="flex items-center justify-between px-4 py-[18px]">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-2xl bg-[var(--text-tertiary)]/10" />
-                  <div className="w-24 h-4 bg-[var(--text-tertiary)]/20 rounded-full" />
-                </div>
-                <div className="w-10 h-5 rounded-full bg-[var(--border-light)] relative">
-                  <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30" />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
+
+        <AnimatePresence>
+          {showDeleteConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[100] flex items-center justify-center px-6"
+            >
+              <div 
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+                onClick={() => setShowDeleteConfirm(false)}
+              />
+              
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="relative w-full max-w-[320px] bg-[#1A1A1A]/90 backdrop-blur-2xl border border-white/10 rounded-[36px] p-8 shadow-2xl overflow-hidden"
+              >
+                {/* Liquid glow effect */}
+                <div className="absolute -top-20 -right-20 w-40 h-40 bg-red-500/10 blur-[50px] rounded-full" />
+                <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-orange-500/5 blur-[50px] rounded-full" />
+
+                <div className="relative flex flex-col items-center text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
+                    <AlertTriangle className="text-red-500 w-8 h-8" />
+                  </div>
+                  
+                  <h2 className="text-[20px] font-ttc-bold text-white mb-3 leading-tight">Удаление аккаунта</h2>
+                  <p className="text-white/50 font-sf-ui-light text-[14px] leading-relaxed mb-8">
+                    Это действие необратимо. Все ваши данные будут безвозвратно удалены. Вы уверены?
+                  </p>
+
+                  <div className="w-full space-y-3">
+                    <button
+                      onClick={async () => {
+                        const client = getSupabase()
+                        if (client && userId) {
+                          // 1. Delete profile data
+                          await client.from('profiles').delete().eq('id', userId)
+                          // 2. Sign out (this handles session cleanup)
+                          await client.auth.signOut()
+                        }
+                        // 3. Clear local storage
+                        localStorage.removeItem('hw-auth')
+                        localStorage.removeItem('hw-profiles')
+                        // 4. Close and redirect
+                        setShowDeleteConfirm(false)
+                        close()
+                        window.location.reload() // Reload to trigger login screen state
+                      }}
+                      className="w-full h-[56px] bg-red-500 text-white rounded-[24px] font-sf-ui-medium text-[16px] active:scale-95 transition-all shadow-lg shadow-red-500/20"
+                    >
+                      Да, удалить
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="w-full h-[56px] bg-white/5 text-white/60 rounded-[24px] font-sf-ui-medium text-[16px] hover:bg-white/10 active:scale-95 transition-all"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {showNotifications && (
@@ -718,7 +786,7 @@ export default function Setting({
                 </button>
                 <div className="flex-1 text-center pr-6">
                   <div className="text-[20px] font-bold text-[var(--text-primary)] font-ttc-bold">
-                    Вид сайта
+                    Настройки сайта
                   </div>
                 </div>
               </div>
@@ -838,28 +906,16 @@ export default function Setting({
                   </div>
                 </div>
 
-                {/* Placeholder/Future Features Card */}
-                <div className={`${cardStyle} opacity-40`}>
-                  <div className="px-5 py-6 space-y-7">
-                    <div className="flex items-center justify-between">
-                      <div className="w-32 h-4 bg-[var(--text-tertiary)]/20 rounded-full" />
-                      <div className="w-10 h-5 rounded-full bg-[var(--border-light)] relative">
-                        <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="w-24 h-4 bg-[var(--text-tertiary)]/20 rounded-full" />
-                      <div className="w-10 h-5 rounded-full bg-[var(--border-light)] relative">
-                        <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="w-40 h-4 bg-[var(--text-tertiary)]/20 rounded-full" />
-                      <div className="w-10 h-5 rounded-full bg-[var(--border-light)] relative">
-                        <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--text-tertiary)]/30" />
-                      </div>
-                    </div>
-                  </div>
+                {/* Danger Zone Section */}
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full h-[64px] bg-red-500/10 border border-red-500/20 rounded-[32px] flex items-center justify-center gap-3 active:bg-red-500/20 transition-all"
+                  >
+                    <Trash2 size={20} className="text-red-500" />
+                    <span className="text-red-500 font-sf-ui-medium text-[16px]">Удалить аккаунт</span>
+                  </button>
                 </div>
               </div>
             </motion.div>
