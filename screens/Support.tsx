@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Send, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, Trash2 } from 'lucide-react'
+import { ChevronLeft, Send, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, Trash2, Plus } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 
 type Message = {
@@ -25,6 +25,7 @@ type Ticket = {
   profiles?: {
     tag: string
     avatar_url: string | null
+    is_verified?: boolean
   }
 }
 
@@ -40,8 +41,71 @@ export default function Support({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [showClosedNotice, setShowClosedNotice] = useState(false)
+  const [showSupportNotice, setShowSupportNotice] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const quickQuestions = [
+    "Как создать объявление?",
+    "Как изменить город в профиле?",
+    "Как связаться с продавцом?",
+    "Безопасны ли сделки?",
+    "Как работает поиск?",
+    "Как удалить аккаунт?"
+  ]
+
+  const moderatorPhrases = [
+    "Здравствуйте! Чем я могу вам помочь?",
+    "Ваш запрос передан техническому специалисту.",
+    "Пожалуйста, ожидайте, мы проверяем информацию.",
+    "Ваша проблема решена. Есть ли другие вопросы?",
+    "Для решения вопроса нам потребуется скриншот.",
+    "Благодарим за обращение в поддержку!"
+  ]
+
+  const aiAnswers: Record<string, string> = {
+    "Как создать объявление?": "Для создания объявления нажмите на кнопку '+' в нижнем меню. Заполните описание, добавьте фото и укажите цену. После модерации оно появится в ленте!",
+    "Как изменить город в профиле?": "Перейдите в настройки профиля (иконка человечка -> 'Редактировать'). Там вы сможете выбрать ваш текущий город из списка.",
+    "Как связаться с продавцом?": "В карточке каждого объявления есть кнопка 'Написать' или 'Позвонить'. Нажмите на нее, чтобы начать диалог напрямую с автором.",
+    "Безопасны ли сделки?": "Мы рекомендуем встречаться в людных местах и проверять товар перед оплатой. Никогда не переводите предоплату незнакомым лицам.",
+    "Как работает поиск?": "Используйте строку поиска сверху и фильтры по категориям/цене, чтобы быстро найти нужную вещь в вашем городе.",
+    "Как удалить аккаунт?": "Для удаления аккаунта напишите нам в поддержку через форму ниже (не через быстрые вопросы), и мы обработаем ваш запрос в течение 24 часов."
+  }
+
+  const handleQuickQuestion = async (text: string) => {
+    if (sending || !activeTicket || !userId) return
+    
+    // Показываем сообщение пользователя
+    const userMsg: Message = {
+      id: Math.random().toString(),
+      ticket_id: activeTicket.id,
+      sender_id: userId,
+      message: text,
+      image_url: null,
+      created_at: new Date().toISOString()
+    }
+    setMessages(prev => [...prev, userMsg])
+    scrollToBottom()
+
+    // Имитируем "печатание" ИИ
+    setSending(true)
+    await new Promise(r => setTimeout(r, 1000))
+
+    const answer = aiAnswers[text] || "К сожалению, я не нашел готового ответа. Пожалуйста, сформулируйте запрос для поддержки."
+    
+    const aiMsg: Message = {
+      id: Math.random().toString(),
+      ticket_id: activeTicket.id,
+      sender_id: 'ai-bot', // Специальный ID для бота
+      message: answer,
+      image_url: null,
+      created_at: new Date().toISOString()
+    }
+    
+    setMessages(prev => [...prev, aiMsg])
+    setSending(false)
+    scrollToBottom()
+  }
 
   const notifyUser = async (ticketId: string, message: string) => {
     try {
@@ -178,7 +242,7 @@ export default function Support({ onClose }: { onClose: () => void }) {
             .from('support_tickets')
             .select(`
               *,
-              profiles (tag, avatar_url),
+              profiles (tag, avatar_url, is_verified),
               support_messages (message, created_at)
             `)
             .eq('id', payload.new.id)
@@ -287,7 +351,8 @@ export default function Support({ onClose }: { onClose: () => void }) {
           *,
           profiles (
             tag,
-            avatar_url
+            avatar_url,
+            is_verified
           ),
           support_messages (
             message,
@@ -375,6 +440,12 @@ export default function Support({ onClose }: { onClose: () => void }) {
     const client = getSupabase()
     if (!client) return
 
+    // Сначала удаляем все сообщения, связанные с тикетом (Foreign Key Constraint)
+    await client
+      .from('support_messages')
+      .delete()
+      .eq('ticket_id', ticketId)
+
     const { error } = await client
       .from('support_tickets')
       .delete()
@@ -383,6 +454,8 @@ export default function Support({ onClose }: { onClose: () => void }) {
     if (!error) {
       setTickets(prev => prev.filter(t => t.id !== ticketId))
       if (activeTicket?.id === ticketId) setActiveTicket(null)
+    } else {
+      console.error('Error deleting ticket:', error)
     }
   }
 
@@ -455,6 +528,10 @@ export default function Support({ onClose }: { onClose: () => void }) {
       // Optimistically add message if real-time is slow
       setMessages(prev => [...prev, data as Message])
       scrollToBottom()
+
+      // Показываем плашку "Запрос отправлен"
+      setShowSupportNotice(true)
+      setTimeout(() => setShowSupportNotice(false), 4000)
 
       await client
         .from('support_tickets')
@@ -551,14 +628,14 @@ export default function Support({ onClose }: { onClose: () => void }) {
     >
       <div className="flex flex-col h-full mx-auto w-full max-w-[375px] bg-[#0A0A0A] relative shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-10">
+        <div className="flex items-center justify-between px-4 py-4 bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-10">
           <button 
             onClick={activeTicket && isModerator ? () => setActiveTicket(null) : onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 active:scale-90 transition-transform"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 backdrop-blur-md border border-white/10 active:scale-90 transition-all shadow-lg"
           >
-            <ChevronLeft className="w-6 h-6 text-white" />
+            <ChevronLeft className="w-6 h-6 text-white/80" />
           </button>
-          <div className="flex flex-col items-center flex-1 -mt-1">
+          <div className="flex flex-col items-center flex-1">
             <span className="text-[17px] font-sf-ui-medium text-white/90">
               {activeTicket ? (isModerator ? `@${activeTicket.profiles?.tag}` : 'Поддержка') : ''}
             </span>
@@ -566,9 +643,9 @@ export default function Support({ onClose }: { onClose: () => void }) {
           {activeTicket && isModerator && activeTicket.status === 'open' && (
             <button 
               onClick={handleCloseTicket}
-              className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 active:scale-95 transition-all"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 active:scale-95 transition-all"
             >
-              <span className="text-[12px] text-red-400 font-sf-ui-medium">Закрыть</span>
+              <div className="w-5 h-[2px] bg-red-400 rounded-full" />
             </button>
           )}
           {!isModerator && activeTicket && (
@@ -583,12 +660,15 @@ export default function Support({ onClose }: { onClose: () => void }) {
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
           {!activeTicket && isModerator ? (
             // Moderator: Tickets List
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center justify-between px-2 mb-2">
-                <h2 className="text-[20px] font-ttc-bold text-white">Все обращения</h2>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                  <span className="text-[11px] text-white/50 font-sf-ui-medium uppercase tracking-wider">Live</span>
+            <div className="space-y-5 pt-2">
+              <div className="flex items-center justify-between px-3 mb-4">
+                <div className="flex flex-col">
+                  <h2 className="text-[24px] font-ttc-bold text-white tracking-tight">Тикеты</h2>
+                  <p className="text-[12px] text-white/20 font-sf-ui-medium uppercase tracking-widest">Управление поддержкой</p>
+                </div>
+                <div className="flex items-center gap-2.5 px-4 py-2 rounded-[20px] bg-white/[0.03] backdrop-blur-md border border-white/10 shadow-lg">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                  <span className="text-[11px] text-white/60 font-sf-ui-bold uppercase tracking-widest">Live</span>
                 </div>
               </div>
 
@@ -596,71 +676,85 @@ export default function Support({ onClose }: { onClose: () => void }) {
                 const isUnanswered = (ticket as any).lastMessageSenderId === ticket.user_id && ticket.status === 'open'
                 
                 return (
-                  <div key={ticket.id} className="relative group">
-                    {/* Delete Background */}
-                    <div className="absolute inset-0 bg-red-500/20 rounded-3xl flex items-center justify-end px-8">
-                      <Trash2 className="w-6 h-6 text-red-500" />
+                  <div key={ticket.id} className="relative group px-1">
+                    {/* Delete Background - Hidden until swipe starts */}
+                    <div className="absolute inset-0 bg-red-500/10 rounded-[32px] flex items-center justify-end px-8 border border-red-500/20 opacity-0 group-active:opacity-100 transition-opacity">
+                      <div className="flex flex-col items-center gap-1">
+                        <Trash2 className="w-6 h-6 text-red-400" />
+                        <span className="text-[10px] text-red-400/60 font-sf-ui-bold uppercase">Удалить</span>
+                      </div>
                     </div>
                     
                     {/* Ticket Card */}
                     <motion.div
                       drag="x"
                       dragConstraints={{ left: -100, right: 0 }}
+                      onDragStart={() => {
+                        const bg = document.getElementById(`delete-bg-${ticket.id}`)
+                        if (bg) bg.style.opacity = '1'
+                      }}
                       onDragEnd={(_, info) => {
+                        const bg = document.getElementById(`delete-bg-${ticket.id}`)
+                        if (bg && info.offset.x >= -60) bg.style.opacity = '0'
+                        
                         if (info.offset.x < -60) {
                           handleDeleteTicket(ticket.id)
                         }
                       }}
                       className="relative z-10 w-full"
                     >
+                      <div id={`delete-bg-${ticket.id}`} className="absolute inset-0 bg-red-500/20 rounded-[32px] border border-red-500/30 opacity-0 transition-opacity pointer-events-none" />
                       <button
                         onClick={() => setActiveTicket(ticket)}
-                        className={`w-full flex items-center gap-4 p-5 bg-[#121212] border border-white/5 rounded-3xl hover:border-white/10 active:scale-[0.98] transition-all text-left shadow-lg ${isUnanswered ? 'ring-1 ring-blue-500/30 bg-blue-500/[0.02]' : ''}`}
+                        className={`w-full flex items-center gap-4 p-5 bg-[#0A0A0A] border border-white/10 rounded-[32px] hover:bg-white/[0.04] hover:border-white/20 active:scale-[0.98] transition-all text-left shadow-[0_8px_32px_rgba(0,0,0,0.2)] ${isUnanswered ? 'ring-1 ring-blue-500/30 bg-blue-500/[0.04]' : ''}`}
                       >
                         <div className="relative">
-                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                          <div className="w-14 h-14 rounded-[22px] bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center shrink-0 border border-white/10 overflow-hidden shadow-inner">
                             {ticket.profiles?.avatar_url ? (
-                              <img src={ticket.profiles.avatar_url} className="w-full h-full object-cover rounded-2xl" />
+                              <img src={ticket.profiles.avatar_url} className="w-full h-full object-cover" />
                             ) : (
-                              <User className="w-7 h-7 text-white/40" />
+                              <User className="w-7 h-7 text-white/20" />
                             )}
                           </div>
                           {isUnanswered && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-[#121212]" />
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full border-[3px] border-[#0A0A0A] flex items-center justify-center shadow-lg">
+                              <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                            </div>
                           )}
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-ttc-bold text-[16px] text-white/90 truncate">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="font-ttc-bold text-[17px] text-white/90 truncate flex items-center gap-2">
                               @{ticket.profiles?.tag || 'User'}
+                              {ticket.profiles?.is_verified && <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />}
                             </span>
-                            <span className="text-[11px] text-white/30 font-sf-ui-medium">
-                              {new Date(ticket.created_at).toLocaleDateString()}
+                            <span className="text-[11px] text-white/20 font-sf-ui-medium tracking-tight">
+                              {new Date(ticket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                           
-                          <p className={`text-[14px] truncate font-sf-ui-medium mb-3 ${isUnanswered ? 'text-white/80' : 'text-white/40'}`}>
-                            {(ticket as any).lastMessage}
+                          <p className={`text-[14px] truncate font-sf-ui-medium mb-3 leading-tight ${isUnanswered ? 'text-white/80' : 'text-white/40'}`}>
+                            {(ticket as any).lastMessage || 'Нет сообщений'}
                           </p>
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className={`text-[10px] px-2.5 py-1 rounded-lg font-ttc-bold uppercase tracking-wider ${
+                              <span className={`text-[9px] px-3 py-1 rounded-full font-sf-ui-bold uppercase tracking-widest ${
                                 ticket.status === 'open' 
                                   ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
                                   : 'bg-white/5 text-white/30 border border-white/5'
                               }`}>
-                                {ticket.status === 'open' ? 'Открыт' : 'Закрыт'}
+                                {ticket.status === 'open' ? 'Активен' : 'Архив'}
                               </span>
                               {isUnanswered && (
-                                <span className="text-[10px] px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 font-ttc-bold uppercase tracking-wider">
-                                  Нужен ответ
+                                <span className="text-[9px] px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-sf-ui-bold uppercase tracking-widest shadow-[0_0_12px_rgba(59,130,246,0.1)]">
+                                  Ждет ответа
                                 </span>
                               )}
                             </div>
-                            <div className="flex -space-x-2">
-                              {/* Optional: Show icons of moderators who participated */}
+                            <div className="text-[10px] text-white/10 font-sf-ui-bold uppercase tracking-widest">
+                              ID: {ticket.id.slice(0, 4)}
                             </div>
                           </div>
                         </div>
@@ -672,12 +766,13 @@ export default function Support({ onClose }: { onClose: () => void }) {
 
               {tickets.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-32 px-10 text-center">
-                  <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
-                    <MessageCircle className="w-10 h-10 text-white/10" />
+                  <div className="w-24 h-24 rounded-[32px] bg-white/[0.03] backdrop-blur-2xl border border-white/10 flex items-center justify-center mb-8 shadow-2xl relative group">
+                    <div className="absolute inset-0 bg-blue-500/5 rounded-[32px] blur-2xl group-hover:bg-blue-500/10 transition-all" />
+                    <MessageCircle className="w-10 h-10 text-white/20 relative z-10" />
                   </div>
-                  <h3 className="text-[17px] font-ttc-bold text-white/90 mb-2">Обращений пока нет</h3>
-                  <p className="text-[14px] text-white/30 font-sf-ui-light leading-relaxed">
-                    Когда пользователи напишут в поддержку, они появятся здесь в реальном времени.
+                  <h3 className="text-[19px] font-ttc-bold text-white mb-3">Тикетов пока нет</h3>
+                  <p className="text-[14px] text-white/30 font-sf-ui-medium leading-relaxed max-w-[240px] mx-auto">
+                    Все входящие обращения от пользователей появятся здесь в реальном времени.
                   </p>
                 </div>
               )}
@@ -702,6 +797,7 @@ export default function Support({ onClose }: { onClose: () => void }) {
 
               {messages.map((msg, i) => {
                 const isOwn = msg.sender_id === userId
+                const isAI = msg.sender_id === 'ai-bot'
                 const showClosedDivider = i > 0 && messages[i-1].ticket_id !== msg.ticket_id
 
                 return (
@@ -718,28 +814,44 @@ export default function Support({ onClose }: { onClose: () => void }) {
                     <motion.div 
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} mb-4`}
+                      className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} mb-2`}
                     >
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      <div className={`max-w-[85%] px-4 py-2.5 shadow-sm ${
                         isOwn 
-                          ? 'bg-blue-600 text-white rounded-tr-none' 
-                          : 'bg-white/5 text-white/90 rounded-tl-none border border-white/5'
+                          ? 'bg-[#3390ec] text-white rounded-[20px] rounded-tr-[4px] shadow-[0_1px_3px_rgba(0,0,0,0.1)]' 
+                          : isAI
+                            ? 'bg-white/10 text-white/90 rounded-[20px] rounded-tl-[4px] border border-white/20 backdrop-blur-md'
+                            : 'bg-white/[0.03] backdrop-blur-2xl border border-white/10 text-white rounded-[20px] rounded-tl-[4px]'
                       }`}>
-                        {msg.image_url ? (
-                          <img 
-                            src={msg.image_url} 
-                            alt="Support attachment" 
-                            className="rounded-lg max-w-full mb-2"
-                          />
-                        ) : (
-                          <p className="text-[15px] font-sf-ui-light leading-relaxed break-words">
-                            {msg.message}
-                          </p>
+                        {isAI && (
+                          <div className="flex items-center gap-1.5 mb-1 opacity-50">
+                            <ShieldCheck className="w-3 h-3" />
+                            <span className="text-[10px] font-sf-ui-bold uppercase tracking-tighter">AI Ассистент</span>
+                          </div>
                         )}
-                        <div className={`text-[10px] mt-1 ${isOwn ? 'text-white/50' : 'text-white/30'} flex items-center gap-1`}>
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          {isOwn && <CheckCircle2 className="w-3 h-3" />}
-                        </div>
+                        {msg.image_url ? (
+                          <div className="relative">
+                            <img 
+                              src={msg.image_url} 
+                              alt="Support attachment" 
+                              className="rounded-lg max-w-full mb-1"
+                            />
+                            <div className={`text-[10px] absolute bottom-1 right-1 px-1.5 py-0.5 rounded-full backdrop-blur-md bg-black/20 ${isOwn ? 'text-white/70' : 'text-white/80'} flex items-center gap-1`}>
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {isOwn && <CheckCircle2 className="w-3 h-3" />}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="relative flex items-end gap-x-2">
+                            <p className="text-[15px] font-sf-ui-light leading-relaxed break-words max-w-full">
+                              {msg.message}
+                            </p>
+                            <div className={`text-[10px] shrink-0 mb-[-2px] ${isOwn ? 'text-white/40' : 'text-white/60'} flex items-center gap-1`}>
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {isOwn && <CheckCircle2 className="w-2.5 h-2.5 opacity-70" />}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   </div>
@@ -765,19 +877,51 @@ export default function Support({ onClose }: { onClose: () => void }) {
 
         {/* Input Area */}
         {activeTicket && (activeTicket.status === 'open' || !isModerator) && (
-          <div className="p-4 border-t border-white/5 bg-[#0A0A0A] safe-area-bottom">
-            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-2 pr-3 focus-within:border-blue-500/50 transition-colors">
+          <div className="p-4 bg-transparent safe-area-bottom relative z-20">
+            {/* Quick Questions / Moderator Phrases */}
+            <div className="mb-3 overflow-hidden -mx-4">
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar animate-scroll-questions px-4">
+                {(isModerator ? moderatorPhrases : quickQuestions).concat(isModerator ? moderatorPhrases : quickQuestions).map((q, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => isModerator ? setNewMessage(q) : handleQuickQuestion(q)}
+                    className="whitespace-nowrap px-4 py-2 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 text-white/60 text-[13px] hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Support Notice */}
+            <AnimatePresence>
+              {showSupportNotice && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="mb-3"
+                >
+                  <div className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 backdrop-blur-md">
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-[13px] text-white/70 font-sf-ui-medium">Запрос отправлен в поддержку</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="flex items-center gap-3 bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[26px] p-2 focus-within:border-white/20 focus-within:bg-white/[0.06] transition-all duration-500 group/input shadow-[0_4px_24px_rgba(0,0,0,0.1)]">
                 <button 
                   onClick={() => {/* fileInputRef.current?.click() */}}
                   disabled={true}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl transition-all text-white/10 cursor-not-allowed"
+                  className="w-10 h-10 flex items-center justify-center rounded-xl transition-all text-white/10 cursor-not-allowed hover:bg-white/5"
                 >
-                  <ImageIcon className="w-5 h-5" />
+                  <Plus className="w-5 h-5" />
                 </button>
                 <input 
                   type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
+                  ref={fileInputRef}
+                  className="hidden"
                   accept="image/*"
                   onChange={handleImageUpload}
                   disabled={sending}
@@ -786,28 +930,40 @@ export default function Support({ onClose }: { onClose: () => void }) {
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Задайте вопрос"
-                  className="flex-1 bg-transparent border-none focus:ring-0 outline-none shadow-none text-white text-[15px] font-sf-ui-light py-2"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder="Сообщение..."
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-white/30 text-[15px] py-2"
                   disabled={sending}
                 />
-                <button 
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim() || sending}
-                  className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
-                    newMessage.trim() && !sending 
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                      : 'bg-white/5 text-white/20'
-                  }`}
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
+            </div>
           </div>
         )}
       </div>
 
       <style jsx>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        @keyframes scrollQuestions {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-scroll-questions {
+          width: max-content;
+          animation: scrollQuestions 40s linear infinite;
+        }
+        .animate-scroll-questions:hover {
+          animation-play-state: paused;
+        }
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }

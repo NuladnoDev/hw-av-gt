@@ -823,9 +823,9 @@ export default function AdsCreate({
                             e.stopPropagation()
                             removeImageAt(index)
                           }}
-                          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-red-500/90 shadow-lg backdrop-blur-sm active:scale-90 transition-transform z-10"
+                          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/20 backdrop-blur-md border border-white/10 shadow-lg active:scale-75 transition-all z-10 group/btn"
                         >
-                          <X size={16} className="text-white" />
+                          <X size={14} className="text-white/80 group-hover/btn:text-white transition-colors" />
                         </button>
                       </div>
                     </motion.div>
