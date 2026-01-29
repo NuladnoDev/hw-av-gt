@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Bell, BellRing, ShieldCheck, Share2, Flag } from 'lucide-react'
+import { ChevronLeft, Bell, BellRing, ShieldCheck, Share2, Flag, Monitor, Moon, Sun } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 
@@ -29,10 +29,17 @@ export default function Setting({
   const [tagText, setTagText] = useState<string>('user')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showAppearance, setShowAppearance] = useState(false)
   const [showVerification, setShowVerification] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [isDarkTheme, setIsDarkTheme] = useState(true)
   const [subNotifs, setSubNotifs] = useState(true)
   const [newPostNotifs, setNewPostNotifs] = useState(true)
+
+  const cardStyle = "bg-[#111111] border border-white/[0.05] rounded-[32px] overflow-hidden"
+  const itemStyle = "flex w-full items-center justify-between px-4 py-[18px] text-left bg-transparent active:bg-white/[0.05] transition-colors"
+  const labelStyle = "leading-[1.4em] text-white font-sf-ui-regular text-[15px]"
+  const iconBgStyle = "w-8 h-8 flex items-center justify-center"
 
   useEffect(() => {
     const baseW = 375
@@ -201,19 +208,19 @@ export default function Setting({
             height: 'calc(812px - 56px - var(--home-header-offset))',
           }}
         >
-          <div className="relative w-full">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between px-0 text-left bg-transparent"
-              style={{ height: 'calc(var(--settings-user-block-height) * var(--settings-scale))', marginTop: 'var(--settings-list-top-margin)' }}
-              onClick={onOpenProfile}
-            >
-              <div className="flex items-center flex-1 min-w-0" style={{ gap: 'var(--settings-icon-gap)' }}>
+          <div className="relative w-full pb-8">
+            {/* User Profile Card */}
+            <div className="mt-4 mb-6">
+              <button
+                type="button"
+                className="flex w-full items-center gap-4 px-4 py-6 text-left bg-transparent active:bg-white/[0.05] transition-colors rounded-[32px]"
+                onClick={onOpenProfile}
+              >
                 <div
-                  className="rounded-full overflow-hidden flex items-center justify-center"
+                  className="rounded-full overflow-hidden flex items-center justify-center shadow-xl shadow-black/20"
                   style={{
-                    width: 'calc(var(--settings-user-avatar-size) * var(--settings-scale))',
-                    height: 'calc(var(--settings-user-avatar-size) * var(--settings-scale))',
+                    width: '64px',
+                    height: '64px',
                     aspectRatio: '1 / 1',
                     flexShrink: 0,
                     background: avatarUrl ? '#0A0A0A' : gradient,
@@ -222,23 +229,23 @@ export default function Setting({
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" style={{ objectPosition: 'center' }} />
                   ) : (
-                    <span className="text-white font-ttc-bold" style={{ fontSize: 'calc(18px * var(--settings-scale))', lineHeight: '1em' }}>
+                    <span className="text-white font-ttc-bold text-[26px] leading-none">
                       {initialLetter}
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="leading-[1.5em] text-white font-sf-ui-medium truncate" style={{ fontSize: 'calc(var(--settings-user-title-size) * var(--settings-scale))' }}>
+                  <span className="text-[19px] font-sf-ui-medium text-white leading-tight truncate">
                     {tagText && tagText.trim().length > 0 ? tagText.trim() : 'user'}
                   </span>
                   <div 
-                    className="cursor-pointer flex items-center" 
+                    className="cursor-pointer flex items-center mt-1" 
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowRealId(!showRealId);
                     }}
                   >
-                    <div className="relative w-full min-h-[1.3em]">
+                    <div className="relative w-full min-h-[1.2em]">
                       <AnimatePresence mode="wait">
                         <motion.div
                           key={showRealId ? 'real' : 'pretty'}
@@ -246,8 +253,7 @@ export default function Setting({
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -5 }}
                           transition={{ duration: 0.15, ease: 'easeOut' }}
-                          className="leading-[1.3em] text-[#A1A1A1] font-sf-ui-light break-all pr-2"
-                          style={{ fontSize: 'calc(var(--settings-user-subtitle-size) * var(--settings-scale))' }}
+                          className="text-[12px] text-white/40 font-sf-ui-light break-all pr-2"
                         >
                           {showRealId ? (userId ?? 'id пользователя') : (prettyId ?? 'id пользователя')}
                         </motion.div>
@@ -255,147 +261,79 @@ export default function Setting({
                     </div>
                   </div>
                 </div>
-              </div>
-              <img
-                src="/interface/chevron-right 1.svg"
-                alt=""
-                className="h-[20px] w-[20px]"
-                style={{ filter: 'var(--settings-chevron-filter)' }}
-              />
-            </button>
-            <div className="w-full" style={{ height: '0.3px', background: 'rgba(255,255,255,0.1)' }} />
-            <div style={{ marginTop: 'var(--settings-categories-top-margin)' }}>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent"
-                style={{ height: 'var(--settings-item-height)' }}
-                onClick={openAbout}
-              >
-                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
-                  <img
-                    src="/setting/edit-contained.svg"
-                    alt="Обо мне"
-                    style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                  />
-                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Обо мне
-                  </span>
-                </div>
-                <img
-                  src="/interface/chevron-right 1.svg"
-                  alt=""
-                  className="h-[20px] w-[20px]"
-                  style={{ filter: 'var(--settings-chevron-filter)' }}
-                />
               </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent"
-                style={{ height: 'var(--settings-item-height)' }}
-                onClick={onOpenPhone}
-              >
-                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
-                  <img
-                    src="/setting/colors-01.svg"
-                    alt="Устройства"
-                    style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                  />
-                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Устройства
-                  </span>
+            </div>
+
+            {/* General Settings Section */}
+            <div className={`${cardStyle} mb-6`}>
+              <button type="button" className={itemStyle} onClick={openAbout}>
+                <div className="flex items-center gap-3">
+                  <div className={iconBgStyle}>
+                    <img src="/setting/edit-contained.svg" alt="" className="w-5 h-5 filter-none" />
+                  </div>
+                  <span className={labelStyle}>Обо мне</span>
                 </div>
-                <img
-                  src="/interface/chevron-right 1.svg"
-                  alt=""
-                  className="h-[20px] w-[20px]"
-                  style={{ filter: 'var(--settings-chevron-filter)' }}
-                />
               </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent"
-                style={{ height: 'var(--settings-item-height)' }}
-                onClick={() => setShowNotifications(true)}
-              >
-                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
-                  <img
-                    src="/setting/notification-box.svg"
-                    alt="Уведомления"
-                    style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                  />
-                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Уведомления
-                  </span>
+              
+              <div className="h-[1px] bg-white/[0.03] mx-4" />
+              
+              <button type="button" className={itemStyle} onClick={onOpenPhone}>
+                <div className="flex items-center gap-3">
+                  <div className={iconBgStyle}>
+                    <img src="/setting/colors-01.svg" alt="" className="w-5 h-5 filter-none" />
+                  </div>
+                  <span className={labelStyle}>Устройства</span>
                 </div>
-                <img
-                  src="/interface/chevron-right 1.svg"
-                  alt=""
-                  className="h-[20px] w-[20px]"
-                  style={{ filter: 'var(--settings-chevron-filter)' }}
-                />
               </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent"
-                style={{ height: 'var(--settings-item-height)' }}
-                onClick={openContacts}
-              >
-                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
-                  <img
-                    src="/interface/address.svg"
-                    alt="Контакты"
-                    style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                  />
-                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Контакты
-                  </span>
+
+              <div className="h-[1px] bg-white/[0.03] mx-4" />
+
+              <button type="button" className={itemStyle} onClick={() => setShowNotifications(true)}>
+                <div className="flex items-center gap-3">
+                  <div className={iconBgStyle}>
+                    <img src="/setting/notification-box.svg" alt="" className="w-5 h-5 filter-none" />
+                  </div>
+                  <span className={labelStyle}>Уведомления</span>
                 </div>
-                <img
-                  src="/interface/chevron-right 1.svg"
-                  alt=""
-                  className="h-[20px] w-[20px]"
-                  style={{ filter: 'var(--settings-chevron-filter)' }}
-                />
               </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent active:opacity-60 transition-opacity"
-                style={{ height: 'var(--settings-item-height)' }}
-                onClick={() => setShowVerification(true)}
-              >
-                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
-                  <img
-              src="/interface/verified.svg"
-              alt="Подтверждение аккаунта"
-              style={{ width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)', filter: 'brightness(0) saturate(100%) invert(43%) sepia(98%) saturate(2338%) hue-rotate(185deg) brightness(101%) contrast(101%)' }}
-            />
-                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    Подтверждение аккаунта
-                  </span>
+
+              <div className="h-[1px] bg-white/[0.03] mx-4" />
+
+              <button type="button" className={itemStyle} onClick={openContacts}>
+                <div className="flex items-center gap-3">
+                  <div className={iconBgStyle}>
+                    <img src="/interface/address.svg" alt="" className="w-5 h-5 filter-none" />
+                  </div>
+                  <span className={labelStyle}>Контакты</span>
                 </div>
-                <img
-                  src="/interface/chevron-right 1.svg"
-                  alt=""
-                  className="h-[20px] w-[20px]"
-                  style={{ filter: 'var(--settings-chevron-filter)' }}
-                />
               </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between text-left bg-transparent opacity-40 cursor-not-allowed"
-                style={{ height: 'var(--settings-item-height)' }}
-              >
-                <div className="flex items-center" style={{ gap: 'var(--settings-icon-gap)' }}>
-                  <img
-                    src="/setting/brackets.svg"
-                    alt="О проекте..."
-                    style={{ filter: 'var(--settings-icon-filter)', width: 'var(--settings-item-icon-size)', height: 'var(--settings-item-icon-size)' }}
-                  />
-                  <span className="leading-[1.7em] text-white font-sf-ui-regular" style={{ fontSize: 'var(--profile-extra-title-size)' }}>
-                    О проекте...
-                  </span>
+            </div>
+
+            {/* Appearance & Verification Section */}
+            <div className={cardStyle}>
+              <button type="button" className={itemStyle} onClick={() => setShowAppearance(true)}>
+                <div className="flex items-center gap-3">
+                  <div className={iconBgStyle}>
+                    <Monitor className="w-[18px] h-[18px] text-white/80" strokeWidth={1.5} />
+                  </div>
+                  <span className={labelStyle}>Вид сайта</span>
                 </div>
-                <div className="text-[11px] text-white/30 font-sf-ui-medium uppercase tracking-wider pr-1">Скоро</div>
+              </button>
+
+              <div className="h-[1px] bg-white/[0.03] mx-4" />
+
+              <button type="button" className={itemStyle} onClick={() => setShowVerification(true)}>
+                <div className="flex items-center gap-3">
+                  <div className={iconBgStyle}>
+                    <img
+                      src="/interface/verified.svg"
+                      alt=""
+                      className="w-[18px] h-[18px]"
+                      style={{ filter: 'brightness(0) saturate(100%) invert(43%) sepia(98%) saturate(2338%) hue-rotate(185deg) brightness(101%) contrast(101%)' }}
+                    />
+                  </div>
+                  <span className={labelStyle}>Подтверждение аккаунта</span>
+                </div>
               </button>
             </div>
           </div>
@@ -436,83 +374,88 @@ export default function Setting({
 
               <div className="flex-1 px-6 mt-4 space-y-6">
                 {/* Main Toggle */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl ${notificationsEnabled ? 'bg-indigo-500/10 text-indigo-400' : 'bg-white/5 text-white/20'}`}>
-                      <Bell className="w-5 h-5" />
+                <div className={cardStyle}>
+                  <div className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl ${notificationsEnabled ? 'bg-indigo-500/10 text-indigo-400' : 'bg-white/5 text-white/20'}`}>
+                        <Bell className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[15px] font-sf-ui-medium text-white">Все уведомления</span>
+                        <span className="text-[12px] text-white/40 font-sf-ui-light">Глобальный переключатель</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-[15px] font-sf-ui-medium text-white">Все уведомления</span>
-                      <span className="text-[12px] text-white/40 font-sf-ui-light">Глобальный переключатель</span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? 'bg-blue-500' : 'bg-white/10'}`}
+                    >
+                      <motion.div
+                        animate={{ x: notificationsEnabled ? 26 : 4 }}
+                        className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                      />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? 'bg-blue-500' : 'bg-white/10'}`}
-                  >
-                    <motion.div
-                      animate={{ x: notificationsEnabled ? 26 : 4 }}
-                      className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
-                    />
-                  </button>
+
+                  <AnimatePresence>
+                    {notificationsEnabled && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="h-[1px] bg-white/[0.03] mx-4" />
+                        <div className="p-4 space-y-4">
+                          <div className="text-[11px] text-white/30 font-sf-ui-bold uppercase tracking-widest pl-2">Настройки подписок</div>
+                          
+                          {/* Subscription Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="text-[15px] font-sf-ui-medium text-white/90">Новые подписчики</span>
+                              <span className="text-[12px] text-white/40 font-sf-ui-light">Когда кто-то подписывается на вас</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSubNotifs(!subNotifs)}
+                              className={`w-10 h-5 rounded-full transition-colors relative ${subNotifs ? 'bg-blue-500/60' : 'bg-white/5'}`}
+                            >
+                              <motion.div
+                                animate={{ x: subNotifs ? 22 : 2 }}
+                                className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
+                              />
+                            </button>
+                          </div>
+
+                          {/* New Posts Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="text-[15px] font-sf-ui-medium text-white/90">Новые публикации</span>
+                              <span className="text-[12px] text-white/40 font-sf-ui-light">От людей, на которых вы подписаны</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setNewPostNotifs(!newPostNotifs)}
+                              className={`w-10 h-5 rounded-full transition-colors relative ${newPostNotifs ? 'bg-blue-500/60' : 'bg-white/5'}`}
+                            >
+                              <motion.div
+                                animate={{ x: newPostNotifs ? 22 : 2 }}
+                                className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                <AnimatePresence>
-                  {notificationsEnabled && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="space-y-4"
-                    >
-                      <div className="text-[11px] text-white/30 font-sf-ui-bold uppercase tracking-widest pl-2">Настройки подписок</div>
-                      
-                      {/* Subscription Toggle */}
-                      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-[15px] font-sf-ui-medium text-white/90">Новые подписчики</span>
-                          <span className="text-[12px] text-white/40 font-sf-ui-light">Когда кто-то подписывается на вас</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setSubNotifs(!subNotifs)}
-                          className={`w-10 h-5 rounded-full transition-colors relative ${subNotifs ? 'bg-blue-500/60' : 'bg-white/5'}`}
-                        >
-                          <motion.div
-                            animate={{ x: subNotifs ? 22 : 2 }}
-                            className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
-                          />
-                        </button>
-                      </div>
-
-                      {/* New Posts Toggle */}
-                      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-[15px] font-sf-ui-medium text-white/90">Новые публикации</span>
-                          <span className="text-[12px] text-white/40 font-sf-ui-light">От людей, на которых вы подписаны</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setNewPostNotifs(!newPostNotifs)}
-                          className={`w-10 h-5 rounded-full transition-colors relative ${newPostNotifs ? 'bg-blue-500/60' : 'bg-white/5'}`}
-                        >
-                          <motion.div
-                            animate={{ x: newPostNotifs ? 22 : 2 }}
-                            className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
-                          />
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
                 {!notificationsEnabled && (
-                  <div className="p-6 text-center space-y-2">
-                    <div className="text-white/20 flex justify-center">
-                      <BellRing className="w-12 h-12 stroke-[1px]" />
+                  <div className="p-8 text-center space-y-3">
+                    <div className="w-16 h-16 rounded-full bg-white/[0.03] flex items-center justify-center mx-auto mb-4">
+                      <BellRing className="w-8 h-8 text-white/10 stroke-[1.5px]" />
                     </div>
-                    <div className="text-[14px] text-white/30 font-sf-ui-light">
+                    <div className="text-[14px] text-white/30 font-sf-ui-light max-w-[200px] mx-auto leading-relaxed">
                       Уведомления полностью отключены. Вы не будете получать никаких оповещений.
                     </div>
                   </div>
@@ -578,6 +521,67 @@ export default function Setting({
                 >
                   Скоро
                 </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showAppearance && (
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute inset-0 z-[60] bg-[#0A0A0A] flex flex-col"
+            >
+              {/* Appearance Header */}
+              <div 
+                className="flex items-center px-6 bg-[#0A0A0A]"
+                style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowAppearance(false)}
+                  className="flex h-full items-center"
+                >
+                  <img
+                    src="/interface/str.svg"
+                    alt="back"
+                    className="h-[22px] w-[22px]"
+                    style={{ filter: 'brightness(0) invert(1)' }}
+                  />
+                </button>
+                <div className="flex-1 text-center pr-6">
+                  <div className="text-[20px] font-bold text-white font-ttc-bold">
+                    Вид сайта
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 px-6 mt-4 space-y-6">
+                {/* Theme Toggle */}
+                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${isDarkTheme ? 'bg-indigo-500/10 text-indigo-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                      {isDarkTheme ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[15px] font-sf-ui-medium text-white">Тёмная тема</span>
+                      <span className="text-[12px] text-white/40 font-sf-ui-light">Переключение темы оформления</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsDarkTheme(!isDarkTheme)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${isDarkTheme ? 'bg-blue-500' : 'bg-white/10'}`}
+                  >
+                    <motion.div
+                      animate={{ x: isDarkTheme ? 26 : 4 }}
+                      className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                    />
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
