@@ -306,25 +306,38 @@ export default function ProfileEdit({
     const next = tagText.trim()
     if (next.length === 0) return
     const client = getSupabase()
-    if (client && userId) {
-      const { error } = await client.from('profiles').upsert({ id: userId, tag: next })
-      if (error) {
-        const profRaw = window.localStorage.getItem('hw-profiles')
-        const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>) : {}
+
+    const updateLocal = () => {
+      const profRaw = window.localStorage.getItem('hw-profiles')
+      const profMap = profRaw
+        ? (JSON.parse(profRaw) as Record<
+            string,
+            {
+              tag?: string
+              avatar_url?: string
+              description?: string
+              age?: string
+              gender?: string
+              city?: string
+              political?: string
+              hobbies?: string
+            }
+          >)
+        : {}
+      if (userId) {
         const prev = profMap[userId] ?? {}
         profMap[userId] = { ...prev, tag: next }
         window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
-        const event = new CustomEvent('profile-updated', { detail: { tag: next } })
-        window.dispatchEvent(event)
-        return
       }
-    } else if (userId) {
-      const profRaw = window.localStorage.getItem('hw-profiles')
-      const profMap = profRaw ? JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; political?: string; hobbies?: string }> : {}
-      const prev = profMap[userId] ?? {}
-      profMap[userId] = { ...prev, tag: next }
-      window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
     }
+
+    if (client && userId) {
+      const { error } = await client.from('profiles').upsert({ id: userId, tag: next })
+      updateLocal()
+    } else if (userId) {
+      updateLocal()
+    }
+
     const event = new CustomEvent('profile-updated', { detail: { tag: next } })
     window.dispatchEvent(event)
   }
@@ -404,9 +417,7 @@ export default function ProfileEdit({
     }
     if (client) {
       const { error } = await client.from('profiles').upsert(payload)
-      if (error) {
-        updateLocal()
-      }
+      updateLocal()
     } else {
       updateLocal()
     }
@@ -461,11 +472,7 @@ export default function ProfileEdit({
       const { error } = await client
         .from('profiles')
         .upsert({ id, description: next })
-      if (error) {
-        const event = new CustomEvent('profile-updated', { detail: { description: next } })
-        window.dispatchEvent(event)
-        return
-      }
+      updateLocal()
     } else {
       updateLocal()
     }
@@ -634,7 +641,7 @@ export default function ProfileEdit({
                   }}
                   placeholder="Тег"
                   className="mb-3 w-full rounded-[10px] bg-[#0F0F0F] px-3 leading-[1.4em] text-white outline-none font-sf-ui-light"
-                  style={{ height: 'var(--profile-edit-input-height)', fontSize: 'calc(var(--profile-edit-text-size) - 2px)', border: tagError ? '1px solid var(--profile-tag-error-border-color)' : 'none' }}
+                  style={{ height: 'var(--profile-edit-input-height)', fontSize: '16px', border: tagError ? '1px solid var(--profile-tag-error-border-color)' : 'none' }}
                 />
                 <div className="leading-[1.7em] font-sf-ui-light mb-2" style={{ fontSize: 'var(--profile-edit-label-size)', color: '#ffffff' }}>Описание профиля</div>
                 <textarea
@@ -645,7 +652,7 @@ export default function ProfileEdit({
                   rows={3}
                   placeholder=""
                   className="w-full rounded-[10px] bg-[#0F0F0F] px-3 py-2 leading-[1.4em] text-white outline-none font-sf-ui-light"
-                  style={{ fontSize: 'calc(var(--profile-edit-text-size) - 2px)', border: 'var(--profile-edit-input-border)' }}
+                  style={{ fontSize: '16px', border: 'var(--profile-edit-input-border)' }}
                 />
               </div>
               <button

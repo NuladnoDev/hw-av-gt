@@ -271,9 +271,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
     }
     if (client) {
       const { error } = await client.from('profiles').upsert(payload)
-      if (error) {
-        updateLocal()
-      }
+      updateLocal()
     } else {
       updateLocal()
     }
@@ -366,6 +364,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                     onChange={(e) => setAge(e.target.value)}
                     inputMode="numeric"
                     className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all"
+                    style={{ fontSize: '16px' }}
                     placeholder="Введите возраст"
                   />
                   {age.trim().length > 0 && (
@@ -462,6 +461,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                   onChange={(e) => setHobbies(e.target.value)}
                   placeholder="Программист, дизайнер, художник"
                   className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-white font-sf-ui-light focus:outline-none focus:border-white/30 transition-all placeholder:text-white/50"
+                  style={{ fontSize: '16px' }}
                 />
                 {hobbies.trim().length > 0 && (
                   <button
@@ -555,6 +555,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
                     onChange={(e) => setCitySearch(e.target.value)}
                     placeholder="Поиск города"
                     className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl px-5 py-2.5 text-white font-sf-ui-light outline-none placeholder:text-white/20 focus:bg-white/[0.15] transition-all"
+                    style={{ fontSize: '16px' }}
                   />
                   {citySearch && (
                     <button
