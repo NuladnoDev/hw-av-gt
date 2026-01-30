@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function HelloScreen({
   onNext,
@@ -25,201 +26,141 @@ export default function HelloScreen({
     setShowIosTip(ios && !standalone)
   }, [])
 
-  useEffect(() => {
-    if (showIosTip) return
-    const updateOffset = () => {
-      try {
-        const btn = loginButtonRef.current
-        if (!btn) return
-        const rect = btn.getBoundingClientRect()
-        const viewportH = window.visualViewport?.height ?? window.innerHeight
-        const margin = isIOS ? 60 : 12
-        const overflow = rect.bottom + margin - viewportH
-        const root = document.documentElement
-        if (overflow > 0) {
-          root.style.setProperty('--hello-login-offset-y', `${overflow}px`)
-        } else {
-          root.style.setProperty('--hello-login-offset-y', '0px')
-        }
-      } catch {}
-    }
-    updateOffset()
-    window.addEventListener('resize', updateOffset)
-    const vv = window.visualViewport as any
-    vv?.addEventListener?.('resize', updateOffset)
-    return () => {
-      window.removeEventListener('resize', updateOffset)
-      vv?.removeEventListener?.('resize', updateOffset)
-    }
-  }, [showIosTip, isIOS])
-
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#0A0A0A]">
-      <div className="relative h-[812px] w-[375px]">
-        <div hidden={showIosTip}>
-        <img
-          src="/interface/src.svg"
-          alt="src"
-          className="absolute left-[133px] top-[190px] h-[150px] w-[150px]"
-        />
-        <div
-          className="absolute left-[113px] top-[380px] h-[26px] w-[150px] text-center text-[32px] font-bold leading-[0.8125em] text-white font-ttc-bold whitespace-nowrap"
-        >
-          hw-project
-        </div>
-        <div className="absolute left-[48px] top-[406px] h-[26px] w-[279px] text-center text-[20px] font-light leading-[1.3em] text-white">
-          Удобно. быстро. безопастно
-        </div>
-        <div className="absolute left-[75px] top-[432px] h-[26px] w-[244px] text-center text-[16px] font-light leading-[1.625em] text-[#A6F3A6]">
-          Пользовательское соглашение
-        </div>
-        <button
+    <div className="flex min-h-screen w-full flex-col items-center justify-between bg-black px-6 pb-12 pt-20 overflow-hidden">
+      {/* Background gradients for Liquid Glass effect */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full" />
+      </div>
+
+      <AnimatePresence>
+        {!showIosTip ? (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative flex flex-col items-center justify-center w-full max-w-sm flex-1"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="mb-12"
+            >
+              <img
+                src="/interface/src.svg"
+                alt="src"
+                className="h-[120px] w-[120px] opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+              />
+            </motion.div>
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="text-center space-y-3"
+            >
+              <h1 className="text-4xl font-bold tracking-tight text-white font-ttc-bold">
+                hw-project
+              </h1>
+              <p className="text-xl font-light text-white/60">
+                Удобно. Быстро. Безопасно.
+              </p>
+              <button 
+                type="button"
+                className="text-sm font-medium text-emerald-400/80 hover:text-emerald-400 transition-colors"
+              >
+                Пользовательское соглашение
+              </button>
+            </motion.div>
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="mt-16 w-full"
+            >
+              <button
+                type="button"
+                className="h-[58px] w-full rounded-2xl bg-white text-black font-bold text-lg shadow-[0_20px_40px_-15px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all hover:bg-zinc-100"
+                onClick={() => {
+                  if (onNext) {
+                    onNext()
+                    return
+                  }
+                  const event = new CustomEvent('hello-next')
+                  window.dispatchEvent(event)
+                }}
+              >
+                Далее
+              </button>
+            </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="relative z-20 flex flex-col items-center justify-center w-full max-w-sm flex-1"
+          >
+            <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl text-center space-y-6">
+              <img
+                src="/interface/link-broken.svg"
+                alt="union"
+                className="mx-auto w-16 h-16 opacity-80"
+              />
+              <div className="space-y-2">
+                <h2 className="text-2xl font-light text-white">
+                  Ой, похоже у вас <span className="font-medium">iPhone</span>
+                </h2>
+                <p className="text-white/60 leading-relaxed">
+                  В таком случае <span className="text-emerald-400">крайне рекомендуется</span> добавить сайт как <span className="text-white">приложение</span>
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-center gap-4 py-4 border-y border-white/5">
+                <img src="/interface/dot-horizontal.svg" alt="dot" className="w-6 h-6 opacity-60" />
+                <span className="text-white/40">→</span>
+                <img src="/interface/Share.svg" alt="Share" className="w-6 h-6 opacity-60" />
+                <span className="text-sm text-white/60">Поделиться</span>
+                <span className="text-white/40">→</span>
+                <img src="/interface/add-square-03.svg" alt="Add" className="w-6 h-6 opacity-60" />
+                <span className="text-sm text-white/60 font-medium">«Домой»</span>
+              </div>
+
+              <button
+                type="button"
+                className="w-full h-12 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium transition-colors"
+                onClick={() => setShowIosTip(false)}
+              >
+                Закрыть
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!showIosTip && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
           type="button"
-          className="absolute left-[113px] top-[492px] h-[47px] w-[157px] rounded-[10px] bg-[#111111] text-center"
+          ref={loginButtonRef}
+          className="relative z-10 text-white/50 hover:text-white/80 transition-colors text-base py-4"
           onClick={() => {
-            if (onNext) {
-              onNext()
+            if (onLogin) {
+              onLogin()
               return
             }
-            const event = new CustomEvent('hello-next')
+            const event = new CustomEvent('hello-login')
             window.dispatchEvent(event)
           }}
         >
-          <span
-            className="inline-block h-[25px] w-[149px] text-[20px] font-semibold leading-[1.25em] tracking-[0.015em] text-white font-vk-demi"
-          >
-            Далее
-          </span>
-        </button>
-        </div>
-        {!showIosTip && (
-          <button
-            type="button"
-            ref={loginButtonRef}
-            className="absolute left-0 w-full text-center"
-            style={{
-              bottom: isStandalone
-                ? 'calc(env(safe-area-inset-bottom, 0px) + var(--hello-login-standalone-bottom) + var(--hello-login-offset-y))'
-                : 'calc(env(safe-area-inset-bottom, 0px) + var(--hello-login-browser-bottom) + var(--hello-login-offset-y))',
-            }}
-            onClick={() => {
-              if (onLogin) {
-                onLogin()
-                return
-              }
-              const event = new CustomEvent('hello-login')
-              window.dispatchEvent(event)
-            }}
-          >
-            <span className="inline-block text-[16px] leading-[1.4em] text-white">
-              У меня уже есть аккаунт
-            </span>
-          </button>
-        )}
-        {showIosTip && (
-          <div
-            className="absolute left-0 top-0 flex h-full w-full items-center justify-center"
-            style={{ zIndex: 20, transform: 'translateY(var(--hello-tip-overlay-offset-y))' }}
-          >
-            <div className="relative">
-              <div
-                className="absolute left-0 top-4 w-full rounded-[16px]"
-                style={{ height: 'calc(var(--hello-tip-modal-width) * 0.6)', background: 'rgba(255,255,255,0.04)', filter: 'blur(6px)' }}
-              />
-              <div
-                className="rounded-[var(--hello-tip-card-radius)] border text-center"
-                style={{
-                  width: 'var(--hello-tip-modal-width)',
-                  height: 'var(--hello-tip-modal-height)',
-                  padding: 'var(--hello-tip-modal-padding)',
-                  background: 'var(--hello-tip-card-bg)',
-                  borderColor: 'var(--hello-tip-card-border)',
-                  boxShadow: 'var(--hello-tip-card-shadow)',
-                }}
-              >
-                <img
-                  src="/interface/link-broken.svg"
-                  alt="union"
-                  style={{
-                    width: 'var(--hello-tip-union-size)',
-                    height: 'var(--hello-tip-union-size)',
-                    marginBottom: 'var(--hello-tip-union-margin-bottom)',
-                    display: 'block',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                    transform: 'translate(var(--hello-tip-union-offset-x), var(--hello-tip-union-offset-y))',
-                  }}
-                />
-                <div
-                  className="mx-auto text-white"
-                  style={{
-                    fontSize: 'var(--hello-tip-title-size)',
-                    width: 'var(--hello-tip-text-block-width)',
-                    fontFamily: 'var(--font-sf-ui-text-light)',
-                    lineHeight: 'calc(1.25em + var(--hello-tip-text-indent))',
-                  }}
-                >
-                  <span>Ой, похоже у вас </span>
-                  <span style={{ color: 'white', fontFamily: 'var(--font-sf-ui-text-medium)' }}>Iphone</span>
-                </div>
-                <div
-                  className="mx-auto text-white"
-                  style={{
-                    fontSize: 'var(--hello-tip-text-size)',
-                    marginTop: 'var(--hello-tip-line-gap)',
-                    width: 'var(--hello-tip-text-block-width)',
-                    fontFamily: 'var(--font-sf-ui-text-light)',
-                    lineHeight: 'calc(1.4em + var(--hello-tip-text-indent))',
-                  }}
-                >
-                  <span>В таком случае </span>
-                  <span style={{ color: 'var(--hello-tip-iphone-color)' }}>крайне рекомендуется</span>
-                  <span> добавить сайт как </span>
-                  <span style={{ color: 'white' }}>приложение</span>
-                </div>
-                <div style={{ height: 'var(--hello-tip-gap)' }} />
-                <div className="mx-auto" style={{ width: 'var(--hello-tip-instruction-width)', marginTop: 'var(--hello-tip-flow-margin-top)' }}>
-                  <div className="flex items-center justify-center" style={{ gap: 'var(--hello-tip-flow-gap)' }}>
-                    <img src="/interface/dot-horizontal.svg" alt="dot" style={{ width: 'var(--hello-tip-icon-size)', height: 'var(--hello-tip-icon-size)' }} />
-                    <span className="text-white" style={{ fontSize: 'var(--hello-tip-text-size)' }}>→</span>
-                    <img src="/interface/Share.svg" alt="Share" style={{ width: 'var(--hello-tip-icon-size)', height: 'var(--hello-tip-icon-size)' }} />
-                    <span className="text-white" style={{ fontSize: 'var(--hello-tip-text-size)' }}>Поделиться</span>
-                    <span className="text-white" style={{ fontSize: 'var(--hello-tip-text-size)' }}>→</span>
-                    <img src="/interface/add-square-03.svg" alt="Add" style={{ width: 'var(--hello-tip-icon-size)', height: 'var(--hello-tip-icon-size)' }} />
-                    <span className="text-white" style={{ fontSize: 'var(--hello-tip-text-size)' }}>
-                      «Домой»
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="absolute left-0 w-full text-center"
-                style={{
-                  bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--hello-close-bottom))',
-                }}
-                onClick={() => {
-                  setShowIosTip(false)
-                }}
-              >
-                <span
-                  className="inline-flex items-center justify-center font-vk-demi"
-                  style={{
-                    width: 'var(--hello-close-width)',
-                    height: 'var(--hello-close-height)',
-                    borderRadius: 'var(--hello-close-radius)',
-                    background: 'var(--hello-close-bg)',
-                    fontSize: 'var(--hello-close-text-size)',
-                    color: 'var(--hello-close-text-color)',
-                  }}
-                >
-                  Закрыть
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+          У меня уже есть аккаунт
+        </motion.button>
+      )}
     </div>
   )
 }

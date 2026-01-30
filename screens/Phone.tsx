@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { X, Smartphone, Tablet, Laptop, Globe, MapPin, Clock, Shield, LogOut, ChevronRight } from 'lucide-react'
+import { X, Smartphone, Tablet, Laptop, Globe, MapPin, Clock, Shield, LogOut, ChevronRight, ChevronLeft } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 
 type DeviceInfo = {
@@ -245,14 +245,9 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 -ml-2 items-center justify-center rounded-full active:bg-white/10 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
           >
-            <img
-              src="/interface/str.svg"
-              alt="back"
-              className="h-[22px] w-[22px]"
-              style={{ filter: 'brightness(0) invert(1)' }}
-            />
+            <ChevronLeft size={24} className="text-white" />
           </button>
           <div className="flex-1 text-center pr-8">
             <span className="text-[20px] font-ttc-bold text-white">Устройства</span>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { RefreshCcw, ShoppingBag, User } from 'lucide-react'
+import { RefreshCcw, ShoppingBag, User, Settings } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import Profile from './profile'
 import ProfileEdit from './profile_edit'
@@ -511,11 +511,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   className={`absolute left-6 top-0 flex h-full items-center transition-all duration-200 ${!isAuthed ? 'opacity-30 grayscale' : ''}`}
                   aria-label="Редактировать профиль"
                 >
-                  <img
-                    src="/interface/pencil-02.svg"
-                    alt="edit"
-                    className="h-[22px] w-[22px]"
-                    style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
+                  <Settings
+                    className="h-[22px] w-[22px] text-white"
                   />
                 </button>
               ) : (

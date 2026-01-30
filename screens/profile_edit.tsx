@@ -6,18 +6,23 @@ import ModeratorBadge from '../components/ModeratorBadge'
 import QualityBadge from '../components/QualityBadge'
 import VerifiedBadge from '../components/VerifiedBadge'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  User, 
-  MapPin, 
-  Briefcase, 
-  Heart, 
-  Hash, 
-  Settings, 
-  LogOut, 
+import {
+  User,
+  MapPin,
+  Briefcase,
+  Heart,
+  Hash,
+  Settings,
+  LogOut,
   ChevronRight,
+  ChevronLeft,
+  Trash2,
   Sparkles,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Lock,
+  Copy,
+  Check
 } from 'lucide-react'
 
 export default function ProfileEdit({
@@ -54,6 +59,13 @@ export default function ProfileEdit({
   const [selectorClosing, setSelectorClosing] = useState(false)
   const [selectorType, setSelectorType] = useState<'gender' | 'city' | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showAccountSettings, setShowAccountSettings] = useState(false)
+  const [showPasswordSettings, setShowPasswordSettings] = useState(false)
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [idRevealed, setIdRevealed] = useState(false)
   const [cityQuery, setCityQuery] = useState('')
   const [cityResults, setCityResults] = useState<string[]>([])
   const [cityLoading, setCityLoading] = useState(false)
@@ -511,6 +523,62 @@ export default function ProfileEdit({
     window.dispatchEvent(event)
   }
 
+  const handlePasswordChange = async () => {
+    setPasswordError('')
+    if (!oldPassword) {
+      setPasswordError('Введите старый пароль')
+      return
+    }
+    if (!newPassword) {
+      setPasswordError('Введите новый пароль')
+      return
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('Пароль должен быть не менее 6 символов')
+      return
+    }
+
+    setIsChangingPassword(true)
+    try {
+      const client = getSupabase()
+      if (!client) throw new Error('Supabase client not found')
+
+      // Get current user email
+      const { data: { user } } = await client.auth.getUser()
+      if (!user?.email) throw new Error('Пользователь не найден')
+
+      // Verify old password by signing in again
+      const { error: signInError } = await client.auth.signInWithPassword({
+        email: user.email,
+        password: oldPassword,
+      })
+
+      if (signInError) {
+        setPasswordError('Неверный старый пароль')
+        return
+      }
+
+      // Update password
+      const { error: updateError } = await client.auth.updateUser({
+        password: newPassword
+      })
+
+      if (updateError) {
+        setPasswordError(updateError.message)
+      } else {
+        // Success
+        setOldPassword('')
+        setNewPassword('')
+        setShowPasswordSettings(false)
+        // Could add a success toast here
+      }
+    } catch (err: any) {
+      setPasswordError(err.message || 'Произошла ошибка')
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
+
   const dirty =
     tagText.trim() !== (originalTag ?? '') ||
     (description ?? '') !== (originalDescription ?? '') ||
@@ -524,7 +592,7 @@ export default function ProfileEdit({
     <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
       <div className="relative h-full w-full max-w-[430px] bg-[#0A0A0A] flex flex-col">
         {/* Header */}
-        <div className="safe-top h-[64px] flex items-center justify-between px-6 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-20">
+        <div className="safe-top h-[64px] flex items-center justify-between px-6 bg-transparent sticky top-0 z-20 pointer-events-none">
           <button
             type="button"
             onClick={() => {
@@ -534,7 +602,7 @@ export default function ProfileEdit({
                 onClose()
               }
             }}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 backdrop-blur-md transition-colors pointer-events-auto"
           >
             <img
               src="/interface/x-01.svg"
@@ -551,7 +619,7 @@ export default function ProfileEdit({
               onClose()
             }}
             disabled={!dirty}
-            className={`px-5 h-10 rounded-full font-sf-ui-medium transition-all ${
+            className={`px-5 h-10 rounded-full font-sf-ui-medium transition-all backdrop-blur-md pointer-events-auto ${
               dirty 
                 ? 'bg-white text-black scale-100 active:scale-95' 
                 : 'bg-white/5 text-white/30 scale-100'
@@ -561,22 +629,31 @@ export default function ProfileEdit({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-32">
-          {/* Avatar Section */}
-          <div className="relative pt-10 pb-6 flex flex-col items-center">
+        <div className="flex-1 overflow-y-auto pb-32 scrollbar-hide flex flex-col items-center mt-[-64px]">
+          <style jsx global>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+            .scrollbar-hide {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+          `}</style>
+          
+          <div className="w-full flex flex-col items-center pt-24">
             <div 
               className="relative group cursor-pointer"
               onClick={() => avatarInputRef.current?.click()}
             >
               <div 
-                className="w-[120px] h-[120px] rounded-full overflow-hidden border-4 border-[#1A1A1A] shadow-2xl relative"
+                className="w-[120px] h-[120px] rounded-full overflow-hidden border-4 border-[#1A1A1A] shadow-2xl relative flex items-center justify-center"
                 style={{ background: avatarUrl ? '#1A1A1A' : gradient }}
               >
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[40px] text-white/50 font-ttc-bold">
-                    {initialLetter}
+                  <div className="w-full h-full flex items-center justify-center text-[40px] text-white/50 font-ttc-bold leading-none">
+                    <span className="translate-y-[2px]">{initialLetter}</span>
                   </div>
                 )}
                 
@@ -598,33 +675,32 @@ export default function ProfileEdit({
               )}
             </div>
 
-            <div className="mt-4 flex flex-col items-center gap-1">
+            <div className="mt-4 flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-2">
-                <span className="text-[24px] font-ttc-bold text-white">@{tagText || 'user'}</span>
                 <div className="flex items-center gap-1.5">
                   {isModerator && <ModeratorBadge size={18} />}
                   {isQuality && <QualityBadge size={18} />}
-                  {isVerified && <VerifiedBadge size={18} />}
                 </div>
+                <span className="text-[24px] font-ttc-bold text-white">{tagText || 'user'}</span>
+                {isVerified && <VerifiedBadge size={18} />}
               </div>
               <p className="text-white/40 text-[13px] font-sf-ui-light">Нажмите на фото, чтобы изменить</p>
             </div>
           </div>
 
-          {/* Form Sections */}
-          <div className="px-6 space-y-6">
+            {/* Form Sections */}
+          <div className="w-full px-6 space-y-6 mt-6">
             {/* Tag Section */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 px-1">
-                <Hash size={16} className="text-white/40" />
-                <span className="text-[13px] font-sf-ui-medium text-white/40 uppercase tracking-wider">Тег профиля</span>
+                <span className="text-[13px] font-sf-ui-medium text-white/40 tracking-wider">Имя пользователя</span>
               </div>
               <div className="relative">
                 <input
                   value={tagText}
                   onChange={(e) => setTagText(e.target.value)}
                   placeholder="Ваш уникальный тег"
-                  className={`w-full h-[56px] bg-[#1A1A1A] border ${tagError ? 'border-red-500/50' : 'border-white/5'} rounded-[28px] px-6 text-white font-sf-ui-light outline-none focus:border-white/20 transition-colors`}
+                  className={`w-full h-[56px] bg-[#0F0F0F] border ${tagError ? 'border-red-500/50' : 'border-white/5'} rounded-[28px] px-6 text-white font-sf-ui-light outline-none focus:border-white/20 transition-colors`}
                 />
                 {tagError && <p className="absolute -bottom-5 left-4 text-[11px] text-red-500">{tagError}</p>}
               </div>
@@ -634,13 +710,13 @@ export default function ProfileEdit({
             <div className="space-y-3">
               <div className="flex items-center gap-2 px-1">
                 <Info size={16} className="text-white/40" />
-                <span className="text-[13px] font-sf-ui-medium text-white/40 uppercase tracking-wider">О себе</span>
+                <span className="text-[13px] font-sf-ui-medium text-white/40 tracking-wider">О себе</span>
               </div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Расскажите что-нибудь интересное..."
-                className="w-full min-h-[120px] bg-[#1A1A1A] border border-white/5 rounded-[32px] p-6 text-white font-sf-ui-light outline-none focus:border-white/20 transition-colors resize-none"
+                className="w-full min-h-[120px] bg-[#0F0F0F] border border-white/5 rounded-[32px] p-6 text-white font-sf-ui-light outline-none focus:border-white/20 transition-colors resize-none"
               />
             </div>
 
@@ -648,17 +724,12 @@ export default function ProfileEdit({
             <div className="pt-4 space-y-3">
               <button
                 type="button"
-                onClick={() => {
-                  onClose()
-                  window.dispatchEvent(new Event('open-settings'))
-                }}
+                onClick={() => setShowAccountSettings(true)}
                 className="w-full h-[56px] bg-[#1A1A1A] border border-white/5 rounded-[28px] flex items-center justify-between px-6 group hover:bg-white/[0.08] transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-                    <Settings size={20} className="text-white/60" />
-                  </div>
-                  <span className="text-white font-sf-ui-medium">Настройки</span>
+                  <Settings size={20} className="text-white/60" />
+                  <span className="text-white font-sf-ui-medium">Настройки аккаунта</span>
                 </div>
                 <ChevronRight size={20} className="text-white/20 group-hover:translate-x-1 transition-transform" />
               </button>
@@ -681,8 +752,255 @@ export default function ProfileEdit({
         </div>
       </div>
 
+      <AnimatePresence>
+        {showAccountSettings && (
+          <div key="account-settings-overlay" className="fixed inset-0 z-[100] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative h-full w-full max-w-[430px] bg-[#0A0A0A] flex flex-col"
+            >
+              {/* Account Settings Header */}
+              <div className="safe-top h-[64px] flex items-center px-6 bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-20">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAccountSettings(false)
+                    setIdRevealed(false)
+                  }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <ChevronLeft className="h-6 w-6 text-white" />
+                </button>
+                <div className="flex-1 text-center pr-10">
+                  <span className="text-[20px] font-ttc-bold text-white">Настройки аккаунта</span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 scrollbar-hide">
+                {/* User Info Card */}
+                <div className="bg-[#0F0F0F] border border-white/5 rounded-[32px] p-6">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div
+                      className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center shadow-xl"
+                      style={{ background: avatarUrl ? '#0A0A0A' : gradient }}
+                    >
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-white font-ttc-bold text-[20px]">{initialLetter}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[18px] font-sf-ui-medium text-white">{tagText || 'user'}</span>
+                      <span className="text-[13px] text-white/40 font-sf-ui-light">Ваш профиль</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/5">
+                      <div
+                        className="flex flex-col flex-1 cursor-pointer group/id"
+                        onClick={() => setIdRevealed(true)}
+                      >
+                        <span className="text-[12px] text-white/30 uppercase tracking-wider mb-1">hw-id</span>
+                        <div className="relative inline-block overflow-hidden rounded-md">
+                          <span
+                            className={`text-[14px] text-white font-mono break-all pr-2 transition-all duration-500 ease-out ${
+                              !idRevealed ? 'blur-[6px] select-none opacity-30 scale-95' : 'blur-0 opacity-100 scale-100'
+                            }`}
+                          >
+                            {userId || 'ID не найден'}
+                          </span>
+                          {!idRevealed && (
+                             <motion.div
+                               initial={{ opacity: 0 }}
+                               animate={{ 
+                                  opacity: 1,
+                                  backgroundPosition: ['0px 0px', '6px 6px']
+                                }}
+                                transition={{
+                                  backgroundPosition: {
+                                    duration: 0.2,
+                                    repeat: Infinity,
+                                    ease: "linear"
+                                  }
+                                }}
+                                className="absolute inset-0 flex items-center justify-start pointer-events-none"
+                              >
+                                <div className="w-full h-full bg-white/10 opacity-40" style={{
+                                  backgroundImage: `radial-gradient(circle, currentColor 1.1px, transparent 1.1px)`,
+                                  backgroundSize: '6px 6px'
+                                }} />
+                              </motion.div>
+                           )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (userId) {
+                            navigator.clipboard.writeText(userId)
+                            setIdRevealed(true)
+                            // Could add a toast here
+                          }
+                        }}
+                        className="w-10 h-10 aspect-square flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 active:scale-95 transition-all border border-white/5 ml-4"
+                      >
+                        <Copy size={18} className="text-white/60" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Card */}
+                <div className="bg-[#0F0F0F] border border-white/5 rounded-[32px] overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordSettings(true)}
+                    className="w-full flex items-center justify-between p-5 hover:bg-white/[0.03] transition-colors group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                        <Lock size={20} className="text-blue-400" />
+                      </div>
+                      <span className="text-white font-sf-ui-medium">Изменить пароль</span>
+                    </div>
+                    <ChevronRight size={20} className="text-white/20 group-hover:translate-x-1 transition-transform" />
+                  </button>
+
+                  <div className="h-[1px] bg-white/[0.03] mx-5" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAccountSettings(false)
+                      setShowConfirm(false)
+                      setIdRevealed(false)
+                      // Trigger delete confirm from Setting or local state
+                      // For now we'll use a local delete confirm or dispatch event
+                      window.dispatchEvent(new Event('profile-delete-request'))
+                    }}
+                    className="w-full flex items-center justify-between p-5 hover:bg-red-500/5 transition-colors group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                        <Trash2 size={20} className="text-red-500" />
+                      </div>
+                      <span className="text-red-500 font-sf-ui-medium">Удалить аккаунт</span>
+                    </div>
+                    <ChevronRight size={20} className="text-red-500/20 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Confirmation Modal */}
       <AnimatePresence>
+        {showPasswordSettings && (
+          <div key="password-settings-overlay" className="fixed inset-0 z-[110] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative h-full w-full max-w-[430px] bg-[#0A0A0A] flex flex-col"
+            >
+              {/* Password Settings Header */}
+              <div className="safe-top h-[64px] flex items-center px-6 bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-20">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordSettings(false)
+                    setOldPassword('')
+                    setNewPassword('')
+                    setPasswordError('')
+                  }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <ChevronLeft className="h-6 w-6 text-white" />
+                </button>
+                <div className="flex-1 text-center pr-10">
+                  <span className="text-[20px] font-ttc-bold text-white">Изменение пароля</span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 scrollbar-hide">
+                <div className="space-y-6">
+                  {/* Old Password */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 px-1">
+                      <Lock size={16} className="text-white/40" />
+                      <span className="text-[13px] font-sf-ui-medium text-white/40 tracking-wider">Старый пароль</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full h-[56px] bg-[#0F0F0F] border border-white/5 rounded-[28px] px-6 text-white font-sf-ui-light outline-none focus:border-white/20 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* New Password */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 px-1">
+                      <Sparkles size={16} className="text-white/40" />
+                      <span className="text-[13px] font-sf-ui-medium text-white/40 tracking-wider">Новый пароль</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full h-[56px] bg-[#0F0F0F] border border-white/5 rounded-[28px] px-6 text-white font-sf-ui-light outline-none focus:border-white/20 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {passwordError && (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                      <AlertTriangle size={16} className="text-red-500 flex-shrink-0" />
+                      <p className="text-[13px] text-red-500 font-sf-ui-light">{passwordError}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handlePasswordChange}
+                    disabled={isChangingPassword || !oldPassword || !newPassword}
+                    className={`w-full h-[56px] rounded-[28px] font-sf-ui-medium transition-all flex items-center justify-center gap-2 ${
+                      !isChangingPassword && oldPassword && newPassword
+                        ? 'bg-white text-black active:scale-95'
+                        : 'bg-white/5 text-white/20'
+                    }`}
+                  >
+                    {isChangingPassword ? (
+                      <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Check size={20} />
+                        <span>Сохранить новый пароль</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-white/20 text-[13px] text-center px-4 font-sf-ui-light leading-relaxed">
+                  После смены пароля вам может потребоваться войти в аккаунт повторно на других устройствах.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {showConfirm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
             <motion.div

@@ -330,9 +330,8 @@ export default function InfoMe({ onClose }: InfoMeProps) {
             <button
               type="button"
               onClick={handleClose}
-              className="absolute left-4 p-2 -ml-1 rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-300"
+              className="absolute left-6 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
               aria-label="Назад"
-              style={{ marginTop: 'var(--about-header-icon-margin-top)' }}
             >
               <ChevronLeft size={24} className="text-white" />
             </button>

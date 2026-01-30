@@ -2,7 +2,28 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Search, Package } from 'lucide-react'
+import {
+  Bell,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Edit2,
+  Lock,
+  LogOut,
+  MapPin,
+  MoreVertical,
+  Plus,
+  Settings,
+  Shield,
+  Star,
+  Trash2,
+  User,
+  Users,
+  Wallet,
+  Search,
+  Package
+} from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 import { AdCard, AdCardSkeleton, loadAdsFromStorage, deleteAdById, StoredAd } from './ads'
@@ -946,7 +967,7 @@ export default function Profile({
         />
       </div>
       <div
-        className="absolute left-0 w-full px-6 overflow-y-auto pb-8"
+        className="absolute left-0 w-full px-6 overflow-y-auto pb-8 scrollbar-hidden"
         style={{
           top: 'calc(var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px + var(--profile-avatar-top-offset, 0px))',
           height: 'calc(100% - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - 12px - var(--profile-avatar-top-offset, 0px))',
@@ -1839,7 +1860,7 @@ export default function Profile({
                             </span>
                           </div>
                           <div className="ml-auto">
-                            <img src="/interface/str.svg" className="w-4 h-4 opacity-20 rotate-180" style={{ filter: 'brightness(0) invert(1)' }} />
+                            <ChevronLeft size={16} className="text-white opacity-20 rotate-180" />
                           </div>
                         </motion.button>
                       )

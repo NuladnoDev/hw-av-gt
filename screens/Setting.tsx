@@ -179,7 +179,14 @@ export default function Setting({
       else if (typeof ev.detail?.avatar_url === 'string') setAvatarUrl(ev.detail.avatar_url)
     }
     window.addEventListener('profile-updated', handleUpdated as EventListener)
-    return () => window.removeEventListener('profile-updated', handleUpdated as EventListener)
+    const handleDeleteRequest = () => {
+      setShowDeleteConfirm(true)
+    }
+    window.addEventListener('profile-delete-request', handleDeleteRequest)
+    return () => {
+      window.removeEventListener('profile-updated', handleUpdated as EventListener)
+      window.removeEventListener('profile-delete-request', handleDeleteRequest)
+    }
   }, [])
 
   const gradientIndex = (() => {
@@ -202,7 +209,7 @@ export default function Setting({
   const openAbout = () => {
     if (onOpenAbout) onOpenAbout()
     else {
-      const ev = new Event('open-profile-edit')
+      const ev = new Event('open-info-me')
       window.dispatchEvent(ev)
     }
     close()
@@ -247,15 +254,10 @@ export default function Setting({
             <button
               type="button"
               onClick={close}
-              className="absolute left-6 top-0 flex h-full items-center"
+              className="absolute left-6 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
               aria-label="Назад"
             >
-              <img
-                src="/interface/str.svg"
-                alt="back"
-                className="h-[22px] w-[22px]"
-                style={{ filter: 'brightness(0) invert(1)' }}
-              />
+              <ChevronLeft size={24} className="text-white" />
             </button>
             <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
               <div className="text-[28px] font-bold leading-[1em] text-white font-ttc-bold">
@@ -481,7 +483,7 @@ export default function Setting({
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="absolute inset-0 z-[60] bg-[var(--bg-primary)] flex flex-col"
             >
-              {/* Notifications Header */}
+              {/* Header */}
               <div 
                 className="flex items-center px-6 bg-[var(--bg-primary)]"
                 style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
@@ -489,20 +491,10 @@ export default function Setting({
                 <button
                   type="button"
                   onClick={() => setShowNotifications(false)}
-                  className="flex h-full items-center"
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                 >
-                  <img
-                    src="/interface/str.svg"
-                    alt="back"
-                    className="h-[22px] w-[22px]"
-                    style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
-                  />
+                  <ChevronLeft size={24} className="text-white" />
                 </button>
-                <div className="flex-1 text-center pr-6">
-                  <div className="text-[20px] font-bold text-[var(--text-primary)] font-ttc-bold">
-                    Уведомления
-                  </div>
-                </div>
               </div>
 
               <div className="flex-1 px-6 mt-4 space-y-4">
@@ -714,20 +706,10 @@ export default function Setting({
                 <button
                   type="button"
                   onClick={() => setShowVerification(false)}
-                  className="flex h-full items-center"
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                 >
-                  <img
-                    src="/interface/str.svg"
-                    alt="back"
-                    className="h-[22px] w-[22px]"
-                    style={{ filter: 'brightness(0) invert(1)' }}
-                  />
+                  <ChevronLeft size={24} className="text-white" />
                 </button>
-                <div className="flex-1 text-center pr-6">
-                  <div className="text-[20px] font-bold text-white font-ttc-bold">
-                    Подтверждение
-                  </div>
-                </div>
               </div>
 
               <div className="flex-1 px-6 flex flex-col items-center justify-center text-center space-y-8">
@@ -767,7 +749,7 @@ export default function Setting({
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="absolute inset-0 z-[60] bg-[var(--bg-primary)] flex flex-col"
             >
-              {/* Appearance Header */}
+              {/* Header */}
               <div 
                 className="flex items-center px-6 bg-[var(--bg-primary)]"
                 style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
@@ -775,20 +757,10 @@ export default function Setting({
                 <button
                   type="button"
                   onClick={() => setShowAppearance(false)}
-                  className="flex h-full items-center"
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                 >
-                  <img
-                    src="/interface/str.svg"
-                    alt="back"
-                    className="h-[22px] w-[22px]"
-                    style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
-                  />
+                  <ChevronLeft size={24} className="text-white" />
                 </button>
-                <div className="flex-1 text-center pr-6">
-                  <div className="text-[20px] font-bold text-[var(--text-primary)] font-ttc-bold">
-                    Настройки сайта
-                  </div>
-                </div>
               </div>
 
               <div className="flex-1 px-6 mt-4 space-y-6">
@@ -904,18 +876,6 @@ export default function Setting({
                       </button>
                     </div>
                   </div>
-                </div>
-
-                {/* Danger Zone Section */}
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full h-[64px] bg-red-500/10 border border-red-500/20 rounded-[32px] flex items-center justify-center gap-3 active:bg-red-500/20 transition-all"
-                  >
-                    <Trash2 size={20} className="text-red-500" />
-                    <span className="text-red-500 font-sf-ui-medium text-[16px]">Удалить аккаунт</span>
-                  </button>
                 </div>
               </div>
             </motion.div>

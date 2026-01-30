@@ -70,13 +70,12 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
-          <button onClick={onClose} className="p-2 -ml-2 text-white/40 hover:text-white transition-colors">
-            <X size={24} />
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+            <X size={20} className="text-white" />
           </button>
-          <h2 className="text-[18px] font-sf-ui-medium text-white">Фильтры</h2>
           <button 
             onClick={handleReset}
-            className="text-[14px] text-[#007AFF] font-sf-ui-medium"
+            className="px-5 h-10 rounded-full bg-white/5 border border-white/10 text-white/30 text-[14px] font-sf-ui-medium active:scale-95 transition-all backdrop-blur-md hover:bg-white/10 hover:text-white"
           >
             Сбросить
           </button>
@@ -86,7 +85,7 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
         <div className="flex-1 overflow-y-auto scrollbar-hidden px-6 py-6 space-y-8">
           {/* Categories */}
           <section>
-            <h3 className="text-[15px] text-white/40 font-sf-ui-medium uppercase tracking-wider mb-4 px-1">
+            <h3 className="text-[13px] text-white/40 font-sf-ui-medium tracking-wider mb-4 px-1">
               Категории
             </h3>
             <div className="grid grid-cols-1 gap-2">
@@ -94,26 +93,26 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
                 <button
                   key={cat.id}
                   onClick={() => toggleCategory(cat.id)}
-                  className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-200 ${
+                  className={`flex items-center justify-between p-4 rounded-[24px] border transition-all duration-300 ${
                     tempFilters.categories.includes(cat.id)
-                      ? 'bg-white/10 ring-1 ring-white/20'
-                      : 'bg-white/5 hover:bg-white/10'
+                      ? 'bg-white/10 border-white/20'
+                      : 'bg-[#0F0F0F] border-white/5 hover:border-white/10'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div 
-                      className="p-2 rounded-xl"
-                      style={{ backgroundColor: `${cat.color}20`, color: cat.color }}
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                      style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
                     >
                       {React.isValidElement(cat.icon) 
-                        ? React.cloneElement(cat.icon as React.ReactElement<any>, { size: 20 })
+                        ? React.cloneElement(cat.icon as React.ReactElement<any>, { size: 18 })
                         : cat.icon}
                     </div>
                     <span className="text-[16px] text-white font-sf-ui-medium">{cat.label}</span>
                   </div>
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
                     tempFilters.categories.includes(cat.id)
-                      ? 'bg-[#007AFF] border-[#007AFF]'
+                      ? 'bg-blue-500 border-blue-500'
                       : 'border-white/10'
                   }`}>
                     {tempFilters.categories.includes(cat.id) && <Check size={14} strokeWidth={3} className="text-white" />}
@@ -125,7 +124,7 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
 
           {/* Price Range */}
           <section>
-            <h3 className="text-[15px] text-white/40 font-sf-ui-medium uppercase tracking-wider mb-4 px-1">
+            <h3 className="text-[13px] text-white/40 font-sf-ui-medium tracking-wider mb-4 px-1">
               Цена, ₽
             </h3>
             <div className="flex items-center gap-3">
@@ -135,7 +134,7 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
                   placeholder="От"
                   value={tempFilters.minPrice}
                   onChange={(e) => setTempFilters(prev => ({ ...prev, minPrice: e.target.value }))}
-                  className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 text-white placeholder:text-white/20 outline-none focus:ring-2 focus:ring-[#007AFF]/50 transition-all"
+                  className="w-full h-14 bg-[#0F0F0F] border border-white/5 rounded-[24px] px-6 text-white placeholder:text-white/20 outline-none focus:border-white/20 transition-all"
                 />
               </div>
               <div className="w-4 h-[1px] bg-white/10" />
@@ -145,7 +144,7 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
                   placeholder="До"
                   value={tempFilters.maxPrice}
                   onChange={(e) => setTempFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
-                  className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 text-white placeholder:text-white/20 outline-none focus:ring-2 focus:ring-[#007AFF]/50 transition-all"
+                  className="w-full h-14 bg-[#0F0F0F] border border-white/5 rounded-[24px] px-6 text-white placeholder:text-white/20 outline-none focus:border-white/20 transition-all"
                 />
               </div>
             </div>
@@ -153,7 +152,7 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
 
           {/* Condition */}
           <section>
-            <h3 className="text-[15px] text-white/40 font-sf-ui-medium uppercase tracking-wider mb-4 px-1">
+            <h3 className="text-[13px] text-white/40 font-sf-ui-medium tracking-wider mb-4 px-1">
               Состояние
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -161,10 +160,10 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
                 <button
                   key={cond.id}
                   onClick={() => toggleCondition(cond.id)}
-                  className={`px-5 py-3 rounded-full text-[14px] font-sf-ui-medium transition-all duration-200 ${
+                  className={`px-6 py-3 rounded-full text-[14px] font-sf-ui-medium transition-all duration-300 border ${
                     tempFilters.conditions.includes(cond.id)
-                      ? 'bg-[#007AFF] text-white'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
+                      ? 'bg-blue-500 border-blue-500 text-white'
+                      : 'bg-[#0F0F0F] border-white/5 text-white/60 hover:border-white/10'
                   }`}
                 >
                   {cond.label}
@@ -175,10 +174,10 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-[#0A0A0A] border-t border-white/5">
+        <div className="p-6 bg-[#0A0A0A]/80 backdrop-blur-xl border-t border-white/5">
           <button
             onClick={() => onApply(tempFilters)}
-            className="w-full h-14 bg-white text-black rounded-2xl font-vk-demi text-[17px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+            className="w-full h-14 bg-white/5 border border-white/10 text-white rounded-[28px] font-sf-ui-medium text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-white/10 backdrop-blur-md"
           >
             Показать результаты
           </button>

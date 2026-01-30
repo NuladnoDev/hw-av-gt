@@ -115,7 +115,7 @@ export default function Home() {
       const hash = arr.map((b) => b.toString(16).padStart(2, '0')).join('')
       const cnt = users.length + 1
       const uid = `hw-${String(cnt).padStart(4, '0')}`
-      const email = `${tag}@hw.local`
+      const email = `${tag}@hw-app.com`
       const nextUsers = [...users, { tag, uid, email, pass: hash }]
       window.localStorage.setItem('hw-users', JSON.stringify(nextUsers))
       window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid, email }))
@@ -133,7 +133,7 @@ export default function Home() {
       window.dispatchEvent(new Event('local-auth-changed'))
       return
     }
-    const email = `${tag}@hw.local`
+    const email = `${tag}@hw-app.com`
     const { data, error } = await client.auth.signUp({
       email,
       password,

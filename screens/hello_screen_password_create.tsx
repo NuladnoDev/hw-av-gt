@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ChevronLeft } from 'lucide-react'
 
 export default function HelloScreenPasswordCreate({
   onBack,
@@ -51,13 +52,10 @@ export default function HelloScreenPasswordCreate({
             const event = new CustomEvent('password-back')
             window.dispatchEvent(event)
           }}
-          className="group absolute left-[24px] top-[50px] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
+          className="absolute left-6 top-[50px] z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+          aria-label="Назад"
         >
-          <img
-            src="/interface/str.svg"
-            alt="back"
-            className="h-[22px] w-[22px] transition-transform group-active:-translate-x-1"
-          />
+          <ChevronLeft size={24} className="text-white" />
         </button>
 
         <div className="absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2 transform px-6 flex flex-col items-center">

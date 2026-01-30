@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapPin, Search } from 'lucide-react'
+import { MapPin, Search, ChevronLeft } from 'lucide-react'
+import { motion } from 'motion/react'
 
 const defaultRussianCities = [
   'Череповец',
@@ -120,31 +121,36 @@ export default function HelloScreenCity({
             const event = new CustomEvent('city-back')
             window.dispatchEvent(event)
           }}
-          className="group absolute left-[24px] top-[50px] z-10 flex h-[32px] w-[32px] items-center justify-center rounded-full bg-transparent"
+          className="absolute left-6 top-[50px] z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+          aria-label="Назад"
         >
-          <img
-            src="/interface/str.svg"
-            alt="back"
-            className="h-[22px] w-[22px] transition-transform group-active:-translate-x-1"
-          />
+          <ChevronLeft size={24} className="text-white" />
         </button>
 
-        <div className="absolute inset-0 flex flex-col pt-[110px] pb-[96px] px-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="absolute inset-0 flex flex-col pt-[110px] pb-10 px-6"
+        >
           <div className="flex flex-col items-center">
-            <div className="mb-8 flex h-[80px] w-[80px] items-center justify-center rounded-[24px] bg-[#1A1A1A]">
-              <MapPin size={40} strokeWidth={1.5} className="text-white" />
+            <div className="mb-8 relative">
+              <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full" />
+              <div className="relative flex h-[80px] w-[80px] items-center justify-center rounded-[24px] bg-white/5 border border-white/10">
+                <MapPin size={40} strokeWidth={1.5} className="text-white" />
+              </div>
             </div>
-            <div className="mb-3 text-center text-[28px] font-bold leading-[1.2em] text-white font-ttc-bold">
+            <div className="mb-3 text-center text-[32px] font-bold leading-[1.2em] text-white font-ttc-bold tracking-tight">
               Выберите город
             </div>
-            <div className="mb-8 max-w-[260px] text-center text-[14px] leading-[1.4em] text-[#A1A1A1]">
+            <div className="mb-8 max-w-[260px] text-center text-[16px] leading-[1.4em] text-white/50 font-sf-ui-regular">
               Укажите город для размещения ваших объявлений
             </div>
           </div>
 
-          <div className="mb-4 w-full">
+          <div className="mb-6 w-full">
             <div className="relative">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+              <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-white/20">
                 <Search size={20} />
               </span>
               <input
@@ -152,40 +158,42 @@ export default function HelloScreenCity({
                 value={citySearch}
                 onChange={(e) => setCitySearch(e.target.value)}
                 placeholder="Поиск города"
-                className="w-full rounded-2xl border border-[#2A2A2A] bg-[#1A1A1A] py-3 pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none placeholder:text-[#6B7280] focus:border-[#3A3A3A]"
+                className="h-[56px] w-full rounded-2xl border border-white/10 bg-white/5 pl-12 pr-5 text-[17px] leading-[1.4em] text-white outline-none placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.08] transition-all"
               />
             </div>
           </div>
 
           <div className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto pr-1">
+            <div className="h-full overflow-y-auto pr-1 space-y-2">
               {cityResults.length > 0 ? (
                 cityResults.map((city) => (
                   <button
                     key={city}
                     type="button"
                     onClick={() => setSelectedCity(city)}
-                    className={`mb-2 w-full rounded-2xl px-5 py-3 text-left text-[16px] leading-[1.4em] transition-all ${
-                      selectedCity === city ? 'bg-white text-black' : 'bg-[#1A1A1A] text-white hover:bg-[#252525]'
+                    className={`w-full rounded-2xl px-5 py-4 text-left text-[17px] leading-[1.4em] transition-all border ${
+                      selectedCity === city 
+                        ? 'bg-white text-black border-white' 
+                        : 'bg-white/5 text-white border-white/5 hover:bg-white/10'
                     }`}
                   >
                     {city}
                   </button>
                 ))
               ) : (
-                <div className="py-12 text-center text-[14px] leading-[1.4em] text-[#6B7280]">
+                <div className="py-12 text-center text-[16px] leading-[1.4em] text-white/20 font-sf-ui-regular">
                   Город не найден
                 </div>
               )}
               {cityLoading && (
-                <div className="pb-4 pt-2 text-[13px] leading-[16px] text-white/60 font-sf-ui-light">
+                <div className="pb-4 pt-2 text-center text-[14px] leading-[16px] text-white/40 font-sf-ui-light italic">
                   Загрузка городов…
                 </div>
               )}
             </div>
           </div>
 
-          <div className="mt-4 w-full">
+          <div className="mt-6 w-full">
             <button
               type="button"
               disabled={!selectedCity}
@@ -194,14 +202,16 @@ export default function HelloScreenCity({
                   onNext(selectedCity)
                 }
               }}
-              className={`h-[52px] w-full rounded-2xl text-[18px] font-semibold leading-[1.25em] tracking-[0.015em] font-vk-demi transition-all ${
-                selectedCity ? 'bg-white text-black active:scale-95' : 'bg-[#1A1A1A] text-gray-600'
+              className={`h-[56px] w-full rounded-2xl text-[18px] font-bold leading-[1.25em] tracking-tight font-vk-demi transition-all ${
+                selectedCity 
+                  ? 'bg-white text-black hover:scale-[1.02] active:scale-[0.98]' 
+                  : 'bg-white/10 text-white/20'
               }`}
             >
               Продолжить
             </button>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   )

@@ -22,7 +22,8 @@ export function getSupabase(): SupabaseClient | null {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'hw-supabase-auth'
+      storageKey: 'hw-supabase-auth',
+      flowType: 'pkce',
     }
   })
 
