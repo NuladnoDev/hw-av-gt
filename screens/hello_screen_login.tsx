@@ -204,7 +204,7 @@ export default function HelloScreenLogin({
             <div className="w-full space-y-6">
             <div className="flex flex-col gap-3">
               <label className="ml-1 text-[13px] font-medium text-white/30 tracking-[0.05em]" style={{ fontFamily: 'var(--font-inter)' }}>
-                Ваш тег
+                Ваше имя пользователя
               </label>
               <div className="relative w-full group">
                 <input

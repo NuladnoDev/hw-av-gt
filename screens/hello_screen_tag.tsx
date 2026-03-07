@@ -144,16 +144,16 @@ export default function HelloScreenTag({
         >
           <div className="pointer-events-auto w-full">
             <div className="mb-2 w-full text-left text-[32px] font-bold leading-[1.2em] text-white font-ttc-bold tracking-tight text-shadow-sm">
-              Выберите тег
+              Имя пользователя
             </div>
             <div className="mb-8 w-full text-left text-[16px] leading-[1.4em] text-white/50 font-light max-w-[280px]" style={{ fontFamily: 'var(--font-inter)' }}>
-              Укажите уникальный тег для вашего профиля
+              Укажите уникальное имя для вашего профиля
             </div>
 
             <div className="w-full space-y-8">
               <div className="flex flex-col gap-3">
                 <label className="ml-1 text-[13px] font-medium text-white/30 tracking-[0.05em]" style={{ fontFamily: 'var(--font-inter)' }}>
-                  Ваш уникальный тег
+                  Ваше имя пользователя
                 </label>
                 <div className="relative w-full group">
                   <input
