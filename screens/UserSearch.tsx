@@ -60,6 +60,19 @@ export default function UserSearchScreen({
   }
 
   useEffect(() => {
+    // Prevent background scroll when search is open
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.width = '100%'
+    
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+    }
+  }, [])
+
+  useEffect(() => {
     const baseW = 375
     const baseH = 812
     const update = () => {
@@ -91,7 +104,7 @@ export default function UserSearchScreen({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex w-full items-center justify-center bg-black/60 backdrop-blur-xl overflow-hidden"
+      className="fixed inset-0 z-[100] flex w-full items-center justify-center bg-black/60 backdrop-blur-xl"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

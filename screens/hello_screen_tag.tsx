@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { getSupabase } from '@/lib/supabaseClient'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { AdCardSkeleton } from './ads'
 
 export default function HelloScreenTag({
   onBack,
@@ -65,13 +66,59 @@ export default function HelloScreenTag({
   
 
   return (
-    <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
+    <div className="fixed inset-0 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden"
+      style={{ 
+        '--ads-bottom-offset': '-140px',
+      } as React.CSSProperties}
+    >
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})` }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px] bg-[#0A0A0A]" />
         
+        {/* Плывущие скелетоны объявлений на фоне снизу */}
+        <div 
+          className="absolute left-0 right-0 h-[600px] pointer-events-none opacity-[0.15] z-0 flex flex-col gap-4 overflow-hidden"
+          style={{ bottom: 'var(--ads-bottom-offset)' }}
+        >
+          {/* Мягкая тень-затемнение сверху вниз */}
+          <div className="absolute inset-0 z-10 bg-gradient-to-b from-[#0A0A0A] via-[#0A0A0A]/20 to-transparent h-[150px]" />
+
+          {/* Первый ряд */}
+          <div className="flex w-full overflow-hidden">
+            <motion.div 
+              className="flex gap-4 flex-nowrap"
+              animate={{ x: [0, -1500] }}
+              transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            >
+              {Array.from({ length: 30 }).map((_, i) => (
+                <div key={`row1-${i}`} className="w-[180px] flex-shrink-0 scale-90">
+                  <AdCardSkeleton />
+                </div>
+              ))}
+            </motion.div>
+          </div>
+          
+          {/* Второй ряд (в обратную сторону + смещение) */}
+          <div className="flex w-full overflow-hidden ml-[-100px]">
+            <motion.div 
+              className="flex gap-4 flex-nowrap"
+              animate={{ x: [-1500, 0] }}
+              transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
+            >
+              {Array.from({ length: 30 }).map((_, i) => (
+                <div key={`row2-${i}`} className="w-[180px] flex-shrink-0 scale-90">
+                  <AdCardSkeleton />
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Затемнение снизу вверх до кнопки */}
+        <div className="absolute bottom-0 left-0 right-0 h-[400px] bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent z-10 pointer-events-none" />
+
         {/* Background Decorative Element */}
-        <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-white/5 blur-[100px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-[-50px] right-[-50px] w-[200px] h-[200px] bg-white/5 blur-[80px] rounded-full pointer-events-none" />
+        <div className="absolute top-[-100px] left-[-100px] w-[300px] h-[300px] bg-white/[0.01] blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-50px] right-[-50px] w-[200px] h-[200px] bg-white/[0.01] blur-[80px] rounded-full pointer-events-none" />
 
         <button
           type="button"
@@ -83,7 +130,7 @@ export default function HelloScreenTag({
             const event = new CustomEvent('tag-back')
             window.dispatchEvent(event)
           }}
-          className="absolute left-6 top-[50px] z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all duration-200 active:scale-95"
+          className="absolute left-6 top-[50px] z-30 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all duration-200 active:scale-95"
           aria-label="Назад"
         >
           <ChevronLeft size={24} className="text-white" />
@@ -93,83 +140,97 @@ export default function HelloScreenTag({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="absolute inset-0 px-6 flex flex-col items-center pt-[140px]"
+          className="absolute inset-x-0 top-0 bottom-0 px-6 flex flex-col items-start pt-[140px] z-20 pointer-events-none"
         >
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
-            className="mb-10 relative"
-          >
-            <div className="absolute inset-0 bg-white/10 blur-[60px] rounded-full" />
-            <div className="relative flex h-[100px] w-[100px] items-center justify-center rounded-[32px] bg-white/5 border border-white/10 backdrop-blur-xl">
-              <img
-                src="/interface/tag.svg"
-                alt="tag"
-                className="h-14 w-14 opacity-90"
-              />
+          <div className="pointer-events-auto w-full">
+            <div className="mb-2 w-full text-left text-[32px] font-bold leading-[1.2em] text-white font-ttc-bold tracking-tight text-shadow-sm">
+              Выберите тег
             </div>
-          </motion.div>
-          
-          <div className="mb-3 w-full text-center text-[32px] font-bold leading-[1.2em] text-white font-ttc-bold tracking-tight">
-            Выберите тег
-          </div>
-          <div className="mb-12 w-full text-center text-[16px] leading-[1.4em] text-white/50 font-sf-ui-regular max-w-[280px]">
-            Укажите уникальный тег для вашего профиля
-          </div>
+            <div className="mb-8 w-full text-left text-[16px] leading-[1.4em] text-white/50 font-light max-w-[280px]" style={{ fontFamily: 'var(--font-inter)' }}>
+              Укажите уникальный тег для вашего профиля
+            </div>
 
-          <div className="w-full space-y-8">
-            <div className="flex flex-col gap-3">
-              <label className="ml-1 text-[13px] font-sf-ui-medium text-white/30 uppercase tracking-[0.1em]">
-                Ваш уникальный тег
-              </label>
-              <div className="relative w-full group">
-                <input
-                  value={value}
-                  onChange={(e) => handleValueChange(e.target.value)}
-                  placeholder="например, durov"
-                  className="h-[64px] w-full rounded-2xl border border-white/10 bg-white/5 pl-6 pr-6 text-[18px] leading-[1.4em] text-white outline-none focus:border-white/20 focus:bg-white/[0.08] transition-all placeholder:text-white/20 backdrop-blur-md"
-                  autoFocus
-                />
-                <AnimatePresence>
-                  {fieldError && (
-                    <motion.span 
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 10 }}
-                      className="absolute right-6 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#FF453A] font-sf-ui-medium bg-black/40 backdrop-blur-sm px-2 py-1 rounded-lg"
-                    >
-                      {fieldError}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+            <div className="w-full space-y-8">
+              <div className="flex flex-col gap-3">
+                <label className="ml-1 text-[13px] font-medium text-white/30 tracking-[0.05em]" style={{ fontFamily: 'var(--font-inter)' }}>
+                  Ваш уникальный тег
+                </label>
+                <div className="relative w-full group">
+                  <input
+                    value={value}
+                    onChange={(e) => handleValueChange(e.target.value)}
+                    placeholder="например, durov"
+                    className="h-[64px] w-full rounded-2xl border border-white/10 bg-white/5 pl-6 pr-6 text-[18px] leading-[1.4em] text-white outline-none focus:border-white/20 focus:bg-white/[0.08] transition-all placeholder:text-white/20 backdrop-blur-md"
+                    autoFocus
+                  />
+                  <AnimatePresence>
+                    {fieldError && (
+                      <motion.span 
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        className="absolute right-6 top-1/2 -translate-y-1/2 text-[14px] leading-[1.3em] text-[#FF453A] font-sf-ui-medium bg-black/40 backdrop-blur-sm px-2 py-1 rounded-lg"
+                      >
+                        {fieldError}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              className={`h-[60px] w-full rounded-2xl text-center transition-all duration-300 relative overflow-hidden ${
-                validFormat && !checking
-                  ? 'bg-white text-black hover:scale-[1.02] active:scale-[0.98]'
-                  : 'bg-white/10 text-white/20'
-              }`}
-              onClick={() => {
-                if (!validLength) {
-                  setError(trimmed.length < 3 ? 'минимум 3 символа' : 'максимум 12 символов')
-                  return
-                }
-                if (!tagRegex.test(trimmed)) {
-                  setError('неверный формат тега')
-                  return
-                }
-                ;(async () => {
-                  setChecking(true)
-                  const client = getSupabase()
-                  if (!client) {
-                    const usersRaw = window.localStorage.getItem('hw-users')
-                    const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
-                    const takenLocal = users.some((u) => u.tag === trimmed)
-                    if (takenLocal) {
+              <button
+                type="button"
+                className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                  validFormat && !checking
+                    ? 'bg-white text-black active:scale-[0.9]'
+                    : 'bg-white/10 text-white/20'
+                }`}
+                onClick={() => {
+                  if (!validLength) {
+                    setError(trimmed.length < 3 ? 'минимум 3 символа' : 'максимум 12 символов')
+                    return
+                  }
+                  if (!tagRegex.test(trimmed)) {
+                    setError('неверный формат тега')
+                    return
+                  }
+                  ;(async () => {
+                    setChecking(true)
+                    const client = getSupabase()
+                    if (!client) {
+                      const usersRaw = window.localStorage.getItem('hw-users')
+                      const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
+                      const takenLocal = users.some((u) => u.tag === trimmed)
+                      if (takenLocal) {
+                        setError('тег занят')
+                        setChecking(false)
+                        return
+                      }
+                      setChecking(false)
+                      if (onNext) {
+                        onNext(trimmed)
+                        return
+                      }
+                      const event = new CustomEvent('tag-next', { detail: { value } })
+                      window.dispatchEvent(event)
+                      return
+                    }
+                    const { count, error: qErr } = await client
+                      .from('profiles')
+                      .select('tag', { count: 'exact', head: true })
+                      .eq('tag', trimmed)
+                    if (qErr) {
+                      setChecking(false)
+                      if (onNext) {
+                        onNext(trimmed)
+                        return
+                      }
+                      const event = new CustomEvent('tag-next', { detail: { value } })
+                      window.dispatchEvent(event)
+                      return
+                    }
+                    const taken = typeof count === 'number' ? count > 0 : false
+                    if (taken) {
                       setError('тег занят')
                       setChecking(false)
                       return
@@ -181,51 +242,22 @@ export default function HelloScreenTag({
                     }
                     const event = new CustomEvent('tag-next', { detail: { value } })
                     window.dispatchEvent(event)
-                    return
-                  }
-                  const { count, error: qErr } = await client
-                    .from('profiles')
-                    .select('tag', { count: 'exact', head: true })
-                    .eq('tag', trimmed)
-                  if (qErr) {
-                    setChecking(false)
-                    if (onNext) {
-                      onNext(trimmed)
-                      return
-                    }
-                    const event = new CustomEvent('tag-next', { detail: { value } })
-                    window.dispatchEvent(event)
-                    return
-                  }
-                  const taken = typeof count === 'number' ? count > 0 : false
-                  if (taken) {
-                    setError('тег занят')
-                    setChecking(false)
-                    return
-                  }
-                  setChecking(false)
-                  if (onNext) {
-                    onNext(trimmed)
-                    return
-                  }
-                  const event = new CustomEvent('tag-next', { detail: { value } })
-                  window.dispatchEvent(event)
-                })()
-              }}
-              disabled={!validFormat || checking}
-            >
-              <span className="inline-block text-[18px] font-bold leading-[1.25em] tracking-tight font-vk-demi">
+                  })()
+                }}
+                disabled={!validFormat || checking}
+              >
                 {checking ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                    <span>Проверка...</span>
-                  </div>
-                ) : 'Продолжить'}
-              </span>
-            </button>
+                  <div className="w-6 h-6 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                ) : (
+                  <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                )}
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>
+      <style jsx>{`
+      `}</style>
     </div>
   )
 }
