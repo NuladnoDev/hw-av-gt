@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   Lock,
   Copy,
-  Check
+  Check,
+  X
 } from 'lucide-react'
 
 export default function ProfileEdit({
@@ -55,6 +56,7 @@ export default function ProfileEdit({
   const [originalCity, setOriginalCity] = useState<string>('')
   const [originalPolitical, setOriginalPolitical] = useState<string>('')
   const [originalHobbies, setOriginalHobbies] = useState<string>('')
+  const [avatarDirty, setAvatarDirty] = useState(false)
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [selectorClosing, setSelectorClosing] = useState(false)
   const [selectorType, setSelectorType] = useState<'gender' | 'city' | null>(null)
@@ -296,53 +298,17 @@ export default function ProfileEdit({
           reader.readAsDataURL(f)
         })
         finalUrl = dataUrl
-        const profRaw = window.localStorage.getItem('hw-profiles')
-        const profMap = profRaw ? JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; political?: string; hobbies?: string }> : {}
-        const prev = profMap[userId] ?? {}
-        profMap[userId] = { ...prev, avatar_url: finalUrl ?? undefined }
-        window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
       }
-      if (finalUrl) {
-        setAvatarUrl(finalUrl)
-        const event = new CustomEvent('profile-updated', { detail: { avatar_url: finalUrl } })
-        window.dispatchEvent(event)
-      }
+      setAvatarUrl(finalUrl)
+      setAvatarDirty(true)
     } finally {
       setAvatarLoading(false)
     }
   }
 
-  const removeAvatar = async () => {
-    if (!userId) {
-      setAvatarUrl(null)
-      const event = new CustomEvent('profile-updated', { detail: { avatar_url: null } })
-      window.dispatchEvent(event)
-      return
-    }
-    const client = getSupabase()
-    if (client) {
-      const { error } = await client.from('profiles').upsert({ id: userId, avatar_url: null })
-      if (error) {
-        const profRaw = window.localStorage.getItem('hw-profiles')
-        const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>) : {}
-        const prev = profMap[userId] ?? {}
-        const next = { ...prev }
-        delete next.avatar_url
-        profMap[userId] = next
-        window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
-      }
-    } else {
-      const profRaw = window.localStorage.getItem('hw-profiles')
-      const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string }>) : {}
-      const prev = profMap[userId] ?? {}
-      const next = { ...prev }
-      delete next.avatar_url
-      profMap[userId] = next
-      window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
-    }
+  const removeAvatar = () => {
     setAvatarUrl(null)
-    const event = new CustomEvent('profile-updated', { detail: { avatar_url: null } })
-    window.dispatchEvent(event)
+    setAvatarDirty(true)
   }
 
   const saveTag = async () => {
@@ -382,6 +348,33 @@ export default function ProfileEdit({
     }
 
     const event = new CustomEvent('profile-updated', { detail: { tag: next } })
+    window.dispatchEvent(event)
+  }
+
+  const saveAvatar = async () => {
+    if (!avatarDirty || !userId) return
+    const client = getSupabase()
+    
+    const updateLocal = (url: string | null) => {
+      const profRaw = window.localStorage.getItem('hw-profiles')
+      const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, any>) : {}
+      const prev = profMap[userId] ?? {}
+      if (url) {
+        profMap[userId] = { ...prev, avatar_url: url }
+      } else {
+        const nextProf = { ...prev }
+        delete nextProf.avatar_url
+        profMap[userId] = nextProf
+      }
+      window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
+    }
+
+    if (client) {
+      await client.from('profiles').upsert({ id: userId, avatar_url: avatarUrl })
+    }
+    updateLocal(avatarUrl)
+    
+    const event = new CustomEvent('profile-updated', { detail: { avatar_url: avatarUrl } })
     window.dispatchEvent(event)
   }
 
@@ -580,6 +573,7 @@ export default function ProfileEdit({
   }
 
   const dirty =
+    avatarDirty ||
     tagText.trim() !== (originalTag ?? '') ||
     (description ?? '') !== (originalDescription ?? '') ||
     (age ?? '') !== (originalAge ?? '') ||
@@ -589,10 +583,18 @@ export default function ProfileEdit({
     (hobbies ?? '') !== (originalHobbies ?? '')
 
   return (
-    <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
+    <div className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
       <div className="relative h-full w-full max-w-[430px] bg-[#0A0A0A] flex flex-col">
+        {/* Hidden File Input */}
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => handleAvatarFile(e.target.files)}
+        />
         {/* Header */}
-        <div className="safe-top h-[64px] flex items-center justify-between px-6 bg-transparent sticky top-0 z-20 pointer-events-none">
+        <div className="safe-top h-[64px] flex items-center justify-between px-6 bg-[#0A0A0A] sticky top-0 z-20">
           <button
             type="button"
             onClick={() => {
@@ -602,24 +604,25 @@ export default function ProfileEdit({
                 onClose()
               }
             }}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 backdrop-blur-md transition-colors pointer-events-auto"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
           >
-            <img
-              src="/interface/x-01.svg"
-              alt="close"
-              className="h-5 w-5 invert brightness-[2]"
-            />
+            <ChevronLeft size={24} className="text-white" />
           </button>
           
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
+            <span className="text-[20px] font-ttc-bold text-white">Настройки</span>
+          </div>
+
           <button
             type="button"
             onClick={async () => {
+              await saveAvatar()
               await saveTag()
               await saveAbout()
               onClose()
             }}
             disabled={!dirty}
-            className={`px-5 h-10 rounded-full font-sf-ui-medium transition-all backdrop-blur-md pointer-events-auto ${
+            className={`px-5 h-10 rounded-full font-sf-ui-medium transition-all ${
               dirty 
                 ? 'bg-white text-black scale-100 active:scale-95' 
                 : 'bg-white/5 text-white/30 scale-100'
@@ -670,7 +673,7 @@ export default function ProfileEdit({
                   }}
                   className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
                 >
-                  <LogOut size={14} className="rotate-180" />
+                  <X size={16} strokeWidth={3} />
                 </button>
               )}
             </div>

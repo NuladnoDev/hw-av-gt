@@ -230,27 +230,25 @@ export default function PhoneScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden"
+      className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden"
       initial={{ opacity: 0, x: '100%' }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: '100%' }}
       transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
     >
-      <div className="relative h-full w-full flex flex-col bg-[#0A0A0A]" style={{ transform: `scale(${scale})` }}>
+      <div className="relative h-full w-full flex flex-col bg-[#0A0A0A]">
         {/* Header */}
-        <div 
-          className="flex items-center px-6 bg-[#0A0A0A]/80 backdrop-blur-xl z-50 sticky top-0"
-          style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
-        >
-          <button
+        <div className="flex items-center justify-between px-6 pt-12 pb-6 backdrop-blur-3xl border-b border-white/[0.05]">
+          <button 
             type="button"
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.08] active:scale-95 transition-all duration-300"
+            aria-label="Назад"
           >
             <ChevronLeft size={24} className="text-white" />
           </button>
           <div className="flex-1 text-center pr-8">
-            <span className="text-[20px] font-ttc-bold text-white">Устройства</span>
+            <span className="text-[20px] font-ttc-bold text-white">Настройки</span>
           </div>
         </div>
 

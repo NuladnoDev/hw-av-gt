@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import AdsCreate, { CONDITION_OPTIONS } from './Ads_Create'
 import AdsEdit from './Ads_Edit'
@@ -22,11 +23,13 @@ interface AdCardProps {
   showEditLabel?: boolean
   createdAt?: number
   specs?: AdSpecItem[]
+  storeId?: string | null
+  onOpenStore?: (id: string) => void
 }
 
-const ADS_SIDE_PADDING = 4
-const ADS_GRID_GAP = 6
-const ADS_TITLE_MAX_LENGTH = 40
+const ADS_SIDE_PADDING = 0
+const ADS_GRID_GAP = 1
+const ADS_TITLE_MAX_LENGTH = 45
 
 type Contact = {
   type: 'vk' | 'telegram'
@@ -64,6 +67,7 @@ export type StoredAd = {
   condition: string | null
   location: string | null
   category: string | null
+  storeId?: string | null
   specs?: AdSpecItem[]
   createdAt: number
 }
@@ -98,6 +102,7 @@ type AdsTableRow = {
   condition: string | null
   location: string | null
   category: string | null
+  store_id: string | null
   specs: string | null
   created_at: string | null
 }
@@ -159,6 +164,7 @@ const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
     condition: row.condition,
     location: row.location,
     category: row.category,
+    storeId: row.store_id,
     specs,
     createdAt: created,
   }
@@ -192,7 +198,63 @@ export const deleteAdById = async (id: string): Promise<void> => {
   }
 }
 
+const CategoryIcon = ({ name, isSelected }: { name: string; isSelected?: boolean }) => {
+  const color = isSelected ? 'black' : 'white'
+  const opacity = isSelected ? '0.4' : '0.2'
+  const strokeOpacity = isSelected ? '1' : '1'
+
+  switch (name) {
+    case 'Новые':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L14.85 8.65L22 9.25L16.5 13.95L18.25 21L12 17.25L5.75 21L7.5 13.95L2 9.25L9.15 8.65L12 2Z" fill={color} fillOpacity={opacity} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx="12" cy="12" r="1" fill={color}>
+            <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      )
+    case 'Популярные':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 22C12 22 20 18 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 18 12 22 12 22Z" fill={color} fillOpacity={opacity} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12 18C12 18 15 15.5 15 13C15 11.3431 13.6569 10 12 10C10.3431 10 9 11.3431 9 13C9 15.5 12 18 12 18Z" fill={color} stroke={color} strokeWidth="1.5"/>
+        </svg>
+      )
+    case 'Подтверждённые':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="18" height="18" rx="6" fill={color} fillOpacity={opacity} stroke={color} strokeWidth="2"/>
+          <path d="M8 12L11 15L16 9" stroke={isSelected ? 'black' : 'white'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )
+    case 'Бесплатно':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 12V22H4V12M22 7H2V12H22V7ZM12 7V22M7 7C7 7 7 2 12 2C17 2 17 7 17 7" fill={color} fillOpacity={opacity} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx="12" cy="4.5" r="1.5" fill={color} />
+        </svg>
+      )
+    case 'Обмен':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" fill={color} fillOpacity={opacity} stroke={color} strokeWidth="2"/>
+          <path d="M16 10L12 6L8 10M8 14L12 18L16 14" stroke={isSelected ? 'black' : 'white'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )
+    case 'Аукцион':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 13L11 18M11 18L16 13M11 18V6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity={isSelected ? '0.8' : '0.6'}/>
+          <path d="M19 13L11 21L3 13" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity={isSelected ? '0.8' : '0.6'}/>
+        </svg>
+      )
+    default:
+      return null
+  }
+}
+
 export function AdCard({
+  id,
   title,
   price,
   imageUrl,
@@ -206,9 +268,45 @@ export function AdCard({
   showEditLabel,
   createdAt,
   specs,
+  storeId,
+  onOpenStore,
 }: AdCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [isFavorite, setIsFavorite] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('hw-favorites')
+    if (saved) {
+      const favorites = JSON.parse(saved) as string[]
+      setIsFavorite(favorites.includes(id))
+    }
+    const handleFavoritesUpdate = () => {
+      const updated = localStorage.getItem('hw-favorites')
+      if (updated) {
+        const favorites = JSON.parse(updated) as string[]
+        setIsFavorite(favorites.includes(id))
+      }
+    }
+    window.addEventListener('favorites-updated', handleFavoritesUpdate)
+    return () => window.removeEventListener('favorites-updated', handleFavoritesUpdate)
+  }, [id])
+
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const saved = localStorage.getItem('hw-favorites')
+    let favorites = saved ? (JSON.parse(saved) as string[]) : []
+    
+    if (isFavorite) {
+      favorites = favorites.filter(favId => favId !== id)
+    } else {
+      favorites.push(id)
+    }
+    
+    localStorage.setItem('hw-favorites', JSON.stringify(favorites))
+    setIsFavorite(!isFavorite)
+    window.dispatchEvent(new Event('favorites-updated'))
+  }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -245,27 +343,15 @@ export function AdCard({
       className="relative w-full"
     >
       <div
-        className="relative cursor-pointer overflow-hidden rounded-2xl bg-[var(--bg-secondary)] group active:scale-[0.98] transition-all duration-200"
+        className="relative cursor-pointer overflow-hidden bg-[#121212] group active:scale-[0.98] transition-all duration-200 border-r border-b border-white/[0.05]"
         style={{
-          minHeight: `calc(160px + var(--ad-card-info-height, 84px))`,
-          borderRadius: '18px',
+          minHeight: `calc(200px + var(--ad-card-info-height, 110px))`,
+          borderRadius: 21,
         }}
         onClick={onClick}
       >
-        {/* Background Blur Effect */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div
-            className="absolute inset-0 scale-125 blur-2xl opacity-[0.15] saturate-200"
-            style={{
-              backgroundImage: `url(${imageUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
-        </div>
-
         {/* Image Container */}
-        <div className="relative h-[160px] overflow-hidden bg-black/20 flex items-center justify-center">
+        <div className="relative h-[200px] overflow-hidden bg-white/5 flex items-center justify-center">
           <img 
             src={imageUrl} 
             alt={title} 
@@ -274,141 +360,93 @@ export function AdCard({
           
           {/* Top Overlays */}
           {!showEditLabel && (
-            <div className="absolute left-2.5 top-2.5 z-20 rounded-xl bg-black/40 px-2.5 py-1.5 backdrop-blur-md border border-white/5">
-              <p
-                className="text-white font-sf-ui-medium tracking-tight"
-                style={{ fontSize: '11px' }}
-              >
-                @{username}
-              </p>
+            <div className="absolute left-2 top-2 z-20 rounded-md bg-black/40 px-2 py-1 backdrop-blur-md border border-white/5">
+              <div className="flex items-center gap-1.5 truncate">
+                <div className={`w-3.5 h-3.5 ${storeId ? 'rounded-sm' : 'rounded-full'} overflow-hidden bg-white/20 flex-shrink-0 flex items-center justify-center text-[7px] font-ttc-bold text-white`}>
+                  <span className="translate-y-[0.5px]">
+                    {storeId ? 'M' : username[0].toUpperCase()}
+                  </span>
+                </div>
+                <div className="truncate text-[10px] font-sf-ui-medium text-white/60">
+                  {storeId ? 'Магазин' : `@${username}`}
+                </div>
+              </div>
             </div>
           )}
           
           {isOwn && (
             <button
               type="button"
-              className="absolute right-2.5 top-2.5 z-20 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 transition-colors"
-              style={{
-                height: 30,
-                minWidth: 30,
-                paddingLeft: showEditLabel ? 10 : 0,
-                paddingRight: showEditLabel ? 12 : 0,
-                gap: showEditLabel ? 6 : 0,
-              }}
+              className="absolute right-2 top-2 z-20 flex items-center justify-center rounded-md bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 transition-colors"
+              style={{ width: 28, height: 28 }}
               onClick={(e) => {
                 e.stopPropagation()
                 if (onEdit) onEdit()
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M13.6763 4.31627C13.2488 2.56124 10.7512 2.56124 10.3237 4.31627C10.2599 4.57999 10.1347 4.82492 9.95831 5.03112C9.78194 5.23732 9.55938 5.39897 9.30874 5.50291C9.0581 5.60684 8.78646 5.65014 8.51592 5.62927C8.24538 5.60839 7.9836 5.52394 7.75187 5.38279C6.20832 4.44227 4.44201 6.20855 5.38254 7.75207C5.99006 8.74884 5.45117 10.0494 4.31713 10.325C2.56096 10.7514 2.56096 13.25 4.31713 13.6753C4.58093 13.7392 4.8259 13.8645 5.03211 14.041C5.23831 14.2175 5.39991 14.4402 5.50375 14.691C5.6076 14.9418 5.65074 15.2135 5.62968 15.4841C5.60862 15.7547 5.52394 16.0165 5.38254 16.2482C4.44201 17.7917 6.20832 19.558 7.75187 18.6175C7.98356 18.4761 8.24536 18.3914 8.51597 18.3704C8.78658 18.3493 9.05834 18.3924 9.30912 18.4963C9.5599 18.6001 9.7826 18.7617 9.95911 18.9679C10.1356 19.1741 10.2609 19.4191 10.3248 19.6829C10.7512 21.439 13.2499 21.439 13.6752 19.6829C13.7393 19.4192 13.8647 19.1744 14.0413 18.9684C14.2178 18.7623 14.4405 18.6008 14.6912 18.497C14.9419 18.3932 15.2135 18.35 15.4841 18.3709C15.7546 18.3919 16.0164 18.4764 16.2481 18.6175C17.7917 19.558 19.558 17.7917 18.6175 16.2482C18.4763 16.0165 18.3918 15.7547 18.3709 15.4842C18.35 15.2136 18.3932 14.942 18.497 14.6913C18.6008 14.4406 18.7623 14.2179 18.9683 14.0414C19.1744 13.8648 19.4192 13.7394 19.6829 13.6753C21.439 13.2489 21.439 10.7502 19.6829 10.325C19.4191 10.2611 19.1741 10.1358 18.9679 9.95928C18.7617 9.78278 18.6001 9.56007 18.4962 9.3093C18.3924 9.05853 18.3493 8.78677 18.3703 8.51617C18.3914 8.24556 18.4761 7.98376 18.6175 7.75207C19.558 6.20855 17.7917 4.44227 16.2481 5.38279C16.0164 5.52418 15.7546 5.60886 15.484 5.62992C15.2134 5.65098 14.9417 5.60784 14.6909 5.504C14.4401 5.40016 14.2174 5.23856 14.0409 5.03236C13.8644 4.82616 13.7391 4.58119 13.6752 4.3174L13.6763 4.31627Z" stroke="white" strokeWidth="2" />
-                <path d="M14 12C14 13.1046 13.1046 14 12 14C10.8954 14 10 13.1046 10 12C10 10.8954 10.8954 10 12 10C13.1046 10 14 10.8954 14 12Z" stroke="white" strokeWidth="2" />
+                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              {showEditLabel && (
-                <span className="font-sf-ui-medium text-[12px] text-white">
-                  Изменить
-                </span>
-              )}
             </button>
+          )}
+
+          {!isOwn && (
+            <button
+              type="button"
+              className="absolute right-2 bottom-2 z-20 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all active:scale-90"
+              style={{ width: 32, height: 32 }}
+              onClick={toggleFavorite}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'text-red-500 fill-current' : 'text-white/60'}`} />
+            </button>
+          )}
+
+          {/* Condition Badge (WB style) */}
+          {conditionConfig && (
+            <div 
+              className="absolute bottom-2 left-2 z-20 px-2 py-0.5 rounded text-[9px] font-sf-ui-bold uppercase tracking-wider backdrop-blur-md border border-white/5"
+              style={{
+                backgroundColor: `${conditionConfig.color}20`,
+                color: conditionConfig.color,
+                borderColor: `${conditionConfig.color}30`
+              }}
+            >
+              {conditionConfig.label}
+            </div>
           )}
         </div>
 
         {/* Info Section */}
-        <div
-          className="relative flex flex-col p-3.5 bg-[var(--bg-secondary)] backdrop-blur-sm border-t border-[var(--border-light)]"
-          style={{ minHeight: 'var(--ad-card-info-height, 84px)' }}
-        >
-          <div className="flex flex-col gap-0.5">
-            <h3
-              className="line-clamp-1 text-[var(--text-primary)] font-ttc-demibold tracking-tight translate-y-[1px]"
-              style={{ fontSize: 16, lineHeight: '20px' }}
-            >
+        <div className="relative flex flex-col p-3 space-y-2">
+          <div className="flex flex-col gap-1.5">
+            <h3 className="line-clamp-2 text-[14px] leading-[1.3] text-white font-sf-ui-medium min-h-[36px]">
               {displayTitle}
             </h3>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[var(--text-secondary)] font-sf-ui-medium text-[11px] uppercase tracking-wider">
-                {condition && (
-                  <span className={
-                    condition === 'Новое' ? 'text-emerald-400' : 
-                    condition === 'Отличное' ? 'text-green-400' :
-                    condition === 'Хорошее' ? 'text-yellow-400' :
-                    condition === 'Не очень' ? 'text-orange-400' : 'text-[var(--text-secondary)]'
-                  }>
-                    {condition}
-                  </span>
-                )}
-                {condition && (location || (specs && specs.length > 0)) && <span>•</span>}
-                
-                {specs && specs.length > 0 ? (
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 active:opacity-60 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setIsExpanded(!isExpanded)
-                    }}
-                  >
-                    <span className="text-[var(--text-secondary)] font-sf-ui-medium text-[11px] uppercase tracking-wider">Детали</span>
-                    <motion.svg 
-                      width="8" 
-                      height="8" 
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="text-[var(--text-secondary)]"
-                      animate={{ rotate: isExpanded ? 180 : 0 }}
-                    >
-                      <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                    </motion.svg>
-                  </button>
-                ) : (
-                  location && <span className="line-clamp-1">{location}</span>
-                )}
-              </div>
+
+            <div className="flex items-baseline gap-1">
+              <span className="text-[17px] font-ttc-bold text-white/90 tracking-tight">
+                {Number(price).toLocaleString('ru-RU')}
+              </span>
+              <span className="text-[12px] font-sf-ui-bold text-white/30">₽</span>
             </div>
           </div>
 
-          <AnimatePresence>
-            {isExpanded && specs && specs.length > 0 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
-                exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                className="overflow-hidden"
-              >
-                <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--border-light)]">
-                  {specs.slice(0, 4).map((spec, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-[11px]">
-                      <span className="text-[var(--text-secondary)] opacity-60 font-sf-ui-light line-clamp-1 mr-2">{spec.label}</span>
-                      <span className="text-[var(--text-primary)] opacity-80 font-sf-ui-medium text-right line-clamp-1">{spec.value}</span>
-                    </div>
-                  ))}
-                  {specs.length > 4 && (
-                    <div className="text-[10px] text-[var(--text-secondary)] opacity-40 font-sf-ui-light italic mt-0.5">
-                      + ещё {specs.length - 4}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="flex items-baseline justify-between mt-3">
-            <div className="text-[19px] text-[var(--text-primary)] font-ttc-demibold tracking-tight translate-y-[1px]">
-              {Number(price).toLocaleString('ru-RU')} <span className="text-[15px] font-sf-ui-medium opacity-70">₽</span>
-            </div>
-            {publishedText && (
-              <span className="text-[11px] text-[var(--text-secondary)] opacity-50 font-sf-ui-medium uppercase">
-                {publishedText}
+          <div className="pt-2 flex items-center justify-between border-t border-white/5">
+            <div className="flex items-center gap-1 opacity-40">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span className="text-[10px] font-sf-ui-light text-white truncate max-w-[80px]">
+                {location || 'Везде'}
               </span>
-            )}
+            </div>
+            <span className="text-[10px] font-sf-ui-light text-white/20 uppercase">
+              {publishedText}
+            </span>
           </div>
         </div>
-
-        {/* Hover Highlight */}
-        <div className="absolute inset-0 bg-white/0 transition-colors duration-300 group-hover:bg-white/[0.02] pointer-events-none" />
       </div>
     </motion.div>
   )
@@ -450,21 +488,27 @@ export function AdCardSkeleton() {
               : 'linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,1))'
           }}
         >
-          <div className="space-y-2">
-            <div className={`h-4 w-3/4 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <div className={`h-3.5 w-full rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+                <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
+              </div>
+              <div className={`h-3.5 w-2/3 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+                <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
+              </div>
+            </div>
+            
+            <div className={`h-5 w-20 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
               <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
             </div>
-            <div className="flex items-center gap-2">
-              <div className={`h-3 w-16 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
-                <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
-              </div>
-              <div className={`h-3 w-20 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
-                <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
-              </div>
-            </div>
           </div>
-          <div className={`mt-2 h-5 w-24 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
-            <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
+          <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+            <div className={`h-3 w-16 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+              <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
+            </div>
+            <div className={`h-3 w-12 rounded ${theme === 'dark' ? 'bg-[#121212]' : 'bg-black/5'} overflow-hidden relative`}>
+              <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${theme === 'dark' ? 'via-white/10' : 'via-black/5'} to-transparent animate-shimmer`} />
+            </div>
           </div>
         </div>
       </div>
@@ -472,17 +516,131 @@ export function AdCardSkeleton() {
   )
 }
 
+const FAKE_ADS: StoredAd[] = [
+  {
+    id: 'fake-1',
+    userId: 'system',
+    userTag: 'Nikfd',
+    title: 'VooPoo VINCI 2 (Dazzling Line)',
+    description: 'В идеальном состоянии, полный комплект. Не вскрывался.',
+    price: '1700',
+    imageUrl: 'https://megabuzz.ru/wp-content/uploads/2022/12/whale-fall-blue.png?q=80&w=800&auto=format&fit=crop',
+    condition: 'Новое',
+    location: 'Москва',
+    category: 'things',
+    createdAt: Date.now() - 3600000,
+  },
+  {
+    id: 'fake-2',
+    userId: 'system',
+    userTag: 'Smehl_o0k',
+    title: 'GeekVape Wenax K1 Black',
+    description: 'Лимитированная серия. Оригинал, любые проверки.',
+    price: '1200',
+    imageUrl: 'https://shop-aladdin.ru/wa-data/public/shop/products/60/77/17760/images/9728/9728.970.jpg?q=80&w=800&auto=format&fit=crop',
+    condition: 'Новое',
+    location: 'Санкт-Петербург',
+    category: 'things',
+    createdAt: Date.now() - 7200000,
+  },
+  {
+    id: 'fake-3',
+    userId: 'system',
+    userTag: 'Direc002',
+    title: 'RELX Infinity (Sky Blush)',
+    description: 'Ревизия 1200. Состояние новой консоли.',
+    price: '800',
+    imageUrl: 'https://d2j6dbq0eux0bg.cloudfront.net/images/19599006/3599134317.jpg?q=80&w=800&auto=format&fit=crop',
+    condition: 'Отличное',
+    location: 'Екатеринбург',
+    category: 'things',
+    createdAt: Date.now() - 10800000,
+  },
+  {
+    id: 'fake-4',
+    userId: 'system',
+    userTag: 'UnoFall',
+    title: 'Elf Bar BC5000',
+    description: 'Пробег 500 кадров. На гарантии.',
+    price: '2300',
+    imageUrl: 'https://static.insales-cdn.com/images/products/1/4845/604328685/Blue_Razz_Ice_-_Черника_Малина_Лёд.jpg?q=80&w=800&auto=format&fit=crop',
+    condition: 'Новое',
+    location: 'Казань',
+    category: 'things',
+    createdAt: Date.now() - 14400000,
+  },
+  {
+    id: 'fake-5',
+    userId: 'system',
+    userTag: 'Kirill09',
+    title: 'Smok Vaporizer Novo 2',
+    description: 'Цвет антрацит. Запечатанная.',
+    price: '1400',
+    imageUrl: 'https://cdn.shopify.com/s/files/1/0022/4775/3801/products/smok_novo_2_25w_pod_system_-_silver_cobra_700x700.jpg?v=1594247201?id=05e9b293eff60c7ec97d5024d5e543ff_l-4297394-images-thumbs&n=13?q=80&w=800&auto=format&fit=crop',
+    condition: 'Новое',
+    location: 'Кадуй',
+    category: 'things',
+    createdAt: Date.now() - 18000000,
+  }
+]
+
 export default function Ads({
   onOpenAd,
   createOnMount,
   onCreateConsumed,
   isAuthed,
+  onOpenStoreById,
 }: {
   onOpenAd?: (ad: StoredAd) => void
   createOnMount?: boolean
   onCreateConsumed?: () => void
   isAuthed?: boolean
+  onOpenStoreById?: (id: string) => void
 }) {
+  const AuthIllustration = () => (
+    <div className="mb-6 flex justify-center w-full">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" stroke="white" strokeOpacity="0.1" strokeWidth="1.5" />
+        <motion.path 
+          d="M8 12L11 15L16 9" 
+          stroke="white" strokeOpacity="0.8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          animate={{ 
+            opacity: [0.3, 1, 0.3],
+            scale: [0.95, 1.05, 0.95]
+          }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </svg>
+    </div>
+  )
+
+  const ContactIllustration = () => (
+    <div className="mb-6 flex justify-center w-full">
+      <svg width="200" height="160" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="100" cy="80" r="60" fill="url(#contact_warning_glow)" fillOpacity="0.2"/>
+        <motion.g
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          {/* Phone Shape */}
+          <rect x="75" y="45" width="50" height="90" rx="12" fill="#1C1C1E" stroke="white" strokeOpacity="0.1" strokeWidth="2"/>
+          {/* Icons of contacts */}
+          <rect x="85" y="60" width="30" height="4" rx="2" fill="#3B82F6" />
+          <rect x="85" y="75" width="20" height="4" rx="2" fill="#10B981" />
+          {/* Warning Circle */}
+          <circle cx="125" cy="115" r="18" fill="#F59E0B" />
+          <path d="M125 108V118M125 122H125.01" stroke="white" strokeWidth="3" strokeLinecap="round" />
+        </motion.g>
+        <defs>
+          <radialGradient id="contact_warning_glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 80) rotate(90) scale(80)">
+            <stop stopColor="#F59E0B"/>
+            <stop offset="1" stopColor="#F59E0B" stopOpacity="0"/>
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
+  )
+
   const [createOpen, setCreateOpen] = useState(false)
   const [items, setItems] = useState<StoredAd[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -495,9 +653,23 @@ export default function Ads({
   const [contactWarningLocked, setContactWarningLocked] = useState(false)
   const [authWarningOpen, setAuthWarningOpen] = useState(false)
   const [authWarningLocked, setAuthWarningLocked] = useState(false)
+  const [authIsAdult, setAuthIsAdult] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeFilters, setActiveFilters] = useState<FilterState | null>(null)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [sortType, setSortType] = useState<'new' | 'cheap' | 'rating'>('new')
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setIsSortMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -687,7 +859,12 @@ export default function Ads({
     const load = async () => {
       const all = await loadAdsFromStorage()
       if (cancelled) return
-      setItems(all.sort((a, b) => b.createdAt - a.createdAt))
+      // Объединяем реальные объявления из БД с фейковыми для наполнения
+      const merged = [...all, ...FAKE_ADS]
+      const sorted = merged.sort((a, b) => b.createdAt - a.createdAt)
+      setItems(sorted)
+      // Save to localStorage for other components (like AdDetail recommendations)
+      localStorage.setItem('hw-ads', JSON.stringify(sorted))
       setInitialLoading(false)
     }
     load()
@@ -697,12 +874,18 @@ export default function Ads({
         const ad = mapRowToStoredAd(ev.detail.row)
         setItems((prev) => {
           if (prev.some((x) => x.id === ad.id)) return prev
-          return [ad, ...prev]
+          const updated = [ad, ...prev]
+          localStorage.setItem('hw-ads', JSON.stringify(updated))
+          return updated
         })
         return
       }
       if (ev.detail?.type === 'deleted' && ev.detail.id) {
-        setItems((prev) => prev.filter((a) => a.id !== ev.detail.id))
+        setItems((prev) => {
+          const updated = prev.filter((a) => a.id !== ev.detail.id)
+          localStorage.setItem('hw-ads', JSON.stringify(updated))
+          return updated
+        })
         return
       }
       load()
@@ -784,127 +967,156 @@ export default function Ads({
       }
     }
 
-    return filtered
-  }, [items, searchQuery, activeFilters, selectedCategory])
+    // Apply Sorting
+    const sorted = [...filtered]
+    if (sortType === 'new') {
+      sorted.sort((a, b) => b.createdAt - a.createdAt)
+    } else if (sortType === 'cheap') {
+      sorted.sort((a, b) => {
+        const priceA = parseInt(a.price.replace(/\D/g, '')) || 0
+        const priceB = parseInt(b.price.replace(/\D/g, '')) || 0
+        return priceA - priceB
+      })
+    } else if (sortType === 'rating') {
+      // For now sorting by random rating since we don't have it in StoredAd
+      // In real app this would be seller rating
+      sorted.sort((a, b) => (b.specs?.length || 0) - (a.specs?.length || 0))
+    }
+
+    return sorted
+  }, [items, searchQuery, activeFilters, selectedCategory, sortType])
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full overflow-hidden">
       <div
-        className="absolute left-0 right-0 flex items-center justify-center"
-        style={{ top: 'var(--feed-controls-top, 10px)' }}
+        className="h-full overflow-y-auto scrollbar-hidden transition-all duration-300"
+        style={{
+          paddingLeft: ADS_SIDE_PADDING,
+          paddingRight: ADS_SIDE_PADDING,
+          paddingBottom: 16,
+        }}
       >
         <div
-          className="flex w-full flex-col items-center"
+          className="flex w-full flex-col items-center pt-3 pb-2"
         >
-          <div
-            className="flex items-stretch"
-            style={{ width: 355, height: 54 }}
-          >
-            <motion.div
-              className="flex h-full items-center backdrop-blur-xl relative overflow-hidden group"
-              style={{
-                width: 355,
-                borderRadius: 24,
-                background: theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
-                border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
-                paddingLeft: 16,
-                paddingRight: 0,
-              }}
+          <div className="flex items-center gap-2 mb-1 w-full max-w-[355px] px-0">
+            <div
+              className="flex items-stretch flex-1 min-w-0"
+              style={{ height: 54 }}
             >
-              {/* Glass Shine Effect */}
-              <div className="absolute inset-0 pointer-events-none">
-                <div className={`absolute inset-0 opacity-10 ${theme === 'dark' ? 'bg-gradient-to-tr from-transparent via-white/5 to-white/10' : 'bg-gradient-to-tr from-transparent via-black/5 to-black/10'}`} />
-                <motion.div 
-                  animate={{
-                    opacity: isSearchActive ? 0.15 : 0.05,
-                    background: isSearchActive 
-                      ? theme === 'dark' 
-                        ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)'
-                        : 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.1) 0%, transparent 70%)'
-                      : theme === 'dark'
-                        ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 70%)'
-                        : 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.05) 0%, transparent 70%)'
+              <motion.div
+                className="flex h-full items-center backdrop-blur-xl relative overflow-hidden group w-full"
+                style={{
+                  borderRadius: 24,
+                  background: theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+                  border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
+                  paddingLeft: 16,
+                  paddingRight: 0,
+                }}
+              >
+                {/* Glass Shine Effect */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className={`absolute inset-0 opacity-10 ${theme === 'dark' ? 'bg-gradient-to-tr from-transparent via-white/5 to-white/10' : 'bg-gradient-to-tr from-transparent via-black/5 to-black/10'}`} />
+                  <motion.div 
+                    animate={{
+                      opacity: isSearchActive ? 0.15 : 0.05,
+                      background: isSearchActive 
+                        ? theme === 'dark' 
+                          ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)'
+                          : 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.1) 0%, transparent 70%)'
+                        : theme === 'dark'
+                          ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 70%)'
+                          : 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.05) 0%, transparent 70%)'
+                    }}
+                    className="absolute inset-0 transition-opacity duration-300"
+                  />
+                </div>
+
+                <motion.div
+                  className="flex h-full items-center relative z-10 w-full"
+                  style={{
+                    paddingRight: 16,
                   }}
-                  className="absolute inset-0 transition-opacity duration-300"
-                />
+                >
+                  <img
+                    src="/interface/search-02.svg"
+                    alt=""
+                    style={{ 
+                      width: 22, 
+                      height: 22, 
+                      marginRight: 8,
+                      filter: theme === 'dark' ? 'none' : 'invert(1) opacity(0.5)'
+                    }}
+                  />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={searchPlaceholder}
+                    className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
+                    style={{
+                      fontSize: 16,
+                      lineHeight: '18px',
+                      color: theme === 'dark' ? '#A8A8A8' : '#3C3C43',
+                    }}
+                    onFocus={() => setIsSearchActive(true)}
+                    onBlur={() => setIsSearchActive(false)}
+                  />
+                </motion.div>
+              </motion.div>
+            </div>
+
+            {/* Sort & Filter Buttons */}
+            <div className="flex items-center gap-2">
+              <div className="relative" ref={sortMenuRef}>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                  className="h-[54px] w-[54px] flex items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl"
+                >
+                  <ArrowUpDown className={`w-5 h-5 ${sortType !== 'new' ? 'text-blue-400' : 'text-white/40'}`} />
+                </motion.button>
+
+                <AnimatePresence>
+                  {isSortMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
+                      className="absolute top-[64px] right-0 w-[200px] z-[100] rounded-2xl bg-[#1C1C1E] border border-white/10 shadow-2xl overflow-hidden"
+                    >
+                      <button
+                        onClick={() => { setSortType('new'); setIsSortMenuOpen(false); }}
+                        className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'new' ? 'text-white' : 'text-white/40'}`}
+                      >
+                        <span className="text-[14px] font-sf-ui-medium">Новинки</span>
+                        <Clock className={`w-4 h-4 ${sortType === 'new' ? 'text-blue-400' : 'opacity-0'}`} />
+                      </button>
+                      <button
+                        onClick={() => { setSortType('cheap'); setIsSortMenuOpen(false); }}
+                        className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'cheap' ? 'text-white' : 'text-white/40'}`}
+                      >
+                        <span className="text-[14px] font-sf-ui-medium">Сначала дешевле</span>
+                        <Tag className={`w-4 h-4 ${sortType === 'cheap' ? 'text-blue-400' : 'opacity-0'}`} />
+                      </button>
+                      <button
+                        onClick={() => { setSortType('rating'); setIsSortMenuOpen(false); }}
+                        className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'rating' ? 'text-white' : 'text-white/40'}`}
+                      >
+                        <span className="text-[14px] font-sf-ui-medium">По рейтингу</span>
+                        <UserCheck className={`w-4 h-4 ${sortType === 'rating' ? 'text-blue-400' : 'opacity-0'}`} />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <motion.div
-                className="flex h-full items-center relative z-10"
-                style={{
-                  width: 209.21,
-                  paddingRight: 16,
-                }}
-                animate={{
-                  width: isSearchActive ? 355 : 209.21,
-                }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setFiltersOpen(true)}
+                className="h-[54px] w-[54px] flex items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl"
               >
-                <img
-                  src="/interface/search-02.svg"
-                  alt=""
-                  style={{ 
-                    width: 22, 
-                    height: 22, 
-                    marginRight: 8,
-                    filter: theme === 'dark' ? 'none' : 'invert(1) opacity(0.5)'
-                  }}
-                />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
-                  style={{
-                    fontSize: 16,
-                    lineHeight: '18px',
-                    color: theme === 'dark' ? '#A8A8A8' : '#3C3C43',
-                  }}
-                  onFocus={() => setIsSearchActive(true)}
-                  onBlur={() => setIsSearchActive(false)}
-                />
-              </motion.div>
-              <AnimatePresence>
-                {!isSearchActive && (
-                  <motion.button
-                    type="button"
-                    className="flex h-full items-center justify-center relative z-10"
-                    style={{
-                      width: 135,
-                      height: 54,
-                        borderRadius: 0,
-                        borderLeft: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                        backgroundColor: 'transparent',
-                      }}
-                    initial={{ opacity: 0, x: 24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 40 }}
-                    transition={{ duration: 0.22, ease: 'easeOut' }}
-                    onClick={() => setFiltersOpen(true)}
-                  >
-                    <img
-                      src="/interface/filter.svg"
-                      alt=""
-                      style={{ 
-                        width: 24, 
-                        height: 24, 
-                        marginRight: 8,
-                        filter: theme === 'dark' ? 'none' : 'invert(1) opacity(0.8)'
-                      }}
-                    />
-                    <span
-                      className="font-vk-demi"
-                      style={{
-                        fontSize: 15,
-                        lineHeight: '19.68px',
-                        color: theme === 'dark' ? '#FFFFFF' : '#000000',
-                      }}
-                    >
-                      Фильтры
-                    </span>
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                <img src="/interface/filter.svg" alt="" className="w-6 h-6 opacity-40" />
+              </motion.button>
+            </div>
           </div>
 
           {/* Category Carousel */}
@@ -912,7 +1124,7 @@ export default function Ads({
             {showCategories && (
               <motion.div 
                 initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                animate={{ height: 'auto', opacity: 1, marginTop: 14 }}
+                animate={{ height: 'auto', opacity: 1, marginTop: 4 }}
                 exit={{ height: 0, opacity: 0, marginTop: 0 }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="w-full relative overflow-hidden"
@@ -934,66 +1146,36 @@ export default function Ads({
                   }}
                 />
                 <div 
-                  className="flex overflow-x-auto scrollbar-hidden category-carousel px-1" 
-                  style={{ width: 355, margin: '0 auto' }}
+                  className="flex overflow-x-auto scrollbar-hidden category-carousel px-1 w-full max-w-[355px] mx-auto" 
                 >
                   <div className="flex gap-2 py-1">
                     {[
-                      { name: 'Новые', color: '#FF6B6B' },
-                      { name: 'Подтверждённые', color: '#F9CA24' },
-                      { name: 'Популярные', color: '#32CD32' },
-                      { name: 'Бесплатно', color: '#6C5CE7' },
-                      { name: 'Обмен', color: '#A29BFE' },
-                      { name: 'Аукцион', color: '#FD79A8', disabled: true }
+                      { name: 'Новые' },
+                      { name: 'Популярные' },
+                      { name: 'Подтверждённые' },
+                      { name: 'Бесплатно' },
+                      { name: 'Обмен' },
+                      { name: 'Аукцион', disabled: true }
                     ].map((category, index) => (
                       <motion.button
                         key={category.name}
                         type="button"
                         disabled={category.disabled}
-                        className={`flex-shrink-0 flex items-center justify-center px-4 py-2 rounded-full font-ttc-demibold text-sm transition-all duration-300 backdrop-blur-xl relative overflow-hidden ${
+                        className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl font-sf-ui-medium text-[14px] transition-all duration-300 relative overflow-hidden ${
                           category.disabled 
-                            ? 'opacity-40 grayscale cursor-not-allowed' 
+                            ? 'opacity-30 grayscale cursor-not-allowed' 
                             : selectedCategory === category.name 
-                              ? 'scale-105 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.3)]' 
-                              : theme === 'dark' ? 'hover:scale-105 hover:bg-white/[0.05]' : 'hover:scale-105 hover:bg-black/[0.05]'
+                              ? 'bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.1)]' 
+                              : 'bg-white/[0.04] text-white/60 border border-white/[0.06] hover:bg-white/[0.08]'
                         } active:scale-95`}
-                        style={{
-                          backgroundColor: category.disabled 
-                            ? theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'
-                            : selectedCategory === category.name 
-                              ? `${category.color}40` 
-                              : `${category.color}15`,
-                          border: `1px solid ${category.disabled 
-                            ? theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
-                            : selectedCategory === category.name 
-                              ? category.color 
-                              : `${category.color}40`}`,
-                          color: category.disabled 
-                            ? theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
-                            : theme === 'dark' ? '#FFFFFF' : '#000000',
-                        }}
-                        whileHover={category.disabled ? {} : { y: -1 }}
                         whileTap={category.disabled ? {} : { scale: 0.95 }}
                         onClick={() => {
                           if (category.disabled) return
                           setSelectedCategory(selectedCategory === category.name ? null : category.name)
-                          console.log('Category clicked:', category.name)
                         }}
                       >
-                        {/* Glass Shine Effect */}
-                        {!category.disabled && (
-                          <div className="absolute inset-0 pointer-events-none">
-                            <div className={`absolute inset-0 opacity-20 ${theme === 'dark' ? 'bg-gradient-to-tr from-transparent via-white/10 to-white/20' : 'bg-gradient-to-tr from-transparent via-black/10 to-black/20'}`} />
-                            {selectedCategory === category.name && (
-                              <motion.div 
-                                layoutId="category-glow"
-                                className="absolute inset-0 blur-md opacity-30"
-                                style={{ backgroundColor: category.color }}
-                              />
-                            )}
-                          </div>
-                        )}
-                        <span className="relative z-10 translate-y-[1px]">{category.name}</span>
+                        <CategoryIcon name={category.name} isSelected={selectedCategory === category.name} />
+                        <span className="relative z-10 translate-y-[0.5px]">{category.name}</span>
                       </motion.button>
                     ))}
                   </div>
@@ -1002,56 +1184,48 @@ export default function Ads({
             )}
           </AnimatePresence>
         </div>
-      </div>
 
-      <div
-        className="absolute left-0 right-0 bottom-0 overflow-y-auto scrollbar-hidden transition-all duration-300"
-        style={{
-          top: showCategories ? 'calc(var(--feed-controls-top) + 128px)' : 'calc(var(--feed-controls-top) + 72px)',
-          paddingLeft: ADS_SIDE_PADDING,
-          paddingRight: ADS_SIDE_PADDING,
-          paddingBottom: 16,
-        }}
-      >
-          <div
-            className="grid grid-cols-2 pb-4"
-            style={{
-              columnGap: ADS_GRID_GAP,
-              rowGap: ADS_GRID_GAP,
-            }}
-          >
-            {initialLoading
-              ? Array.from({ length: 6 }).map((_, index) => (
-                  <AdCardSkeleton key={`skeleton-${index}`} />
-                ))
-              : visibleItems.map((ad) => {
-                  const isOwn =
-                    (currentUserId !== null && ad.userId === currentUserId) ||
-                    (currentUserAltId !== null && ad.userId === currentUserAltId)
-                  return (
-                    <AdCard
-                      key={ad.id}
-                      id={ad.id}
-                      title={ad.title}
-                      price={ad.price}
-                      imageUrl={ad.imageUrl}
-                      username={(ad.userTag ?? 'user').replace(/^@/, '')}
-                      condition={ad.condition ?? undefined}
-                      location={ad.location ?? undefined}
-                      createdAt={ad.createdAt}
-                      specs={ad.specs}
-                      onDelete={isOwn ? () => deleteAdById(ad.id) : undefined}
-                      isOwn={isOwn}
-                      onClick={() => {
-                        if (onOpenAd) {
-                          onOpenAd(ad)
-                        }
-                      }}
-                      onEdit={isOwn ? () => setEditingAd(ad) : undefined}
-                    />
-                  )
-                })}
-          </div>
+        <div
+          className="grid grid-cols-2 pb-4"
+          style={{
+            columnGap: ADS_GRID_GAP,
+            rowGap: ADS_GRID_GAP,
+          }}
+        >
+          {initialLoading
+            ? Array.from({ length: 6 }).map((_, index) => (
+                <AdCardSkeleton key={`skeleton-${index}`} />
+              ))
+            : visibleItems.map((ad) => {
+                const isOwn =
+                  (currentUserId !== null && ad.userId === currentUserId) ||
+                  (currentUserAltId !== null && ad.userId === currentUserAltId)
+                return (
+                  <AdCard
+                    key={ad.id}
+                    id={ad.id}
+                    title={ad.title}
+                    price={ad.price}
+                    imageUrl={ad.imageUrl}
+                    username={(ad.userTag ?? 'user').replace(/^@/, '')}
+                    condition={ad.condition ?? undefined}
+                    location={ad.location ?? undefined}
+                    createdAt={ad.createdAt}
+                    specs={ad.specs}
+                    onDelete={isOwn ? () => deleteAdById(ad.id) : undefined}
+                    isOwn={isOwn}
+                    storeId={ad.storeId}
+                    onClick={() => {
+                      if (onOpenAd) {
+                        onOpenAd(ad)
+                      }
+                    }}
+                    onEdit={isOwn ? () => setEditingAd(ad) : undefined}
+                    onOpenStore={onOpenStoreById}
+                  />
+                )
+              })}
+        </div>
       </div>
       {createOpen && (
         <AdsCreate
@@ -1077,10 +1251,10 @@ export default function Ads({
           <>
             {/* Затемнение фона - на весь экран, но ниже навигации и самого уведомления */}
             <motion.div
-              className="fixed inset-0 z-[85]"
-              initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
-              animate={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-              exit={{ backgroundColor: 'rgba(0,0,0,0)' }}
+              className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
               onClick={() => {
                 if (contactWarningLocked) return
@@ -1090,38 +1264,52 @@ export default function Ads({
             
             {/* Само уведомление - выше всего */}
              <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
-               <motion.button
-                 type="button"
-                 className="relative mb-[calc(var(--nav-bottom-offset,12px)+var(--bottom-nav-height,96px)+15px)] w-[340px] max-w-[94%] rounded-2xl bg-white px-5 py-4 text-left shadow-2xl flex items-center justify-between overflow-hidden pointer-events-auto"
-                 initial={{ translateY: 40, opacity: 0 }}
-                 animate={{ translateY: 0, opacity: 1 }}
-                 exit={{ translateY: 40, opacity: 0 }}
-                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                 onClick={() => {
-                   if (contactWarningLocked) return
-                   if (typeof window !== 'undefined') {
-                     const ev = new Event('open-contacts')
-                     window.dispatchEvent(ev)
-                   }
-                   setContactWarningOpen(false)
-                 }}
+               <motion.div
+                 className="relative w-full max-w-[375px] rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                 initial={{ translateY: '100%' }}
+                 animate={{ translateY: 0 }}
+                 exit={{ translateY: '100%' }}
+                 transition={{ type: 'spring', damping: 30, stiffness: 350 }}
                >
-                 <div className="flex-1 pr-4">
-                   <div className="text-[15px] leading-[1.4em] text-black font-sf-ui-medium">
-                     Для создания объявлений нужно указать способ связи
-                   </div>
-                   <div className="mt-1 text-[13px] leading-[1.4em] text-black/80 font-sf-ui-light">
-                     Нажмите, чтоб указать
-                   </div>
+                 <ContactIllustration />
+                 
+                 <div className="space-y-2">
+                   <h3 className="text-[22px] font-ttc-bold text-white leading-tight">
+                     Укажите способы связи
+                   </h3>
+                   <p className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px]">
+                     Чтобы покупатели могли вам написать или позвонить — добавьте Telegram или VK в профиле
+                   </p>
                  </div>
-                 <div className="flex-shrink-0">
-                   <img 
-                     src="/interface/telegram.svg" 
-                     alt="" 
-                     className="w-12 h-12"
-                   />
+                 
+                 <div className="w-full flex flex-col gap-3 pt-4">
+                   <button
+                     type="button"
+                     className="h-14 w-full rounded-[22px] bg-white text-black font-sf-ui-bold text-[16px] active:scale-[0.97] transition-all"
+                     onClick={() => {
+                       if (contactWarningLocked) return
+                       if (typeof window !== 'undefined') {
+                         const ev = new Event('open-contacts')
+                         window.dispatchEvent(ev)
+                       }
+                       setContactWarningOpen(false)
+                     }}
+                   >
+                     Перейти в профиль
+                   </button>
+                   
+                   <button
+                     type="button"
+                     className="h-14 w-full rounded-[22px] bg-white/5 text-white/70 font-sf-ui-medium text-[15px] active:scale-[0.97] transition-all"
+                     onClick={() => {
+                       if (contactWarningLocked) return
+                       setContactWarningOpen(false)
+                     }}
+                   >
+                     Позже
+                   </button>
                  </div>
-               </motion.button>
+               </motion.div>
              </div>
           </>
         )}
@@ -1129,10 +1317,10 @@ export default function Ads({
         {authWarningOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-[85]"
-              initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
-              animate={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-              exit={{ backgroundColor: 'rgba(0,0,0,0)' }}
+              className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
               onClick={() => {
                 if (authWarningLocked) return
@@ -1142,37 +1330,64 @@ export default function Ads({
             
              <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
                <motion.div
-                 className="relative mb-[calc(var(--nav-bottom-offset,12px)+var(--bottom-nav-height,96px)+15px)] w-[340px] max-w-[94%] rounded-2xl bg-[#1C1C1E] px-5 py-6 text-center shadow-2xl flex flex-col items-center pointer-events-auto"
-                 initial={{ translateY: 40, opacity: 0 }}
-                 animate={{ translateY: 0, opacity: 1 }}
-                 exit={{ translateY: 40, opacity: 0 }}
-                 transition={{ duration: 0.25, ease: 'easeOut' }}
+                 className="relative w-full max-w-[375px] rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                 initial={{ translateY: '100%' }}
+                 animate={{ translateY: 0 }}
+                 exit={{ translateY: '100%' }}
+                 transition={{ type: 'spring', damping: 30, stiffness: 350 }}
                >
-                 <div className="text-[17px] leading-[1.3] text-white font-sf-ui-medium mb-6">
-                   Чтобы публиковать объявления нужен аккаунт
+                 <AuthIllustration />
+                 
+                 <div className="space-y-2">
+                   <h3 className="text-[22px] font-ttc-bold text-white leading-tight">
+                     Вам есть 18 лет?
+                   </h3>
+                   <p className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px]">
+                     Чтобы публиковать объявления и общаться — подтвердите свой возраст
+                   </p>
+                 </div>
+
+                 <div 
+                   className="flex items-center gap-3 cursor-pointer group select-none"
+                   onClick={() => setAuthIsAdult(!authIsAdult)}
+                 >
+                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${authIsAdult ? 'bg-white border-white' : 'bg-transparent border-white/20 group-hover:border-white/40'}`}>
+                     {authIsAdult && <Check size={16} className="text-black" strokeWidth={3} />}
+                   </div>
+                   <span className={`text-[15px] transition-colors duration-300 ${authIsAdult ? 'text-white/80' : 'text-white/40'}`}>
+                     Мне есть 18 лет
+                   </span>
                  </div>
                  
-                 <button
-                   type="button"
-                   className="h-[44px] w-full rounded-[10px] bg-white text-black font-vk-demi text-[15px] mb-3"
-                   onClick={() => {
-                     setAuthWarningOpen(false)
-                     window.dispatchEvent(new Event('trigger-auth'))
-                   }}
-                 >
-                   Зарегистрироваться
-                 </button>
-                 
-                 <button
-                   type="button"
-                   className="text-[12px] text-white/70 font-sf-ui-light"
-                   onClick={() => {
-                     setAuthWarningOpen(false)
-                     window.dispatchEvent(new CustomEvent('trigger-auth', { detail: { screen: 'login' } }))
-                   }}
-                 >
-                   У меня уже есть аккаунт
-                 </button>
+                 <div className="w-full flex flex-col gap-3 pt-4">
+                   <button
+                     type="button"
+                     disabled={!authIsAdult}
+                     className={`h-14 w-full rounded-[22px] font-sf-ui-bold text-[16px] transition-all ${
+                       authIsAdult 
+                         ? 'bg-white text-black active:scale-[0.97]' 
+                         : 'bg-white/10 text-white/20 cursor-not-allowed'
+                     }`}
+                     onClick={() => {
+                       if (!authIsAdult) return
+                       setAuthWarningOpen(false)
+                       window.dispatchEvent(new Event('trigger-auth'))
+                     }}
+                   >
+                     Продолжить
+                   </button>
+                   
+                   <button
+                     type="button"
+                     className="h-14 w-full rounded-[22px] bg-white/5 text-white/70 font-sf-ui-medium text-[15px] active:scale-[0.97] transition-all"
+                     onClick={() => {
+                       setAuthWarningOpen(false)
+                       window.dispatchEvent(new CustomEvent('trigger-auth', { detail: { screen: 'login' } }))
+                     }}
+                   >
+                     У меня уже есть аккаунт
+                   </button>
+                 </div>
                </motion.div>
              </div>
           </>

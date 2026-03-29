@@ -314,7 +314,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in"
+      className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in"
       initial={{ opacity: 0, x: -40 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.22, ease: 'easeOut' }}
@@ -339,7 +339,7 @@ export default function InfoMe({ onClose }: InfoMeProps) {
               className="font-ttc-bold text-white"
               style={{ fontSize: 'var(--about-title-size)', marginTop: 'var(--about-header-title-margin-top)' }}
             >
-              Обо мне
+              Настройки
             </div>
           </div>
         </div>

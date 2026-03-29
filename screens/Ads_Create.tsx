@@ -15,11 +15,13 @@ import {
   Star,
   ThumbsUp,
   CircleAlert,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 
 export type AdsCategory = 'nicotine' | 'job' | 'service' | 'things' | 'other'
 export type AdsCondition = 'new' | 'excellent' | 'good' | 'bad'
-type AdsCreateStep = 1 | 2 | 3 | 4 | 5 | 6 | 7
+type AdsCreateStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
 
 export const CATEGORY_CONFIGS: {
   id: AdsCategory
@@ -30,31 +32,31 @@ export const CATEGORY_CONFIGS: {
   {
     id: 'things',
     label: 'Вещи, электроника',
-    color: '#3b82f6',
+    color: '#FFFFFF',
     icon: <Smartphone size={32} strokeWidth={1.5} />,
   },
   {
     id: 'service',
     label: 'Услуги',
-    color: '#8b5cf6',
+    color: '#FFFFFF',
     icon: <Wrench size={32} strokeWidth={1.5} />,
   },
   {
     id: 'nicotine',
     label: 'Никотиновые устройства',
-    color: '#f59e0b',
+    color: '#FFFFFF',
     icon: <Cigarette size={32} strokeWidth={1.5} />,
   },
   {
     id: 'job',
     label: 'Работа',
-    color: '#10b981',
+    color: '#FFFFFF',
     icon: <Briefcase size={32} strokeWidth={1.5} />,
   },
   {
     id: 'other',
     label: 'Другое',
-    color: '#ec4899',
+    color: '#FFFFFF',
     icon: <Ellipsis size={32} strokeWidth={1.5} />,
   },
 ]
@@ -71,30 +73,172 @@ export const CONDITION_OPTIONS: {
     label: 'Новое',
     description: 'Есть чек, сохранена оригинальная упаковка',
     icon: <Sparkles size={24} />,
-    color: '#4CAF50',
+    color: '#FFFFFF',
   },
   {
     id: 'excellent',
     label: 'Отличное',
     description: 'Целостность товара сохранена, нет дефектов',
     icon: <Star size={24} />,
-    color: '#2196F3',
+    color: '#FFFFFF',
   },
   {
     id: 'good',
     label: 'Хорошее',
     description: 'Есть небольшие дефекты, потёртости и т.п',
     icon: <ThumbsUp size={24} />,
-    color: '#FF9800',
+    color: '#FFFFFF',
   },
   {
     id: 'bad',
     label: 'Не очень',
     description: 'Есть видимые дефекты, неисправности',
     icon: <CircleAlert size={24} />,
-    color: '#F44336',
+    color: '#FFFFFF',
   },
 ]
+
+const StepIllustration = ({ step }: { step: number }) => {
+  switch (step) {
+    case 1: // Категории
+      return (
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="8" width="10" height="10" rx="2" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+          <circle cx="27" cy="13" r="5" stroke="white" strokeOpacity="0.8" strokeWidth="2"/>
+          <path d="M13 22L18 32H8L13 22Z" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+          <rect x="22" y="22" width="10" height="10" rx="2" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+        </svg>
+      )
+    case 2: // Фото
+      return (
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="10" width="28" height="22" rx="4" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+          <circle cx="20" cy="21" r="5" stroke="white" strokeOpacity="0.8" strokeWidth="2"/>
+          <circle cx="29" cy="15" r="2" fill="white" fillOpacity="0.4"/>
+          <path d="M16 10V8C16 7.44772 16.4477 7 17 7H23C23.5523 7 24 7.44772 24 8V10" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+        </svg>
+      )
+    case 3: // Название
+      return (
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 12H32M8 20H24M8 28H18" stroke="white" strokeOpacity="0.4" strokeWidth="2" strokeLinecap="round"/>
+          <rect x="22" y="24" width="12" height="8" rx="2" stroke="white" strokeOpacity="0.8" strokeWidth="2"/>
+          <path d="M25 28H31" stroke="white" strokeOpacity="0.8" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      )
+    case 4: // Состояние
+      return (
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 6L23.5 14.5H32.5L25.5 21L28.5 30L20 25L11.5 30L14.5 21L7.5 14.5H16.5L20 6Z" stroke="white" strokeOpacity="0.8" strokeWidth="2" strokeLinejoin="round"/>
+          <circle cx="20" cy="20" r="16" stroke="white" strokeOpacity="0.2" strokeWidth="1"/>
+        </svg>
+      )
+    case 5: // Характеристики
+      return (
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="10" width="24" height="4" rx="2" fill="white" fillOpacity="0.2"/>
+          <circle cx="12" cy="12" r="3" fill="white" fillOpacity="0.8" stroke="#111111" strokeWidth="1"/>
+          <rect x="8" y="20" width="24" height="4" rx="2" fill="white" fillOpacity="0.2"/>
+          <circle cx="28" cy="22" r="3" fill="white" fillOpacity="0.8" stroke="#111111" strokeWidth="1"/>
+          <rect x="8" y="30" width="24" height="4" rx="2" fill="white" fillOpacity="0.2"/>
+          <circle cx="18" cy="32" r="3" fill="white" fillOpacity="0.8" stroke="#111111" strokeWidth="1"/>
+        </svg>
+      )
+    case 6: // Описание
+      return (
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="6" width="24" height="28" rx="3" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+          <path d="M13 13H27M13 19H27M13 25H21" stroke="white" strokeOpacity="0.8" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      )
+    case 7: // Цена
+      return (
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 10H28C30.2091 10 32 11.7909 32 14V26C32 28.2091 30.2091 30 28 30H12C9.79086 30 8 28.2091 8 26V14C8 11.7909 9.79086 10 12 10Z" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+          <circle cx="20" cy="20" r="5" stroke="white" strokeOpacity="0.8" strokeWidth="2"/>
+          <path d="M8 20H12M28 20H32" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+        </svg>
+      )
+    case 8: // От кого
+      return (
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="15" r="6" stroke="white" strokeOpacity="0.8" strokeWidth="2"/>
+          <path d="M6 32C6 27.5817 9.58172 24 14 24C18.4183 24 22 27.5817 22 32" stroke="white" strokeOpacity="0.8" strokeWidth="2"/>
+          <rect x="24" y="10" width="10" height="10" rx="2" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+          <path d="M22 15H24" stroke="white" strokeOpacity="0.4" strokeWidth="2"/>
+        </svg>
+      )
+    default:
+      return null
+  }
+}
+
+const NicotineFieldIcon = ({ type }: { type: 'brand' | 'format' | 'volume' | 'battery' | 'strength' | 'puffs' | 'flavor' | 'color' }) => {
+  switch (type) {
+    case 'brand':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+          <line x1="7" y1="7" x2="7.01" y2="7"></line>
+        </svg>
+      )
+    case 'format':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="7" y="2" width="10" height="20" rx="2"></rect>
+          <path d="M12 18h.01"></path>
+        </svg>
+      )
+    case 'volume':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+        </svg>
+      )
+    case 'battery':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect>
+          <line x1="22" y1="11" x2="22" y2="13"></line>
+        </svg>
+      )
+    case 'strength':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      )
+    case 'puffs':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17.5 19c.7-1.3 1.5-2.6 1.5-4a5 5 0 0 0-10-0c0 1.4.8 2.7 1.5 4"></path>
+          <path d="M12 19v3"></path>
+          <path d="M9 19H15"></path>
+        </svg>
+      )
+    case 'flavor':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 15c-3.3 0-6 2.7-6 6"></path>
+          <path d="M18 21c0-3.3-2.7-6-6-6"></path>
+          <path d="M12 9c3.3 0 6-2.7 6-6"></path>
+          <path d="M6 3c0 3.3 2.7 6 6 6"></path>
+        </svg>
+      )
+    case 'color':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+      )
+    default:
+      return null
+  }
+}
 
 export default function AdsCreate({
   onClose,
@@ -147,6 +291,8 @@ export default function AdsCreate({
 
   const [otherType, setOtherType] = useState('')
   const [otherDetails, setOtherDetails] = useState('')
+  const [userStores, setUserStores] = useState<{ id: string; name: string; avatar_url: string | null }[]>([])
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [publishPhase, setPublishPhase] = useState<'idle' | 'running' | 'full'>('idle')
   const [showPublishAnimation, setShowPublishAnimation] = useState(false)
@@ -262,6 +408,7 @@ export default function AdsCreate({
       condition: conditionLabel,
       location,
       category,
+      store_id: selectedStoreId,
       created_at: new Date().toISOString(),
     }
 
@@ -315,6 +462,32 @@ export default function AdsCreate({
       return false
     }
   }
+
+  useEffect(() => {
+    const loadStores = async () => {
+      const auth = await loadLocalAuth()
+      const uid = auth?.uuid ?? auth?.uid
+      if (!uid) return
+      const client = getSupabase()
+      if (!client) return
+      try {
+        const { data } = await client
+          .from('store_members')
+          .select('store_id, stores(id, name, avatar_url)')
+          .eq('user_id', uid)
+        if (data) {
+          setUserStores(data.map((m: any) => ({
+            id: m.stores.id,
+            name: m.stores.name,
+            avatar_url: m.stores.avatar_url
+          })))
+        }
+      } catch (e) {
+        console.error('Error loading stores for ad creation:', e)
+      }
+    }
+    loadStores()
+  }, [])
 
   useEffect(() => {
     const baseW = 375
@@ -488,11 +661,13 @@ export default function AdsCreate({
     (step === 4 && condition !== null) ||
     step === 5 ||
     (step === 6 && description.trim().length > 0) ||
-    (step === 7 && price.trim().length > 0 && images.length > 0)
+    (step === 7 && price.trim().length > 0 && images.length > 0) ||
+    step === 8
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const label = step === 7 ? 'Опубликовать' : 'Далее'
+    const isLastStep = userStores.length > 0 ? step === 8 : step === 7
+    const label = isLastStep ? 'Опубликовать' : 'Далее'
     const detail = {
       showNextInNav: true,
       enabled: canGoNext && !publishing,
@@ -501,7 +676,7 @@ export default function AdsCreate({
     }
     const ev = new CustomEvent('ads-create-nav-state', { detail })
     window.dispatchEvent(ev)
-  }, [step, canGoNext, publishing])
+  }, [step, canGoNext, publishing, userStores.length])
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
@@ -526,10 +701,18 @@ export default function AdsCreate({
 
   const goNext = async () => {
     if (!canGoNext || publishing) return
+    
     if (step < 7) {
-      setStep((s) => (s < 7 ? ((s + 1) as AdsCreateStep) : s))
+      setStep((s) => (s + 1) as AdsCreateStep)
       return
     }
+
+    if (step === 7 && userStores.length > 0) {
+      setStep(8)
+      return
+    }
+
+    // Step 8 or Step 7 (without stores)
     const minDuration = 1800
     setPublishing(true)
     setPublishPhase('running')
@@ -581,62 +764,31 @@ export default function AdsCreate({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
 
         <div
-          className="absolute left-0 w-full bg-[#0A0A0A]"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
+          className="absolute left-0 w-full bg-[#0A0A0A] z-[160]"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 20px)', height: '56px' }}
         >
           <div className="relative h-full w-full">
             <button
               type="button"
               onClick={goBack}
-              className="absolute left-6 top-0 flex h-full items-center"
+              className="absolute left-6 w-11 h-11 flex items-center justify-center rounded-2xl bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl transition-all active:scale-95 hover:bg-black/50"
               aria-label={step === 1 ? 'Закрыть' : 'Назад'}
             >
-              {step === 1 ? (
-                <img
-                  src="/interface/x-01.svg"
-                  alt="close"
-                  className="h-[22px] w-[22px]"
-                  style={{ filter: 'invert(1) brightness(1.6)' }}
-                />
-              ) : (
-                <svg
-                  width="27"
-                  height="21"
-                  viewBox="0 0 27 21"
-                  className="block"
-                  fill="none"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M11.5 4L4 10.5L11.5 17"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M5 10.5H23"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
+              <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.5} />
             </button>
           </div>
         </div>
 
         <div
-          className="absolute left-0 w-full px-6 overflow-y-auto pb-6"
+          className={`absolute left-0 w-full px-6 pb-10 ${step === 4 ? 'overflow-hidden' : 'overflow-y-auto'}`}
           style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-            height: 'calc(812px - 56px - 88px - var(--home-header-offset))',
+            top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 92px)',
+            height: 'calc(812px - 92px - var(--home-header-offset))',
           }}
         >
           <div
@@ -724,10 +876,29 @@ export default function AdsCreate({
                     )
                   })}
                 </div>
-                <div className="mt-6 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4">
-                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light text-center">
+
+                <div className="mt-6 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <StepIllustration step={1} />
+                  </div>
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
                     Выбор типа влияет на то, какие характеристики будут представлены покупателю
                   </div>
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    disabled={!canGoNext || publishing}
+                    onClick={goNext}
+                    className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                      canGoNext && !publishing
+                        ? 'bg-white text-black active:scale-[0.9]'
+                        : 'bg-white/10 text-white/20'
+                    }`}
+                  >
+                    <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                  </button>
                 </div>
               </div>
             )}
@@ -859,10 +1030,28 @@ export default function AdsCreate({
                     </span>
                   </div>
                 )}
-                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4">
-                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light text-center">
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <StepIllustration step={2} />
+                  </div>
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
                     Фото — первое, на что смотрит покупатель. Хорошие фото помогают быстрее продать товар
                   </div>
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    disabled={!canGoNext || publishing}
+                    onClick={goNext}
+                    className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                      canGoNext && !publishing
+                        ? 'bg-white text-black active:scale-[0.9]'
+                        : 'bg-white/10 text-white/20'
+                    }`}
+                  >
+                    <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                  </button>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -872,6 +1061,118 @@ export default function AdsCreate({
                   className="hidden"
                   onChange={(e) => handlePickedFiles(e.target.files)}
                 />
+              </div>
+            )}
+
+            {step === 8 && (
+              <div className="pt-2">
+                <div className="mb-8">
+                  <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
+                    От кого опубликовать?
+                  </div>
+                  <div className="mt-1 text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
+                    Вы можете разместить объявление от своего имени или от имени вашего магазина.
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStoreId(null)}
+                    className={`flex items-center gap-4 p-4 rounded-3xl border transition-all ${
+                      selectedStoreId === null 
+                        ? 'bg-white border-white' 
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-vk-demi text-lg ${
+                      selectedStoreId === null ? 'bg-black text-white' : 'bg-white/10 text-white'
+                    }`}>
+                      {title ? title[0].toUpperCase() : 'U'}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className={`text-[17px] font-sf-ui-medium ${selectedStoreId === null ? 'text-black' : 'text-white'}`}>
+                        Личный профиль
+                      </div>
+                      <div className={`text-[13px] ${selectedStoreId === null ? 'text-black/60' : 'text-white/40'}`}>
+                        Объявление будет видно в вашем профиле
+                      </div>
+                    </div>
+                    {selectedStoreId === null && (
+                      <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
+                        <ThumbsUp size={14} className="text-white" />
+                      </div>
+                    )}
+                  </button>
+
+                  <div className="mt-4 mb-2 text-[12px] font-sf-ui-semibold text-white/30 uppercase tracking-[0.05em] ml-2">
+                    Магазины
+                  </div>
+
+                  {userStores.map(store => (
+                    <button
+                      key={store.id}
+                      type="button"
+                      onClick={() => setSelectedStoreId(store.id)}
+                      className={`flex items-center gap-4 p-4 rounded-3xl border transition-all ${
+                        selectedStoreId === store.id 
+                          ? 'bg-white border-white' 
+                          : 'bg-white/5 border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center font-vk-demi text-lg ${
+                        selectedStoreId === store.id ? 'bg-black text-white' : 'bg-white/10 text-white'
+                      }`}>
+                        {store.avatar_url ? (
+                          <img src={store.avatar_url} alt={store.name} className="w-full h-full object-cover" />
+                        ) : (
+                          store.name[0].toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className={`text-[17px] font-sf-ui-medium ${selectedStoreId === store.id ? 'text-black' : 'text-white'}`}>
+                          {store.name}
+                        </div>
+                        <div className={`text-[13px] ${selectedStoreId === store.id ? 'text-black/60' : 'text-white/40'}`}>
+                          Опубликовать от имени магазина
+                        </div>
+                      </div>
+                      {selectedStoreId === store.id && (
+                        <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
+                          <ThumbsUp size={14} className="text-white" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <StepIllustration step={8} />
+                  </div>
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
+                    Публикация от имени магазина повышает доверие покупателей и помогает развивать ваш бренд
+                  </div>
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    disabled={!canGoNext || publishing}
+                    onClick={goNext}
+                    className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                      canGoNext && !publishing
+                        ? 'bg-white text-black active:scale-[0.9]'
+                        : 'bg-white/10 text-white/20'
+                    }`}
+                  >
+                    {publishing ? (
+                      <div className="w-6 h-6 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                    ) : (
+                      <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -891,6 +1192,30 @@ export default function AdsCreate({
                   placeholder="Название товара"
                   className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                 />
+
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <StepIllustration step={3} />
+                  </div>
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
+                    Короткое и ёмкое название привлекает больше внимания в ленте объявлений
+                  </div>
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    disabled={!canGoNext || publishing}
+                    onClick={goNext}
+                    className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                      canGoNext && !publishing
+                        ? 'bg-white text-black active:scale-[0.9]'
+                        : 'bg-white/10 text-white/20'
+                    }`}
+                  >
+                    <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -947,6 +1272,30 @@ export default function AdsCreate({
                     )
                   })}
                 </div>
+
+                <div className="mt-8 flex items-center gap-4">
+                  <div className="flex-1 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-3">
+                    <div className="flex-shrink-0 scale-75 origin-center">
+                      <StepIllustration step={4} />
+                    </div>
+                    <div className="text-[12px] leading-[1.3em] text-white/60 font-sf-ui-light">
+                      Честное описание состояния товара — залог успешной сделки
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!canGoNext || publishing}
+                    onClick={goNext}
+                    className={`h-[56px] w-[56px] flex-shrink-0 rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                      canGoNext && !publishing
+                        ? 'bg-white text-black active:scale-[0.9]'
+                        : 'bg-white/10 text-white/20'
+                    }`}
+                  >
+                    <ChevronRight size={24} className="transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -964,93 +1313,133 @@ export default function AdsCreate({
                         <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                           Бренд/Производитель
                         </div>
-                        <input
-                          value={brand}
-                          onChange={(e) => setBrand(e.target.value)}
-                          placeholder="HQD, Elf Bar и др."
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                            <NicotineFieldIcon type="brand" />
+                          </div>
+                          <input
+                            value={brand}
+                            onChange={(e) => setBrand(e.target.value)}
+                            placeholder="HQD, Elf Bar и др."
+                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          />
+                        </div>
                       </div>
                       <div>
                         <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                           Тип устройства
                         </div>
-                        <input
-                          value={nicotineFormat}
-                          onChange={(e) => setNicotineFormat(e.target.value)}
-                          placeholder="Одноразовое, pod-система, мод"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                            <NicotineFieldIcon type="format" />
+                          </div>
+                          <input
+                            value={nicotineFormat}
+                            onChange={(e) => setNicotineFormat(e.target.value)}
+                            placeholder="Одноразовое, pod-система, мод"
+                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          />
+                        </div>
                       </div>
                       <div>
                         <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                           Объем жидкости (мл)
                         </div>
-                        <input
-                          value={nicotineTankVolume}
-                          onChange={(e) => handleDecimalChange(e.target.value, setNicotineTankVolume)}
-                          inputMode="decimal"
-                          placeholder="2.5, 5, 10"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                            <NicotineFieldIcon type="volume" />
+                          </div>
+                          <input
+                            value={nicotineTankVolume}
+                            onChange={(e) => handleDecimalChange(e.target.value, setNicotineTankVolume)}
+                            inputMode="decimal"
+                            placeholder="2.5, 5, 10"
+                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          />
+                        </div>
                       </div>
                       <div>
                         <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                           Емкость аккумулятора (mAh)
                         </div>
-                        <input
-                          value={nicotineBatteryCapacity}
-                          onChange={(e) => handleNumericChange(e.target.value, setNicotineBatteryCapacity)}
-                          inputMode="numeric"
-                          placeholder="400, 850, 1500"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                            <NicotineFieldIcon type="battery" />
+                          </div>
+                          <input
+                            value={nicotineBatteryCapacity}
+                            onChange={(e) => handleNumericChange(e.target.value, setNicotineBatteryCapacity)}
+                            inputMode="numeric"
+                            placeholder="400, 850, 1500"
+                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          />
+                        </div>
                       </div>
                       <div>
                         <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                           Крепость никотина (мг/мл)
                         </div>
-                        <input
-                          value={nicotineStrength}
-                          onChange={(e) => handleDecimalChange(e.target.value, setNicotineStrength)}
-                          inputMode="decimal"
-                          placeholder="3, 20, 50"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                            <NicotineFieldIcon type="strength" />
+                          </div>
+                          <input
+                            value={nicotineStrength}
+                            onChange={(e) => handleDecimalChange(e.target.value, setNicotineStrength)}
+                            inputMode="decimal"
+                            placeholder="3, 20, 50"
+                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          />
+                        </div>
                       </div>
                       <div>
                         <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                           Количество затяжек
                         </div>
-                        <input
-                          value={nicotinePuffs}
-                          onChange={(e) => handleNumericChange(e.target.value, setNicotinePuffs)}
-                          inputMode="numeric"
-                          placeholder="800, 1500, 2500"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                            <NicotineFieldIcon type="puffs" />
+                          </div>
+                          <input
+                            value={nicotinePuffs}
+                            onChange={(e) => handleNumericChange(e.target.value, setNicotinePuffs)}
+                            inputMode="numeric"
+                            placeholder="800, 1500, 2500"
+                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          />
+                        </div>
                       </div>
                       <div>
                         <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                           Вкус
                         </div>
-                        <input
-                          value={nicotineFlavor}
-                          onChange={(e) => setNicotineFlavor(e.target.value)}
-                          placeholder="Манго, ягодный микс, кола"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                            <NicotineFieldIcon type="flavor" />
+                          </div>
+                          <input
+                            value={nicotineFlavor}
+                            onChange={(e) => setNicotineFlavor(e.target.value)}
+                            placeholder="Манго, ягодный микс, кола"
+                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          />
+                        </div>
                       </div>
                       <div>
                         <div className="mb-2 text-[14px] leading-[1.4em] text-white/80 font-sf-ui-light">
                           Цвет
                         </div>
-                        <input
-                          value={color}
-                          onChange={(e) => setColor(e.target.value)}
-                          placeholder="Черный, градиент и др."
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
-                        />
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                            <NicotineFieldIcon type="color" />
+                          </div>
+                          <input
+                            value={color}
+                            onChange={(e) => setColor(e.target.value)}
+                            placeholder="Черный, градиент и др."
+                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          />
+                        </div>
                       </div>
                     </>
                   )}
@@ -1331,6 +1720,30 @@ export default function AdsCreate({
                     </>
                   )}
                 </div>
+
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <StepIllustration step={5} />
+                  </div>
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
+                    Подробные характеристики помогут покупателю найти ваше объявление через фильтры
+                  </div>
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    disabled={!canGoNext || publishing}
+                    onClick={goNext}
+                    className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                      canGoNext && !publishing
+                        ? 'bg-white text-black active:scale-[0.9]'
+                        : 'bg-white/10 text-white/20'
+                    }`}
+                  >
+                    <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1350,10 +1763,28 @@ export default function AdsCreate({
                   placeholder="Расскажите о товаре: его особенности, история покупки, причина продажи..."
                   className="h-[160px] w-full resize-none rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                 />
-                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4">
-                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light text-center">
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <StepIllustration step={6} />
+                  </div>
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
                     Подробное описание помогает покупателю принять решение. Укажите важные детали и особенности товара
                   </div>
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    disabled={!canGoNext || publishing}
+                    onClick={goNext}
+                    className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                      canGoNext && !publishing
+                        ? 'bg-white text-black active:scale-[0.9]'
+                        : 'bg-white/10 text-white/20'
+                    }`}
+                  >
+                    <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                  </button>
                 </div>
               </div>
             )}
@@ -1384,10 +1815,32 @@ export default function AdsCreate({
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4">
-                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light text-center">
+                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <StepIllustration step={7} />
+                  </div>
+                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
                     Укажите реальную цену. Слишком высокая цена может отпугнуть покупателей, слишком низкая вызовет подозрения
                   </div>
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                  <button
+                    type="button"
+                    disabled={!canGoNext || publishing}
+                    onClick={goNext}
+                    className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
+                      canGoNext && !publishing
+                        ? 'bg-white text-black active:scale-[0.9]'
+                        : 'bg-white/10 text-white/20'
+                    }`}
+                  >
+                    {publishing ? (
+                      <div className="w-6 h-6 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                    ) : (
+                      <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                    )}
+                  </button>
                 </div>
               </div>
             )}

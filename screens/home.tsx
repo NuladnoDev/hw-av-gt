@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { RefreshCcw, ShoppingBag, User, Settings } from 'lucide-react'
+import { RefreshCcw, ShoppingBag, User, Settings, Plus, ShoppingCart, Bell, ChevronRight, Heart, ChevronLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import Profile from './profile'
+import StoreProfile from './StoreProfile'
+import CreateStoreFlow from './CreateStoreFlow'
 import ProfileEdit from './profile_edit'
 import Setting from './Setting'
 import InfoMe from './info_me'
@@ -13,16 +15,21 @@ import ProjectVersion from './project_version'
 import UserSearch from './UserSearch'
 import Phone from './Phone'
 import { getSupabase } from '@/lib/supabaseClient'
+import StoreCatalog from './StoreCatalog'
 import Ads, { type StoredAd } from './ads'
 import AdDetail from './AdDetail'
 import Support from './Support'
+import Chat from './Chat'
 
 export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [scale, setScale] = useState(1)
   const [isStandalone, setIsStandalone] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [showIosTip, setShowIosTip] = useState(false)
-
+  const [chatOpen, setChatOpen] = useState(false)
+  const [activeChatAd, setActiveChatAd] = useState<StoredAd | null>(null)
+  const [chatReceiver, setChatReceiver] = useState<{ id: string; name: string; avatar: string | null } | null>(null)
+  
   useEffect(() => {
     const ua = navigator.userAgent || navigator.vendor || ''
     const ios = /iPhone|iPad|iPod/i.test(ua)
@@ -35,8 +42,85 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     setShowIosTip(ios && !standalone)
   }, [])
 
-  const [tab, setTab] = useState<'ads' | 'profile'>('ads')
-  const [profileTab, setProfileTab] = useState<'ads' | 'about' | 'friends'>('ads')
+  const [tab, setTab] = useState<'ads' | 'profile' | 'store'>('ads')
+  const [profileTab, setProfileTab] = useState<'ads' | 'about' | 'friends' | 'favorites'>('favorites')
+
+  const NavIcon = ({ type, active }: { type: 'ads' | 'store' | 'create' | 'profile', active: boolean }) => {
+    switch (type) {
+      case 'ads':
+        return (
+          <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            animate={active ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
+          >
+            <rect x="3" y="3" width="7" height="7" rx="1" fill="none" />
+            <rect x="14" y="3" width="7" height="7" rx="1" fill="none" />
+            <rect x="14" y="14" width="7" height="7" rx="1" fill="none" />
+            <rect x="3" y="14" width="7" height="7" rx="1" fill="none" />
+          </motion.svg>
+        )
+      case 'store':
+        return (
+          <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            animate={active ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
+          >
+            <path d="M3 21h18" fill="none" />
+            <path d="M3 7v1a3 3 0 0 0 6 0V7m6 0v1a3 3 0 0 0 6 0V7M3 7l2-4h14l2 4M5 21V10.85M19 21V10.85M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4" fill="none" />
+          </motion.svg>
+        )
+      case 'create':
+        return (
+          <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            animate={active ? { rotate: 90, scale: 1.15 } : { rotate: 0, scale: 1 }}
+          >
+            <circle cx="12" cy="12" r="10" fill="none" />
+            <path d="M12 8v8" fill="none" />
+            <path d="M8 12h8" fill="none" />
+          </motion.svg>
+        )
+      case 'profile':
+        return (
+          <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            animate={active ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
+          >
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" fill="none" />
+            <circle cx="12" cy="7" r="4" fill="none" />
+          </motion.svg>
+        )
+    }
+  }
+
   const [profileEdit, setProfileEdit] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsOrigin, setSettingsOrigin] = useState<'profile' | 'edit' | null>(null)
@@ -67,8 +151,14 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [adsCreateRequested, setAdsCreateRequested] = useState(false)
   const [viewProfileMode, setViewProfileMode] = useState<'own' | 'foreign'>('own')
   const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null)
+  const [viewStoreId, setViewStoreId] = useState<string | null>(null)
   const [profileReturnAd, setProfileReturnAd] = useState<StoredAd | null>(null)
   const [profileStack, setProfileStack] = useState<string[]>([])
+  const [userStores, setUserStores] = useState<{ id: string; name: string; avatar_url: string | null }[]>([])
+  const [storesLoading, setStoresLoading] = useState(false)
+  const [showCreateStore, setShowCreateStore] = useState(false)
+  const [storeAuthWarningOpen, setStoreAuthWarningOpen] = useState(false)
+  const [storeAuthWarningLocked, setStoreAuthWarningLocked] = useState(false)
   const [linksOpen, setLinksOpen] = useState(false)
   const [projectInfoOpen, setProjectInfoOpen] = useState(false)
   const [userSearchOpen, setUserSearchOpen] = useState(false)
@@ -77,9 +167,76 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [userSearchLoading, setUserSearchLoading] = useState(false)
   const [phoneOpen, setPhoneOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notificationsClosing, setNotificationsClosing] = useState(false)
   const [navVisible, setNavVisible] = useState(true)
+
+  const openNotifications = () => {
+    setNotificationsClosing(false)
+    setNotificationsOpen(true)
+    setNavVisible(false)
+  }
+
+  const closeNotifications = () => {
+    setNotificationsClosing(true)
+    setTimeout(() => {
+      setNotificationsOpen(false)
+      setNotificationsClosing(false)
+      setNavVisible(true)
+    }, 220)
+  }
   const [profileToastActive, setProfileToastActive] = useState(false)
+  const [alphaModalOpen, setAlphaModalOpen] = useState(false)
+  const [alphaStats, setAlphaStats] = useState<{ users: number; ads: number }>({ users: 0, ads: 0 })
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [favoriteToast, setFavoriteToast] = useState<{ visible: boolean; adId: string | null }>({ visible: false, adId: null })
+  const [notifications, setNotifications] = useState<Array<{ id: string, title: string, text: string, date: string, icon: string }>>([
+    {
+      id: 'welcome',
+      title: 'HelloWorld',
+      text: 'Добро пожаловать! Спасибо, что приняли участие в тестировании нашего сайта. Мы постоянно работаем над улучшением функционала.',
+      date: 'Недавно',
+      icon: '/logo.svg'
+    }
+  ])
+
+  useEffect(() => {
+    const handleFavoriteAdded = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      setFavoriteToast({ visible: true, adId: detail.adId })
+      setTimeout(() => setFavoriteToast(prev => ({ ...prev, visible: false })), 4000)
+    }
+    const handleOpenAdDetail = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail) {
+        setSelectedAd(detail as StoredAd)
+      }
+    }
+    window.addEventListener('show-favorite-added-toast', handleFavoriteAdded)
+    window.addEventListener('open-ad-detail', handleOpenAdDetail)
+    return () => {
+      window.removeEventListener('show-favorite-added-toast', handleFavoriteAdded)
+      window.removeEventListener('open-ad-detail', handleOpenAdDetail)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (alphaModalOpen) {
+      const client = getSupabase()
+      if (client) {
+        void (async () => {
+          const [u, a] = await Promise.all([
+            client.from('profiles').select('*', { count: 'exact', head: true }),
+            client.from('ads').select('*', { count: 'exact', head: true })
+          ])
+          setAlphaStats({
+            users: u.count || 0,
+            ads: a.count || 0
+          })
+        })()
+      }
+    }
+  }, [alphaModalOpen])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -134,6 +291,43 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const openUserSearch = () => {
     setUserSearchOpen(true)
   }
+
+  const StoreAuthIllustration = () => (
+    <div className="mb-6 flex justify-center w-full">
+      <svg width="200" height="160" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="100" cy="80" r="60" fill="url(#store_auth_glow)" fillOpacity="0.2"/>
+        <motion.g
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          {/* Shop Shape */}
+          <path d="M40 120H160V140H40V120Z" fill="#1C1C1E" stroke="white" strokeOpacity="0.1" strokeWidth="2"/>
+          <path d="M50 70L40 120H160L150 70H50Z" fill="#1C1C1E" stroke="white" strokeOpacity="0.1" strokeWidth="2"/>
+          
+          {/* Shop Stripes */}
+          <rect x="60" y="70" width="10" height="50" fill="#3B82F6" fillOpacity="0.3" />
+          <rect x="95" y="70" width="10" height="50" fill="#3B82F6" fillOpacity="0.3" />
+          <rect x="130" y="70" width="10" height="50" fill="#3B82F6" fillOpacity="0.3" />
+
+          {/* Large Lock */}
+          <motion.g
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.5, type: "spring" }}
+          >
+            <circle cx="100" cy="95" r="28" fill="white" />
+            <path d="M92 95V88C92 83.5817 95.5817 80 100 80C104.418 80 108 83.5817 108 88V95M88 95H112V108C112 110.209 110.209 112 108 112H92C89.7909 112 88 110.209 88 108V95Z" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </motion.g>
+        </motion.g>
+        <defs>
+          <radialGradient id="store_auth_glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 80) rotate(90) scale(80)">
+            <stop stopColor="#3B82F6"/>
+            <stop offset="1" stopColor="#3B82F6" stopOpacity="0"/>
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
+  )
   
   const closeUserSearch = () => {
     setUserSearchOpen(false)
@@ -248,11 +442,19 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       if (last === '__own__') {
         setViewProfileMode('own')
         setViewProfileUserId(null)
+        setViewStoreId(null)
+        setProfileReturnAd(null)
+        setTab('profile')
+      } else if (last.startsWith('store:')) {
+        setViewProfileMode('foreign')
+        setViewProfileUserId(null)
+        setViewStoreId(last.replace('store:', ''))
         setProfileReturnAd(null)
         setTab('profile')
       } else {
         setViewProfileMode('foreign')
         setViewProfileUserId(last)
+        setViewStoreId(null)
         setProfileReturnAd(null)
         setTab('profile')
       }
@@ -263,18 +465,81 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     }
     setViewProfileMode('own')
     setViewProfileUserId(null)
+    setViewStoreId(null)
     setProfileReturnAd(null)
     setTab('ads')
   }
 
+  const openStoreProfile = (storeId: string) => {
+    closeAllWindows()
+    setTab('profile')
+    setProfileEdit(false)
+    setSelectedAd(null)
+    setProfileReturnAd(null)
+    setProfileStack((prev) => {
+      if (tab === 'profile') {
+        const currentId = viewStoreId ? `store:${viewStoreId}` : (viewProfileMode === 'foreign' ? viewProfileUserId ?? null : null)
+        const marker = currentId ?? '__own__'
+        return [...prev, marker]
+      }
+      return prev
+    })
+    setViewProfileMode('foreign')
+    setViewProfileUserId(null)
+    setViewStoreId(storeId)
+    setProfileTab('ads')
+  }
+
   useEffect(() => {
-    const sellerId = searchParams.get('sellerId')
+    let cancelled = false
+    const loadStores = async () => {
+      if (!currentUserId) {
+        setUserStores([])
+        return
+      }
+      setStoresLoading(true)
+      const client = getSupabase()
+      if (!client) {
+        setStoresLoading(false)
+        return
+      }
+      try {
+        const { data, error } = await client
+          .from('store_members')
+          .select('store_id, stores(id, name, avatar_url)')
+          .eq('user_id', currentUserId)
+        
+        if (!cancelled && !error && data) {
+          const stores = data.map((m: any) => ({
+            id: m.stores.id,
+            name: m.stores.name,
+            avatar_url: m.stores.avatar_url
+          }))
+          setUserStores(stores)
+        }
+      } catch (e) {
+        console.error('Error loading stores in home:', e)
+      } finally {
+        if (!cancelled) setStoresLoading(false)
+      }
+    }
+    loadStores()
+    
+    const handleRefresh = () => loadStores()
+    window.addEventListener('refresh-user-stores', handleRefresh)
+    return () => { 
+      cancelled = true
+      window.removeEventListener('refresh-user-stores', handleRefresh)
+    }
+  }, [currentUserId])
+
+  useEffect(() => {
+    const sellerId = searchParams.get('seller')
     const profileTabParam = searchParams.get('profileTab')
     if (sellerId) {
-      closeAllWindows()
-      setTab('profile')
       setViewProfileMode('foreign')
       setViewProfileUserId(sellerId)
+      setViewStoreId(null)
       if (profileTabParam === 'ads' || profileTabParam === 'about' || profileTabParam === 'friends') {
         setProfileTab(profileTabParam)
       } else {
@@ -460,9 +725,18 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [tab])
+  useEffect(() => {
+    if (!storeAuthWarningOpen) return
+    setStoreAuthWarningLocked(true)
+    const t = setTimeout(() => {
+      setStoreAuthWarningLocked(false)
+    }, 2000)
+    return () => clearTimeout(t)
+  }, [storeAuthWarningOpen])
+
   return (
     <div className="fixed inset-0 flex w-full items-center justify-center bg-[var(--bg-primary)] overflow-hidden">
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, fontSmooth: 'antialiased', WebkitFontSmoothing: 'antialiased' } as React.CSSProperties}>
+      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, fontSmooth: 'antialiased', WebkitFontSmoothing: 'antialiased', touchAction: 'pan-y' } as React.CSSProperties}>
         <div
           className="absolute left-0 top-0 h-[812px] w-[375px]"
           style={{ backgroundColor: 'var(--bg-primary)' }}
@@ -470,32 +744,53 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
 
         {tab !== 'profile' ? (
           <div
-            className="absolute left-0 w-full px-6 flex items-center justify-between"
-            style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
+            className="absolute left-0 w-full px-6 flex items-center justify-center z-[100]"
+            style={{ 
+              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', 
+              height: '56px',
+              backgroundColor: 'var(--bg-primary)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
+            }}
           >
-            <div className="text-[28px] font-bold leading-[1em] text-[var(--text-primary)] font-ttc-bold">
-              {tab === 'ads' ? 'Объявления' : 'Профиль'}
-            </div>
-            <div className="flex items-center gap-4">
+            <div className="absolute left-6 flex h-full items-center">
               <button
                 type="button"
-                onClick={openUserSearch}
-                className="flex h-full items-center"
-                aria-label="Поиск пользователей"
+                onClick={() => setAlphaModalOpen(true)}
+                className="px-2 py-0.5 rounded-lg bg-[#FFD700] text-black text-[11px] font-sf-ui-bold lowercase tracking-tight shadow-lg active:scale-95 transition-all border border-black/5"
               >
-                <img
-                  src="/interface/search-02.svg"
-                  alt="search"
-                  className="h-[24px] w-[24px]"
-                  style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
+                test
+              </button>
+            </div>
+            <button 
+              type="button"
+              className="flex items-center gap-2.5"
+            >
+              <div className="text-[22px] font-sf-ui-medium leading-[1em] text-[var(--text-primary)]">
+                {tab === 'ads' ? 'HelloWorld-store' : tab === 'store' || viewStoreId ? 'Магазин' : 'Профиль'}
+              </div>
+            </button>
+            <div className="absolute right-6 flex h-full items-center">
+              <button
+                type="button"
+                onClick={openNotifications}
+                className="flex h-full items-center active:scale-90 transition-transform"
+                aria-label="Уведомления"
+              >
+                <Bell
+                  className="h-[24px] w-[24px] text-[var(--text-primary)]"
+                  strokeWidth={2.5}
                 />
               </button>
             </div>
           </div>
         ) : (
           <div
-            className="absolute left-0 w-full bg-[var(--bg-primary)]"
-            style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
+            className="absolute left-0 w-full bg-[var(--bg-primary)] z-[100]"
+            style={{ 
+              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', 
+              height: '56px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
+            }}
           >
             <div className="relative h-full w-full">
               {viewProfileMode === 'own' ? (
@@ -560,7 +855,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   className="text-[28px] font-bold leading-[1em] text-[var(--text-primary)] font-ttc-bold transition-opacity duration-200"
                   style={{ opacity: profileToastActive ? 0 : 1 }}
                 >
-                  Профиль
+                  {viewStoreId ? 'Магазин' : 'Профиль'}
                 </div>
               </div>
             </div>
@@ -568,48 +863,88 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
         )}
 
         {tab === 'profile' && (
-          <motion.div
-            key={`profile-screen-${viewProfileMode}-${viewProfileUserId ?? 'own'}`}
-            className="absolute left-0 w-full"
-            style={{
-              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-              height: 'calc(812px - 88px - 56px - var(--home-header-offset))',
-            }}
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-          >
-            <Profile
-              isAuthed={isAuthed}
-              profileTab={profileTab}
-              setProfileTab={setProfileTab}
-              userTag={
-                viewProfileMode === 'foreign'
-                  ? profileReturnAd?.userTag ?? undefined
-                  : currentTag ?? undefined
-              }
-              isOwnProfile={viewProfileMode === 'own'}
-              viewUserId={viewProfileMode === 'foreign' ? viewProfileUserId ?? undefined : undefined}
-              onOpenProfileById={(id) => {
-                if (!id) return
-                closeAllWindows()
-                setTab('profile')
-                setProfileEdit(false)
-                setSelectedAd(null)
-                setProfileReturnAd(null)
-                setProfileStack((prev) => {
-                  if (tab === 'profile') {
-                    const currentId = viewProfileMode === 'foreign' ? viewProfileUserId ?? null : null
-                    const marker = currentId ?? '__own__'
-                    return [...prev, marker]
-                  }
-                  return prev
-                })
-                setViewProfileMode('foreign')
-                setViewProfileUserId(id)
-                setProfileTab('ads')
+          <>
+            <div 
+              className="absolute left-0 w-full z-[85] pointer-events-none bg-gradient-to-b from-[#0A0A0A] to-transparent"
+              style={{ 
+                top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
+                height: '32px'
               }}
             />
+            <motion.div
+              key={`profile-screen-${viewProfileMode}-${viewStoreId ? `store-${viewStoreId}` : (viewProfileUserId ?? 'own')}`}
+            className="absolute left-0 w-full overflow-hidden"
+            style={{
+              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
+              height: 'calc(812px - var(--bottom-nav-height) - 56px - var(--home-header-offset))',
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            {viewStoreId ? (
+              <StoreProfile
+                storeId={viewStoreId}
+                currentUserId={currentUserId}
+                onOpenProfileById={(id) => {
+                  if (!id) return
+                  closeAllWindows()
+                  setTab('profile')
+                  setProfileEdit(false)
+                  setSelectedAd(null)
+                  setProfileReturnAd(null)
+                  setProfileStack((prev) => {
+                    if (tab === 'profile') {
+                      const currentId = viewStoreId ? `store:${viewStoreId}` : (viewProfileMode === 'foreign' ? viewProfileUserId ?? null : null)
+                      const marker = currentId ?? '__own__'
+                      return [...prev, marker]
+                    }
+                    return prev
+                  })
+                  setViewProfileMode('foreign')
+                  setViewProfileUserId(id)
+                  setViewStoreId(null)
+                  setProfileTab('ads')
+                }}
+              />
+            ) : (
+              <Profile
+                isAuthed={isAuthed}
+                profileTab={profileTab}
+                setProfileTab={setProfileTab}
+                userTag={
+                  viewProfileMode === 'foreign'
+                    ? profileReturnAd?.userTag ?? undefined
+                    : currentTag ?? undefined
+                }
+                isOwnProfile={viewProfileMode === 'own'}
+                viewUserId={viewProfileMode === 'foreign' ? viewProfileUserId ?? undefined : undefined}
+                onOpenStoreById={openStoreProfile}
+                onOpenAd={(ad) => {
+                  setSelectedAd(ad)
+                }}
+                onOpenProfileById={(id) => {
+                  if (!id) return
+                  closeAllWindows()
+                  setTab('profile')
+                  setProfileEdit(false)
+                  setSelectedAd(null)
+                  setProfileReturnAd(null)
+                  setProfileStack((prev) => {
+                    if (tab === 'profile') {
+                      const currentId = viewProfileMode === 'foreign' ? viewProfileUserId ?? null : null
+                      const marker = currentId ?? '__own__'
+                      return [...prev, marker]
+                    }
+                    return prev
+                  })
+                  setViewProfileMode('foreign')
+                  setViewProfileUserId(id)
+                  setViewStoreId(null)
+                  setProfileTab('ads')
+                }}
+              />
+            )}
             {profileMenuOpen && (
               <>
                 <button
@@ -618,14 +953,15 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   style={{ zIndex: 70 }}
                   onClick={closeProfileMenu}
                 />
-                <div
+                <motion.div
+                  layoutId="store-create-expansion"
                   className="absolute right-4"
                   style={{
                     top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-menu-offset-y))',
                     zIndex: 80,
                   }}
                   >
-                    <div
+                    <motion.div
                       className={profileMenuClosing ? 'profile-menu-out' : 'profile-menu-in'}
                       style={{
                       width: 'var(--profile-menu-width)',
@@ -877,7 +1213,11 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                       type="button"
                       onClick={() => {
                         closeProfileMenu()
-                        navigator.clipboard.writeText(window.location.href).catch(() => {})
+                        if (userStores.length > 0) {
+                          openStoreProfile(userStores[0].id)
+                        } else {
+                          setShowCreateStore(true)
+                        }
                       }}
                       className="flex w-full items-center"
                       style={{
@@ -899,7 +1239,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          Скопировать ссылку
+                          {userStores.length > 0 ? 'Мой магазин' : 'Создать магазин'}
                         </span>
                         <div
                           style={{
@@ -910,15 +1250,23 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                             justifyContent: 'flex-end',
                           }}
                         >
-                          <img
-                            src="/interface/Hyperlink.svg"
-                            alt=""
-                            style={{
-                              width: 'var(--profile-menu-item-icon-size)',
-                              height: 'var(--profile-menu-item-icon-size)',
-                              filter: 'var(--profile-menu-item-icon-filter)',
-                            }}
-                          />
+                          {userStores.length > 0 ? (
+                            <ShoppingCart
+                              size={20}
+                              className="text-white/50"
+                              style={{
+                                filter: 'var(--profile-menu-item-icon-filter)',
+                              }}
+                            />
+                          ) : (
+                            <Plus
+                              size={20}
+                              className="text-white/50"
+                              style={{
+                                filter: 'var(--profile-menu-item-icon-filter)',
+                              }}
+                            />
+                          )}
                         </div>
                       </div>
                     </button>
@@ -985,40 +1333,64 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                               height: 'var(--profile-menu-item-icon-size)',
                               filter: 'var(--profile-menu-item-icon-filter)',
                             }}
-
                           />
                         </div>
                       </div>
                     </button>
-                  </div>
-                </div>
+                  </motion.div>
+                </motion.div>
               </>
             )}
           </motion.div>
+          </>
         )}
 
-        {tab !== 'profile' && (
+        {tab === 'store' && (
           <motion.div
-            key="ads-screen"
-            className="absolute left-0 w-full"
+            key="store-catalog-screen"
+            className="absolute left-0 w-full overflow-hidden"
             style={{
               top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-              height: 'calc(812px - 88px - 56px - var(--home-header-offset))',
+              height: 'calc(812px - var(--bottom-nav-height) - 56px - var(--home-header-offset))',
             }}
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
           >
-            {tab === 'ads' && (
-              <Ads
-                isAuthed={isAuthed}
-                onOpenAd={(ad) => {
-                  setSelectedAd(ad)
-                }}
-                createOnMount={adsCreateRequested}
-                onCreateConsumed={() => setAdsCreateRequested(false)}
-              />
-            )}
+            <StoreCatalog
+              onCreateStore={() => {
+                if (!isAuthed) {
+                  setStoreAuthWarningOpen(true)
+                  return
+                }
+                setShowCreateStore(true)
+              }}
+              onOpenStore={(id) => openStoreProfile(id)}
+            />
+          </motion.div>
+        )}
+
+        {tab === 'ads' && (
+          <motion.div
+            key="ads-screen"
+            className="absolute left-0 w-full overflow-hidden"
+            style={{
+              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
+              height: 'calc(812px - var(--bottom-nav-height) - 56px - var(--home-header-offset))',
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            <Ads
+              isAuthed={isAuthed}
+              onOpenAd={(ad) => {
+                setSelectedAd(ad)
+              }}
+              onOpenStoreById={openStoreProfile}
+              createOnMount={adsCreateRequested}
+              onCreateConsumed={() => setAdsCreateRequested(false)}
+            />
           </motion.div>
         )}
 
@@ -1031,25 +1403,21 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="absolute left-0 w-full bg-[#0A0A0A] z-[90]"
+              className="absolute left-0 w-full bg-transparent z-[90]"
               style={{
-                height: 'var(--bottom-nav-height, 96px)',
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset))',
+                height: 'var(--bottom-nav-height, 80px)',
+                bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset, 0px))',
               }}
             >
-              <div className="absolute inset-x-0 bottom-3 px-4">
+              <div className="absolute inset-x-0 bottom-4 px-6">
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-[24px] bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.3)]" />
-                  <div className="relative flex items-center gap-1 p-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (projectInfoOpen) {
-                          const ev = new Event('project-check-updates')
-                          window.dispatchEvent(ev)
-                          return
-                        }
-                        if (adsNavNextVisible) {
+                  <div className="absolute inset-0 rounded-[28px] backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4)]" />
+                  
+                  <div className="relative flex items-center justify-between p-1.5">
+                    {adsNavNextVisible ? (
+                      <button
+                        type="button"
+                        onClick={() => {
                           if (!adsNavNextEnabled) return
                           if (adsNavNextMode === 'detail') {
                             const ev = new Event('ad-detail-purchase')
@@ -1058,137 +1426,78 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                             const ev = new Event('ads-create-nav-next')
                             window.dispatchEvent(ev)
                           }
-                          return
-                        }
-                        closeAllWindows()
-                        setViewProfileMode('own')
-                        setViewProfileUserId(null)
-                        setProfileReturnAd(null)
-                        setProfileStack([])
-                        if (tab === 'ads') {
-                          setAdsCreateRequested(true)
-                          return
-                        }
-                        setTab('ads')
-                      }}
-                      className="relative flex-[7] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-50"
-                      style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
-                    >
-                      {tab === 'ads' && adsNavNextMode !== 'edit' && (
-                        <motion.div
-                          layoutId="bottom-nav-active-tab"
-                          className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 30,
-                            mass: 0.8,
-                          }}
-                        />
-                      )}
-                      <AnimatePresence mode="wait" initial={false}>
-                        {adsNavNextVisible ? (
-                          <motion.div
-                            key="ads-next"
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -6 }}
-                            transition={{ duration: 0.18, ease: 'easeOut' }}
-                            className="relative z-10 flex items-center justify-center"
-                            style={{ opacity: adsNavNextEnabled ? 1 : 0.4 }}
-                          >
-                            <span
-                              className={`font-semibold text-[17.8px] ${
-                                adsNavNextMode === 'edit' ? 'text-white' : 'text-black'
-                              }`}
-                            >
-                              {adsNavNextLabel}
-                            </span>
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="ads-default"
-                            initial={{ opacity: 0, y: -6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 6 }}
-                            transition={{ duration: 0.18, ease: 'easeOut' }}
-                            className="relative z-10 flex flex-col items-center justify-center gap-1"
-                          >
-                            {tab === 'ads' ? (
-                              <>
-                                <img
-                                  src="/interface/plus-02-black.svg"
-                                  alt=""
-                                  className="w-[24px] h-[24px] translate-y-[2px]"
-                                />
-                                <span className="font-semibold text-[13.5px] text-black">
-                                  Создать обьявление
-                                </span>
-                              </>
-                            ) : projectInfoOpen ? (
-                              <>
-                                <RefreshCcw
-                                  className="w-6 h-6 transition-all duration-200 text-white/70"
-                                  strokeWidth={2.5}
-                                />
-                                <span className="font-medium text-[12px] text-white/70">
-                                  Проверить обновления
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingBag
-                                  className="w-6 h-6 transition-all duration-200 text-white/70"
-                                  strokeWidth={2.5}
-                                />
-                                <span className="font-medium text-[12px] text-white/70">
-                                  Объявления
-                                </span>
-                              </>
-                            )}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeAllWindows()
-                        setTab('profile')
-                        setViewProfileMode('own')
-                        setViewProfileUserId(null)
-                        setProfileReturnAd(null)
-                        setProfileStack([])
-                      }}
-                      className="relative flex-[3] flex flex-col items-center justify-center gap-1 rounded-[20px] transition-all duration-200 z-50"
-                      style={{ height: 'var(--bottom-nav-pill-height, 64px)' }}
-                    >
-                      {tab === 'profile' && (
-                        <motion.div
-                          layoutId="bottom-nav-active-tab"
-                          className="absolute inset-[-2px] rounded-[20px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 30,
-                            mass: 0.8,
-                          }}
-                        />
-                      )}
-                      <User
-                        className={`w-6 h-6 transition-all duration-200 relative z-10 ${
-                          tab === 'profile' ? 'text-black scale-110' : 'text-white/70'
-                        }`}
-                        strokeWidth={2.5}
-                      />
-                      <span
-                        className={`font-medium text-[12px] transition-all duration-200 relative z-10 ${
-                          tab === 'profile' ? 'text-black' : 'text-white/70'
-                        }`}
+                        }}
+                        className="w-full h-[52px] flex items-center justify-center rounded-[22px] transition-all duration-200 z-50 bg-white active:scale-[0.98]"
+                        style={{ opacity: adsNavNextEnabled ? 1 : 0.4 }}
                       >
-                        Профиль
-                      </span>
-                    </button>
+                        <span className="font-sf-ui-bold text-[16px] text-black">
+                          {adsNavNextLabel}
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center w-full justify-around px-2">
+                        {/* Feed */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            closeAllWindows()
+                            setTab('ads')
+                          }}
+                          className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
+                        >
+                          <div className={tab === 'ads' ? 'text-white' : 'text-white/40'}>
+                            <NavIcon type="ads" active={tab === 'ads'} />
+                          </div>
+                        </button>
+
+                        {/* Store */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            closeAllWindows()
+                            setTab('store')
+                          }}
+                          className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
+                        >
+                          <div className={tab === 'store' || (tab === 'profile' && !!viewStoreId) ? 'text-white' : 'text-white/40'}>
+                            <NavIcon type="store" active={tab === 'store' || (tab === 'profile' && !!viewStoreId)} />
+                          </div>
+                        </button>
+
+                        {/* Create */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            closeAllWindows()
+                            setTab('ads')
+                            setAdsCreateRequested(true)
+                          }}
+                          className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
+                        >
+                          <div className="text-white/40">
+                            <NavIcon type="create" active={false} />
+                          </div>
+                        </button>
+
+                        {/* Profile */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            closeAllWindows()
+                            setTab('profile')
+                            setViewProfileMode('own')
+                            setViewProfileUserId(null)
+                            setViewStoreId(null)
+                            setProfileTab('favorites')
+                          }}
+                          className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
+                        >
+                          <div className={tab === 'profile' && !viewStoreId && viewProfileMode === 'own' ? 'text-white' : 'text-white/40'}>
+                            <NavIcon type="profile" active={tab === 'profile' && !viewStoreId && viewProfileMode === 'own'} />
+                          </div>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1196,7 +1505,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           )}
         </AnimatePresence>
         <div
-          className="absolute left-0 w-full bg-[#0A0A0A]"
+          className="absolute left-0 w-full bg-transparent"
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
         {profileEdit && tab === 'profile' && viewProfileMode === 'own' && (
@@ -1284,10 +1593,17 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               setTab('profile')
               setViewProfileMode('foreign')
               setViewProfileUserId(ad.userId)
+              setViewStoreId(null)
               setProfileReturnAd(ad)
               setProfileTab('ads')
               setProfileEdit(false)
               setSelectedAd(null)
+            }}
+            onOpenStoreProfile={openStoreProfile}
+            onOpenChat={(ad, receiver) => {
+              setChatReceiver(receiver)
+              setActiveChatAd(ad)
+              setChatOpen(true)
             }}
           />
         )}
@@ -1299,6 +1615,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               setTab('profile')
               setViewProfileMode('foreign')
               setViewProfileUserId(userId)
+              setViewStoreId(null)
               setProfileReturnAd(null)
               setProfileTab('ads')
               setProfileEdit(false)
@@ -1325,6 +1642,289 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             }}
           />
         )}
+        {chatOpen && chatReceiver && (
+          <Chat
+            onClose={() => {
+              setChatOpen(false)
+              setActiveChatAd(null)
+              setChatReceiver(null)
+            }}
+            receiverId={chatReceiver.id}
+            receiverName={chatReceiver.name}
+            receiverAvatar={chatReceiver.avatar}
+            adContext={activeChatAd}
+            contacts={(() => {
+              if (!activeChatAd?.userId) return []
+              try {
+                const raw = localStorage.getItem('hw-profiles')
+                const map = raw ? JSON.parse(raw) : {}
+                const userProfile = map[activeChatAd.userId]
+                const items = userProfile?.contacts
+                if (!Array.isArray(items)) return []
+                return items
+                  .map((item: any) => {
+                    if (!item || typeof item !== 'object') return null
+                    const type = item.type === 'vk' || item.type === 'telegram' ? item.type : null
+                    const url = typeof item.url === 'string' ? item.url.trim() : ''
+                    if (!type || !url) return null
+                    return { type, url }
+                  })
+                  .filter((x: any) => !!x)
+              } catch {}
+              return []
+            })()}
+          />
+        )}
+        {showCreateStore && (
+          <CreateStoreFlow
+            onClose={() => setShowCreateStore(false)}
+            onSuccess={(storeId) => {
+              setShowCreateStore(false)
+              window.dispatchEvent(new Event('refresh-user-stores'))
+              openStoreProfile(storeId)
+            }}
+          />
+        )}
+
+        <AnimatePresence>
+          {storeAuthWarningOpen && (
+            <>
+              <motion.div
+                className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                onClick={() => {
+                  if (storeAuthWarningLocked) return
+                  setStoreAuthWarningOpen(false)
+                }}
+              />
+              
+               <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
+                 <motion.div
+                   className="relative w-full max-w-[375px] rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                   initial={{ translateY: '100%' }}
+                   animate={{ translateY: 0 }}
+                   exit={{ translateY: '100%' }}
+                   transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+                 >
+                   <StoreAuthIllustration />
+                   
+                   <div className="space-y-2">
+                     <h3 className="text-[22px] font-ttc-bold text-white leading-tight">
+                       Нужен аккаунт
+                     </h3>
+                     <p className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px]">
+                       Чтобы открыть свой магазин и начать продавать — нужно войти в аккаунт
+                     </p>
+                   </div>
+                   
+                   <div className="w-full flex flex-col gap-3 pt-4">
+                     <button
+                       type="button"
+                       className="h-14 w-full rounded-[22px] bg-white text-black font-sf-ui-bold text-[16px] active:scale-[0.97] transition-all"
+                       onClick={() => {
+                         if (storeAuthWarningLocked) return
+                         window.dispatchEvent(new Event('trigger-auth'))
+                         setStoreAuthWarningOpen(false)
+                       }}
+                     >
+                       Войти
+                     </button>
+                     
+                     <button
+                       type="button"
+                       className="h-14 w-full rounded-[22px] bg-white/5 text-white/70 font-sf-ui-medium text-[15px] active:scale-[0.97] transition-all"
+                       onClick={() => {
+                         if (storeAuthWarningLocked) return
+                         setStoreAuthWarningOpen(false)
+                       }}
+                     >
+                       Позже
+                     </button>
+                   </div>
+                 </motion.div>
+               </div>
+            </>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {notificationsOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: '100%' }}
+              animate={notificationsClosing ? { opacity: 0, x: '100%' } : { opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+              className="fixed inset-0 z-[160] flex flex-col bg-[#0A0A0A]"
+            >
+              {/* Header */}
+              <div
+                className="relative w-full bg-[#0A0A0A] border-b border-white/[0.05] flex-shrink-0"
+                style={{ 
+                  paddingTop: 'env(safe-area-inset-top, 0px)',
+                  height: 'calc(env(safe-area-inset-top, 0px) + 56px)' 
+                }}
+              >
+                <div className="relative h-full w-full flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={closeNotifications}
+                    className="absolute left-6 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <ChevronLeft size={24} className="text-white" />
+                  </button>
+                  <div className="font-ttc-bold text-white text-[20px]">
+                    Уведомления
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto scrollbar-hidden">
+                {notifications.length > 0 ? (
+                  notifications.map((notif) => (
+                    <motion.div
+                      key={notif.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="w-full px-6 py-5 border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
+                    >
+                      <div className="flex gap-4 items-start text-left">
+                        <div className="relative flex-shrink-0">
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/[0.08] to-transparent flex items-center justify-center overflow-hidden border border-white/[0.08]">
+                            <img src={notif.icon} alt="" className="w-7 h-7 rounded-lg" />
+                          </div>
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#0A0A0A]" />
+                        </div>
+                        
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[16px] font-sf-ui-semibold text-white/90 truncate tracking-tight">
+                              {notif.title}
+                            </span>
+                            <span className="text-[11px] text-white/20 font-sf-ui-medium uppercase tracking-widest whitespace-nowrap">
+                              {notif.date}
+                            </span>
+                          </div>
+                          <p className="text-[14px] text-white/40 font-sf-ui-light leading-relaxed">
+                            {notif.text}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="w-full py-20 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-20 h-20 rounded-full bg-white/[0.03] flex items-center justify-center relative">
+                      <Bell size={40} className="text-white/10" />
+                      <motion.div 
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="absolute inset-0 rounded-full border-2 border-white/5"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[16px] font-sf-ui-medium text-white/60">Пока пусто</p>
+                      <p className="text-[13px] text-white/30 font-sf-ui-light">Мы сообщим, когда появится что-то новое</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          <AnimatePresence>
+          {favoriteToast.visible && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+              className="fixed bottom-[100px] left-1/2 -translate-x-1/2 z-[200] w-[280px]"
+            >
+              <button
+                onClick={() => {
+                  setFavoriteToast({ visible: false, adId: null })
+                  setTab('profile')
+                  setTimeout(() => window.dispatchEvent(new Event('open-favorites')), 100)
+                }}
+                className="w-full flex items-center justify-between px-5 py-4 rounded-[22px] bg-[#1C1C1E] border border-white/10 shadow-2xl backdrop-blur-xl active:scale-95 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                    <Heart className="w-4 h-4 text-red-500 fill-current" />
+                  </div>
+                  <span className="text-[14px] font-sf-ui-medium text-white/90">Добавлено в избранное</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/20" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {alphaModalOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setAlphaModalOpen(false)}
+                className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-md"
+              />
+              <div className="fixed inset-0 z-[160] flex items-end justify-center pointer-events-none">
+                <motion.div
+                  initial={{ translateY: '100%' }}
+                  animate={{ translateY: 0 }}
+                  exit={{ translateY: '100%' }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+                  className="relative w-full max-w-[375px] bg-[#121212] border-t border-white/10 rounded-t-[32px] p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                >
+                  <div className="space-y-2">
+                    <h3 className="text-[22px] font-ttc-bold text-white leading-tight flex items-center justify-center gap-2.5">
+                      <img src="/logo.svg" alt="Alpha" className="w-6 h-6 rounded-md" />
+                      Alpha Test
+                    </h3>
+                    <p className="text-[14px] text-white/40 font-sf-ui-light leading-relaxed max-w-[280px]">
+                      Сайт находится в стадии активной разработки. Возможны ошибки и нестабильная работа. Спасибо, что приняли участие в тестировании сайта.
+                    </p>
+                  </div>
+
+                  <div className="w-full grid grid-cols-2 gap-3 pt-2">
+                    <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center">
+                      <span className="text-[20px] font-ttc-bold text-white">
+                        {alphaStats.users}
+                      </span>
+                      <span className="text-[11px] text-white/30 uppercase tracking-wider font-sf-ui-medium">
+                        Зарегистрированных пользователей
+                      </span>
+                    </div>
+                    <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center">
+                      <span className="text-[20px] font-ttc-bold text-white">
+                        {alphaStats.ads}
+                      </span>
+                      <span className="text-[11px] text-white/30 uppercase tracking-wider font-sf-ui-medium">
+                        Созданных объявлений
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-full pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setAlphaModalOpen(false)}
+                      className="h-14 w-full rounded-[22px] bg-white text-black font-sf-ui-bold text-[16px] active:scale-[0.97] transition-all"
+                    >
+                      Понятно
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
       {showIosTip && (
         <div

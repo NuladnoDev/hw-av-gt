@@ -99,9 +99,17 @@ export default function Home() {
 
   async function signUpWithTagAndPassword(tag: string, password: string, city?: string) {
     const client = getSupabase()
+    const regMetadata = {
+      userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
+      screen: typeof window !== 'undefined' ? `${window.screen.width}x${window.screen.height}` : 'unknown',
+      regDate: new Date().toISOString(),
+      platform: typeof window !== 'undefined' ? (window.navigator as any).platform : 'unknown',
+      initialCity: city || 'none'
+    }
+ 
     if (!client) {
       const usersRaw = window.localStorage.getItem('hw-users')
-      const users: Array<{ tag: string; uid: string; email: string; pass: string }> = usersRaw ? JSON.parse(usersRaw) : []
+      const users: Array<{ tag: string; uid: string; email: string; pass: string; reg_info?: any }> = usersRaw ? JSON.parse(usersRaw) : []
       const exists = users.some((u) => u.tag === tag)
       if (exists) {
         setTagError('тег занят')
@@ -116,17 +124,17 @@ export default function Home() {
       const cnt = users.length + 1
       const uid = `hw-${String(cnt).padStart(4, '0')}`
       const email = `${tag}@hw-app.com`
-      const nextUsers = [...users, { tag, uid, email, pass: hash }]
+      const nextUsers = [...users, { tag, uid, email, pass: hash, reg_info: regMetadata }]
       window.localStorage.setItem('hw-users', JSON.stringify(nextUsers))
       window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid, email }))
       try {
         const profRaw = window.localStorage.getItem('hw-profiles')
         const profMap = profRaw
-          ? (JSON.parse(profRaw) as Record<string, { city?: string }>)
+          ? (JSON.parse(profRaw) as Record<string, { city?: string; reg_info?: any }>)
           : {}
         const prev = profMap[uid] ?? {}
         const c = typeof city === 'string' ? city.trim() : ''
-        profMap[uid] = c.length > 0 ? { ...prev, city: c } : prev
+        profMap[uid] = { ...prev, ...(c.length > 0 ? { city: c } : {}), reg_info: regMetadata }
         window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
       } catch {
       }
@@ -137,7 +145,7 @@ export default function Home() {
     const { data, error } = await client.auth.signUp({
       email,
       password,
-      options: { data: { tag } },
+      options: { data: { tag, ...regMetadata } },
     })
     if (error) {
       if (/registered|exists/i.test(error.message)) {
@@ -163,22 +171,28 @@ export default function Home() {
       .select('*', { count: 'exact', head: true })
     const cnt = (countRes.count ?? 0) + 1
     uid = `hw-${String(cnt).padStart(4, '0')}`
-    await client.from('profiles').insert({
+    
+    // Attempting to store metadata in profiles if columns exist, or fallback to metadata
+    const profileData: any = {
       id: userId,
       tag,
       uid,
+      email,
       city: typeof city === 'string' && city.trim().length > 0 ? city.trim() : null,
-    })
-    await client.auth.updateUser({ data: { tag, uid } })
+      reg_info: regMetadata,
+    }
+
+    await client.from('profiles').insert(profileData)
+    await client.auth.updateUser({ data: { tag, uid, ...regMetadata } })
     if (userId) {
       try {
         const profRaw = window.localStorage.getItem('hw-profiles')
         const profMap = profRaw
-          ? (JSON.parse(profRaw) as Record<string, { city?: string }>)
+          ? (JSON.parse(profRaw) as Record<string, { city?: string; reg_info?: any }>)
           : {}
         const prev = profMap[userId] ?? {}
         const c = typeof city === 'string' ? city.trim() : ''
-        profMap[userId] = c.length > 0 ? { ...prev, city: c } : prev
+        profMap[userId] = { ...prev, ...(c.length > 0 ? { city: c } : {}), reg_info: regMetadata }
         window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
       } catch {
       }

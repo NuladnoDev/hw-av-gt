@@ -22,7 +22,10 @@ import {
   Users,
   Wallet,
   Search,
-  Package
+  Package,
+  X,
+  RefreshCw,
+  Heart
 } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
@@ -46,6 +49,16 @@ function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
 const isUuid = (value: string | null | undefined): boolean => {
   if (!value) return false
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+}
+
+const slugify = (text: string) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-')
 }
 
 type Contact = {
@@ -72,6 +85,32 @@ const contactMethods: { id: string; label: string; type: Contact['type'] }[] = [
   { id: 'telegram', label: 'Telegram', type: 'telegram' },
 ]
 
+const defaultRussianCities = [
+  'Череповец',
+  'Кадуй',
+  'Москва',
+  'Волгоград',
+  'Владивосток',
+  'Воронеж',
+  'Екатеринбург',
+  'Казань',
+  'Калининград',
+  'Краснодар',
+  'Красноярск',
+  'Нижний Новгород',
+  'Новосибирск',
+  'Омск',
+  'Пермь',
+  'Ростов-на-Дону',
+  'Самара',
+  'Санкт-Петербург',
+  'Саратов',
+  'Тюмень',
+  'Уфа',
+  'Хабаровск',
+  'Челябинск',
+]
+
 export default function Profile({
   profileTab,
   setProfileTab,
@@ -80,16 +119,20 @@ export default function Profile({
   isOwnProfile = true,
   viewUserId,
   onOpenProfileById,
+  onOpenStoreById,
   isAuthed,
+  onOpenAd,
 }: {
-  profileTab: 'ads' | 'about' | 'friends'
-  setProfileTab: (t: 'ads' | 'about' | 'friends') => void
+  profileTab: 'ads' | 'about' | 'friends' | 'favorites'
+  setProfileTab: (t: 'ads' | 'about' | 'friends' | 'favorites') => void
   userTag?: string
   editMode?: boolean
   isOwnProfile?: boolean
   viewUserId?: string
   onOpenProfileById?: (id: string) => void
+  onOpenStoreById?: (id: string) => void
   isAuthed?: boolean
+  onOpenAd?: (ad: StoredAd) => void
 }) {
   const [tagText, setTagText] = useState<string>(typeof userTag === 'string' ? userTag.replace(/^@/, '') : '')
   const [tagEditing, setTagEditing] = useState(false)
@@ -107,6 +150,72 @@ export default function Profile({
   const [contacts, setContacts] = useState<Contact[]>([])
   const [userAds, setUserAds] = useState<StoredAd[]>([])
   const [userAdsLoading, setUserAdsLoading] = useState(true)
+  const [favoriteAds, setFavoriteAds] = useState<StoredAd[]>([])
+  const [favoritesLoading, setFavoritesLoading] = useState(false)
+  const EmptyAdsIllustration = () => (
+    <div className="flex flex-col items-center justify-center w-full">
+      <svg width="180" height="140" viewBox="0 0 180 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Floating Abstract Items (Colorful) */}
+        <motion.g
+          animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        >
+          {/* Main Card Item */}
+          <rect x="60" y="30" width="60" height="80" rx="16" fill="#3B82F6" fillOpacity="0.8" />
+          <rect x="70" y="45" width="40" height="4" rx="2" fill="white" fillOpacity="0.3" />
+          <rect x="70" y="55" width="25" height="4" rx="2" fill="white" fillOpacity="0.15" />
+          {/* Price Tag on it */}
+          <rect x="85" y="80" width="30" height="18" rx="9" fill="#10B981" />
+        </motion.g>
+
+        {/* Small Floating Sparkles/Particles */}
+        <motion.circle 
+          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.7, 0.3] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          cx="45" cy="50" r="4" fill="#F59E0B" 
+        />
+        <motion.circle 
+          animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.6, 0.2] }}
+          transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+          cx="140" cy="90" r="6" fill="#6366F1" 
+        />
+        <motion.rect 
+          animate={{ rotate: 360 }}
+          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          x="130" y="40" width="8" height="8" rx="2" fill="#EC4899" fillOpacity="0.6" 
+        />
+      </svg>
+    </div>
+  )
+
+  const EmptyFavoritesIllustration = () => (
+    <div className="flex flex-col items-center justify-center w-full">
+      <svg width="180" height="140" viewBox="0 0 180 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Кроссовок (Sneaker) */}
+        <motion.g
+          animate={{ y: [0, -4, 0], rotate: [0, -1, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <path d="M30 100C30 100 35 85 55 85C75 85 100 95 110 95C120 95 130 88 130 80V110H30V100Z" stroke="white" strokeOpacity="0.15" strokeWidth="2"/>
+          <path d="M45 85L55 70H85L95 85" stroke="white" strokeOpacity="0.1" strokeWidth="1.5"/>
+        </motion.g>
+
+        {/* Подик (Vape/Pod) */}
+        <motion.g
+          animate={{ y: [0, -6, 0], rotate: [0, 2, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+        >
+          <rect x="110" y="45" width="22" height="55" rx="4" stroke="white" strokeOpacity="0.2" strokeWidth="2" fill="#0D0D0D"/>
+          <rect x="116" y="38" width="10" height="7" rx="1.5" stroke="white" strokeOpacity="0.15" strokeWidth="1.5"/>
+          <circle cx="121" cy="72" r="3" stroke="white" strokeOpacity="0.25" strokeWidth="1"/>
+        </motion.g>
+
+        {/* Декоративная линия земли */}
+        <line x1="20" y1="115" x2="160" y2="115" stroke="white" strokeOpacity="0.05" strokeWidth="1"/>
+      </svg>
+    </div>
+  )
+
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
@@ -117,9 +226,17 @@ export default function Profile({
   const [isVerified, setIsVerified] = useState(false)
   const [isQuality, setIsQuality] = useState(false)
   const [isModerator, setIsModerator] = useState(false)
+  const [userStores, setUserStores] = useState<{ id: string; name: string; avatar_url: string | null }[]>([])
+  const [storesLoading, setStoresLoading] = useState(false)
+  const [showCreateStore, setShowCreateStore] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
+  const [pullDistance, setPullDistance] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const startYRef = useRef(0)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -132,6 +249,50 @@ export default function Profile({
     window.addEventListener('theme-updated', handleThemeUpdate)
     return () => window.removeEventListener('theme-updated', handleThemeUpdate)
   }, [])
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return
+    setIsRefreshing(true)
+    
+    try {
+      // Trigger all useEffect hooks by changing the key
+      setRefreshKey(prev => prev + 1)
+      
+      // Also manually trigger some things if needed
+      const ev = new CustomEvent('profile-refresh-requested')
+      window.dispatchEvent(ev)
+      
+      // Simulate network delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 800))
+    } finally {
+      setIsRefreshing(false)
+      setPullDistance(0)
+    }
+  }
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (scrollRef.current?.scrollTop === 0) {
+      startYRef.current = e.touches[0].pageY
+    }
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (scrollRef.current?.scrollTop === 0) {
+      const currentY = e.touches[0].pageY
+      const distance = currentY - startYRef.current
+      if (distance > 0) {
+        setPullDistance(Math.min(distance * 0.4, 80))
+      }
+    }
+  }
+
+  const onTouchEnd = () => {
+    if (pullDistance > 60) {
+      handleRefresh()
+    } else {
+      setPullDistance(0)
+    }
+  }
 
   const showToast = (message: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
@@ -196,6 +357,83 @@ export default function Profile({
       console.error('writeLocalFollow error:', e)
     }
   }
+
+  useEffect(() => {
+    let cancelled = false
+    const loadStores = async () => {
+      if (!userId || !isOwnProfile) return
+      setStoresLoading(true)
+      const client = getSupabase()
+      if (!client) {
+        setStoresLoading(false)
+        return
+      }
+      try {
+        const { data, error } = await client
+          .from('store_members')
+          .select('store_id, stores(id, name, avatar_url)')
+          .eq('user_id', userId)
+        
+        if (!cancelled && !error && data) {
+          const stores = data.map((m: any) => ({
+            id: m.stores.id,
+            name: m.stores.name,
+            avatar_url: m.stores.avatar_url
+          }))
+          setUserStores(stores)
+        }
+      } catch (e) {
+        console.error('Error loading stores:', e)
+      } finally {
+        if (!cancelled) setStoresLoading(false)
+      }
+    }
+    loadStores()
+    return () => { cancelled = true }
+  }, [userId, isOwnProfile, refreshKey])
+
+  useEffect(() => {
+    if (!isOwnProfile && profileTab === 'favorites') {
+      setProfileTab('ads')
+    }
+  }, [isOwnProfile, profileTab, setProfileTab])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadFavorites = async () => {
+      if (profileTab !== 'favorites') return
+      setFavoritesLoading(true)
+      try {
+        const saved = localStorage.getItem('hw-favorites')
+        if (!saved) {
+          setFavoriteAds([])
+          return
+        }
+        const favoriteIds = JSON.parse(saved) as string[]
+        if (favoriteIds.length === 0) {
+          setFavoriteAds([])
+          return
+        }
+        
+        const allAds = await loadAdsFromStorage()
+        const filtered = allAds.filter(ad => favoriteIds.includes(ad.id))
+        if (!cancelled) {
+          setFavoriteAds(filtered.sort((a, b) => b.createdAt - a.createdAt))
+        }
+      } catch (e) {
+        console.error('Error loading favorites:', e)
+      } finally {
+        if (!cancelled) setFavoritesLoading(false)
+      }
+    }
+    loadFavorites()
+    const handler = () => loadFavorites()
+    window.addEventListener('favorites-updated', handler)
+    return () => {
+      cancelled = true
+      window.removeEventListener('favorites-updated', handler)
+    }
+  }, [profileTab, refreshKey])
 
   useEffect(() => {
     let cancelled = false
@@ -281,7 +519,7 @@ export default function Profile({
       cancelled = true
       window.removeEventListener('ads-updated', handler as EventListener)
     }
-  }, [userId, userAltId])
+  }, [userId, userAltId, refreshKey])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -382,7 +620,7 @@ export default function Profile({
         setProfileInfoLoading(false)
       }
     })()
-  }, [userTag, viewUserId])
+  }, [userTag, viewUserId, refreshKey])
   useEffect(() => {
     let cancelled = false
     const loadFollow = async () => {
@@ -437,7 +675,7 @@ export default function Profile({
     return () => {
       cancelled = true
     }
-  }, [viewUserId, viewerId])
+  }, [viewUserId, viewerId, refreshKey])
 
   useEffect(() => {
     let cancelled = false
@@ -555,7 +793,7 @@ export default function Profile({
     return () => {
       cancelled = true
     }
-  }, [profileTab, userId, viewUserId, viewerId])
+  }, [profileTab, viewUserId, userId, viewerId, refreshKey])
   useEffect(() => {
     const handleUpdated = (e: Event) => {
       const ev = e as CustomEvent<{ tag?: string; avatar_url?: string; description?: string; age?: string; gender?: string; city?: string; political?: string; hobbies?: string; contacts?: Contact[]; is_verified?: boolean; is_quality?: boolean; is_moderator?: boolean }>
@@ -842,31 +1080,83 @@ export default function Profile({
   if (isOwnProfile && !isAuthed) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center bg-[var(--bg-primary)]">
-        <div className="mb-6 flex h-[120px] w-[120px] items-center justify-center rounded-full bg-[var(--bg-secondary)]">
-          <img
-            src="/interface/adv.svg"
-            alt="sales"
-            className="h-16 w-16 opacity-80"
-            style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }}
-          />
+        <div className="mb-10 w-full flex justify-center">
+          <svg width="280" height="240" viewBox="0 0 280 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Background Glow */}
+            <circle cx="140" cy="120" r="100" fill="url(#profile_guest_glow)" fillOpacity="0.15"/>
+            
+            {/* Market Stand / Interaction Concept */}
+            <motion.g
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            >
+              {/* Abstract App Interface Elements */}
+              <rect x="60" y="40" width="160" height="160" rx="24" fill="white" fillOpacity="0.03" stroke="white" strokeOpacity="0.1" strokeWidth="2"/>
+              
+              {/* Colorful Product Cards */}
+              <motion.rect 
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                x="80" y="60" width="50" height="60" rx="12" fill="#3B82F6" fillOpacity="0.8" 
+              />
+              <motion.rect 
+                animate={{ y: [0, -12, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                x="150" y="80" width="50" height="60" rx="12" fill="#10B981" fillOpacity="0.8" 
+              />
+              <motion.rect 
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                x="80" y="130" width="50" height="40" rx="12" fill="#F59E0B" fillOpacity="0.8" 
+              />
+              
+              {/* Interaction Indicators (Hand/Click) */}
+              <motion.circle 
+                animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0.6, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                cx="140" cy="120" r="15" fill="white" fillOpacity="0.2" 
+              />
+              <path d="M140 110V130M130 120H150" stroke="white" strokeWidth="3" strokeLinecap="round" />
+            </motion.g>
+
+            {/* Decorative Floating Elements */}
+            <motion.circle animate={{ x: [0, 10, 0] }} transition={{ duration: 5, repeat: Infinity }} cx="40" cy="60" r="6" fill="#6366F1" />
+            <motion.rect animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }} x="230" y="140" width="12" height="12" rx="3" fill="#EC4899" />
+            
+            <defs>
+              <radialGradient id="profile_guest_glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(140 120) rotate(90) scale(100)">
+                <stop stopColor="#3B82F6"/>
+                <stop offset="1" stopColor="#3B82F6" stopOpacity="0"/>
+              </radialGradient>
+            </defs>
+          </svg>
         </div>
-        <h2 className="text-[20px] leading-[1.3] font-sf-ui-medium text-[var(--text-primary)] mb-8">
-          Зарегистрируйтесь и пользуйтесь полным функционалом сайта!
-        </h2>
-        <button
-          type="button"
-          className="h-[48px] w-full rounded-[12px] bg-[var(--text-primary)] text-[var(--bg-primary)] font-vk-demi text-[16px] mb-4"
-          onClick={() => window.dispatchEvent(new Event('trigger-auth'))}
-        >
-          Создать аккаунт
-        </button>
-        <button
-          type="button"
-          className="text-[14px] text-[var(--text-secondary)] font-sf-ui-light"
-          onClick={() => window.dispatchEvent(new CustomEvent('trigger-auth', { detail: { screen: 'login' } }))}
-        >
-          У меня уже есть аккаунт. Войти
-        </button>
+        
+        <div className="space-y-3 mb-10">
+          <h2 className="text-[24px] leading-[1.2] font-ttc-bold text-[var(--text-primary)]">
+            Зарегистрируйтесь и пользуйтесь<br/>полным функционалом сайта!
+          </h2>
+          <p className="text-[15px] text-[var(--text-secondary)] font-sf-ui-light max-w-[280px] mx-auto">
+            Создайте профиль, чтобы выставлять товары, общаться с продавцами и следить за обновлениями
+          </p>
+        </div>
+
+        <div className="w-full space-y-3">
+          <button
+            type="button"
+            className="h-[56px] w-full rounded-[23px] bg-[var(--text-primary)] text-[var(--bg-primary)] font-sf-ui-bold text-[17px] active:scale-[0.97] transition-all shadow-xl shadow-blue-500/10"
+            onClick={() => window.dispatchEvent(new Event('trigger-auth'))}
+          >
+            Создать аккаунт
+          </button>
+          <button
+            type="button"
+            className="h-[56px] w-full rounded-[18px] bg-[var(--bg-secondary)] text-[var(--text-primary)] font-sf-ui-medium text-[15px] active:scale-[0.97] transition-all"
+            onClick={() => window.dispatchEvent(new CustomEvent('trigger-auth', { detail: { screen: 'login' } }))}
+          >
+            Уже есть профиль? Войти
+          </button>
+        </div>
       </div>
     )
   }
@@ -916,64 +1206,91 @@ export default function Profile({
         )}
       </AnimatePresence>
       <div
-        className="absolute left-0 w-full"
-        style={{ top: '0px', height: 'var(--profile-cover-height)' }}
-      >
-        <div className="h-full w-full" style={{ background: 'var(--bg-primary)' }} />
-      </div>
-      <div
-        className="absolute left-1/2 -translate-x-1/2 rounded-full overflow-hidden"
-        style={{
-          width: 'var(--profile-avatar-size)',
-          height: 'var(--profile-avatar-size)',
-          top: 'calc(var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) + var(--profile-avatar-top-offset, 0px))',
-          boxShadow: theme === 'dark' ? `0 0 20px rgba(255,255,255,0.15), 0 4px 18px rgba(0,0,0,0.35)` : `0 4px 18px rgba(0,0,0,0.1)`,
-          background: avatarUrl ? 'var(--bg-primary)' : gradient,
-        }}
-      >
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-white font-vk-demi text-[36px]">
-            {initialLetter}
-          </div>
-        )}
-        {editMode && (
-          <button
-            type="button"
-            onClick={() => avatarInputRef.current?.click()}
-            className="absolute left-0 top-0 h-full w-full flex items-center justify-center bg-black/20"
-            aria-label="Сменить аватар"
-          >
-            <img
-              src="/interface/image-add.svg"
-              alt="add"
-              className="h-[40px] w-[40px]"
-              style={{
-                filter: theme === 'dark' 
-                  ? 'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)'
-                  : 'none',
-                opacity: 0.9,
-              }}
-            />
-          </button>
-        )}
-        <input
-          ref={avatarInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => handleAvatarFile(e.target.files)}
-        />
-      </div>
-      <div
+        ref={scrollRef}
         className="absolute left-0 w-full px-6 overflow-y-auto pb-8 scrollbar-hidden"
         style={{
-          top: 'calc(var(--profile-cover-height) + calc(var(--profile-avatar-size) / 2) + 12px + var(--profile-avatar-top-offset, 0px))',
-          height: 'calc(100% - var(--profile-cover-height) - calc(var(--profile-avatar-size) / 2) - 12px - var(--profile-avatar-top-offset, 0px))',
+          top: '0px',
+          height: '100%',
         }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
-        <div className="flex w-full flex-col items-center">
+        {/* Pull-to-refresh Indicator */}
+        <div 
+          className="absolute left-0 right-0 flex justify-center pointer-events-none z-50 transition-all duration-200"
+          style={{ 
+            top: 10,
+            opacity: pullDistance > 0 || isRefreshing ? 1 : 0,
+          }}
+        >
+          <div 
+            className="bg-[#1A1A1A] p-2 rounded-full border border-white/10 shadow-2xl"
+            style={{ 
+              transform: `translateY(${pullDistance}px)`
+            }}
+          >
+            <RefreshCw 
+              size={18} 
+              className={`text-white/60 ${isRefreshing ? 'animate-spin' : ''}`}
+              style={{ transform: `rotate(${pullDistance * 2}deg)` }}
+            />
+          </div>
+        </div>
+
+        <div
+          className="w-full relative"
+          style={{ height: 'var(--profile-cover-height)', background: 'transparent', marginLeft: '-24px', marginRight: '-24px', width: 'calc(100% + 48px)' }}
+        >
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#0A0A0A] to-transparent pointer-events-none" />
+        </div>
+        
+        <div className="flex w-full flex-col items-center relative" style={{ marginTop: 'calc(calc(var(--profile-avatar-size) / -2) + var(--profile-avatar-top-offset, 0px))' }}>
+          <div
+            className="rounded-full overflow-hidden relative"
+            style={{
+              width: 'var(--profile-avatar-size)',
+              height: 'var(--profile-avatar-size)',
+              boxShadow: theme === 'dark' ? `0 0 30px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.8)` : `0 4px 18px rgba(0,0,0,0.1)`,
+              background: avatarUrl ? 'var(--bg-primary)' : gradient,
+            }}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-white font-vk-demi text-[36px]">
+                {initialLetter}
+              </div>
+            )}
+            {editMode && (
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute left-0 top-0 h-full w-full flex items-center justify-center bg-black/20"
+                aria-label="Сменить аватар"
+              >
+                <img
+                  src="/interface/image-add.svg"
+                  alt="add"
+                  className="h-[40px] w-[40px]"
+                  style={{
+                    filter: theme === 'dark' 
+                      ? 'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)'
+                      : 'none',
+                    opacity: 0.9,
+                  }}
+                />
+              </button>
+            )}
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleAvatarFile(e.target.files)}
+            />
+          </div>
+
           {!tagEditing ? (
             <div className="w-full flex items-center justify-center" style={{ marginTop: 'var(--profile-name-margin-top)' }}>
               {/* Левый пустой блок для симметрии (ширина кнопок + отступ) */}
@@ -1068,7 +1385,7 @@ export default function Profile({
             </div>
           )}
           {!isOwnProfile && (
-            <div className="w-full mt-4">
+            <div className="w-full mt-4 px-6">
               <div className="flex items-center gap-2">
                 <motion.button
                   type="button"
@@ -1268,27 +1585,51 @@ export default function Profile({
                 borderRadius: 'var(--profile-border-radius)',
               }}
             >
-              <button
-                type="button"
-                onClick={() => setProfileTab('ads')}
-                className="relative flex-1 h-full px-3 text-[14px] overflow-hidden"
-                style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-              >
-                {profileTab === 'ads' && (
-                  <motion.div
-                    layoutId="profile-tabs-active"
-                    className="absolute inset-0 bg-[#222222]"
-                    style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 500,
-                      damping: 30,
-                      mass: 0.8,
-                    }}
-                  />
-                )}
-                <span className={`relative z-10 ${profileTab === 'ads' ? 'text-white' : 'text-white/70'}`}>Объявления</span>
-              </button>
+              {isOwnProfile ? (
+                <button
+                  type="button"
+                  onClick={() => setProfileTab('favorites')}
+                  className="relative flex-1 h-full px-3 text-[14px] overflow-hidden"
+                  style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                >
+                  {profileTab === 'favorites' && (
+                    <motion.div
+                      layoutId="profile-tabs-active"
+                      className="absolute inset-0 bg-[#222222]"
+                      style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 500,
+                        damping: 30,
+                        mass: 0.8,
+                      }}
+                    />
+                  )}
+                  <span className={`relative z-10 ${profileTab === 'favorites' ? 'text-white' : 'text-white/70'}`}>Избранное</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setProfileTab('ads')}
+                  className="relative flex-1 h-full px-3 text-[14px] overflow-hidden"
+                  style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                >
+                  {profileTab === 'ads' && (
+                    <motion.div
+                      layoutId="profile-tabs-active"
+                      className="absolute inset-0 bg-[#222222]"
+                      style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 500,
+                        damping: 30,
+                        mass: 0.8,
+                      }}
+                    />
+                  )}
+                  <span className={`relative z-10 ${profileTab === 'ads' ? 'text-white' : 'text-white/70'}`}>Объявления</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setProfileTab('about')}
@@ -1388,43 +1729,36 @@ export default function Profile({
                       isOwn={isOwnProfile}
                       onEdit={isOwnProfile ? () => setEditingAd(ad) : undefined}
                       showEditLabel={isOwnProfile}
+                      onClick={() => {
+                        if (onOpenAd) onOpenAd(ad)
+                      }}
                     />
                   ))}
                   </div>
                 ) : (
-                  <>
+                  <div className="flex flex-col items-center pt-2">
                     <div
                       style={{
-                        position: 'absolute',
-                        top: 'var(--profile-empty-icon-top)',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 'var(--profile-empty-icon-size)',
-                        height: 'var(--profile-empty-icon-size)',
+                        width: '180px',
+                        height: '140px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        opacity: 0.1,
-                         color: '#FFFFFF'
+                        color: '#FFFFFF'
                        }}
                      >
-                       <Package size={120} strokeWidth={1} />
+                       <EmptyAdsIllustration />
                      </div>
                     <div
-                      className="text-center text-[16px] leading-[1.4em] text-[#A1A1A1]"
-                      style={{ position: 'absolute', left: 0, right: 0, bottom: 'var(--profile-empty-text-bottom)' }}
+                      className="text-center text-[15px] leading-[1.4em] text-[#A1A1A1] mt-2"
                     >
-                      {isOwnProfile ? 'У вас ещё нет объявлений' : 'У пользователя ещё нет объявлений'}
+                      {isOwnProfile ? 'Вы ещё не создали ни одного объявления.' : 'У пользователя ещё нет объявлений'}
                     </div>
                     {isOwnProfile && (
                       <button
                         type="button"
-                        className="text-center bg-[#111111]"
+                        className="text-center bg-[#111111] mt-5"
                         style={{
-                          position: 'absolute',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          bottom: 'var(--profile-empty-button-bottom)',
                           width: 'var(--profile-empty-button-width)',
                           height: 'var(--profile-empty-button-height)',
                           borderRadius: 'var(--profile-button-radius)',
@@ -1448,7 +1782,71 @@ export default function Profile({
                         </span>
                       </button>
                     )}
-                  </>
+                  </div>
+                )}
+              </div>
+            ) : profileTab === 'favorites' ? (
+              <div className="w-full">
+                {favoritesLoading ? (
+                  <div
+                    className="grid grid-cols-2 pb-4"
+                    style={{
+                      columnGap: 6,
+                      rowGap: 6,
+                      paddingLeft: 4,
+                      paddingRight: 4,
+                      marginLeft: -24,
+                      marginRight: -24,
+                      width: 'calc(100% + 48px)',
+                    }}
+                  >
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <AdCardSkeleton key={index} />
+                    ))}
+                  </div>
+                ) : favoriteAds.length > 0 ? (
+                  <div
+                    className="grid grid-cols-2 pb-4"
+                    style={{
+                      columnGap: 6,
+                      rowGap: 6,
+                      paddingLeft: 4,
+                      paddingRight: 4,
+                      marginLeft: -24,
+                      marginRight: -24,
+                      width: 'calc(100% + 48px)',
+                    }}
+                  >
+                  {favoriteAds.map((ad) => (
+                    <AdCard
+                      key={ad.id}
+                      id={ad.id}
+                      title={ad.title}
+                      price={ad.price}
+                      imageUrl={ad.imageUrl}
+                      username={(ad.userTag ?? 'user').replace(/^@/, '')}
+                      condition={ad.condition ?? undefined}
+                      location={ad.location ?? undefined}
+                      createdAt={ad.createdAt}
+                      isOwn={false}
+                      onClick={() => {
+                        if (onOpenAd) onOpenAd(ad)
+                      }}
+                    />
+                  ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center pt-8 pb-12 px-6 text-center">
+                    <div className="w-full max-w-[200px] mb-2 opacity-80">
+                      <EmptyFavoritesIllustration />
+                    </div>
+                    <div>
+                      <h3 className="text-[18px] font-sf-ui-semibold text-white/80 mb-1">Здесь пока пусто</h3>
+                      <p className="text-[14px] text-white/30 font-sf-ui-light max-w-[220px] mx-auto">
+                        Добавляйте объявления в избранное, чтобы не потерять их
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
             ) : profileTab === 'about' ? (
@@ -1877,6 +2275,358 @@ export default function Profile({
             onClose={() => setEditingAd(null)}
           />
         )}
+      </div>
+      <AnimatePresence>
+        {showCreateStore && (
+          <CreateStoreFlow 
+            onClose={() => setShowCreateStore(false)} 
+            userId={userId} 
+            subscriptions={subscriptions}
+            onCreated={(store) => {
+              setUserStores(prev => [...prev, store])
+              setShowCreateStore(false)
+              showToast('Магазин создан!')
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function CreateStoreFlow({ 
+  onClose, 
+  userId, 
+  subscriptions,
+  onCreated 
+}: { 
+  onClose: () => void; 
+  userId: string | null; 
+  subscriptions: { id: string; tag: string; avatarUrl: string | null }[];
+  onCreated: (store: { id: string; name: string; avatar_url: string | null }) => void 
+}) {
+  const [step, setStep] = useState(1)
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [city, setCity] = useState('')
+  const [citySearch, setCitySearch] = useState('')
+  const [cityResults, setCityResults] = useState<string[]>(defaultRussianCities)
+  const [cityLoading, setCityLoading] = useState(false)
+  const [selectedStaff, setSelectedStaff] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [scale, setScale] = useState(1)
+  const [showCityStep, setShowCityStep] = useState(false)
+
+  useEffect(() => {
+    const baseW = 375
+    const baseH = 812
+    const update = () => {
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const s = Math.min(vw / baseW, vh / baseH)
+      setScale(Math.max(1, s))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  useEffect(() => {
+    const query = citySearch.trim()
+    if (query.length < 2) {
+      setCityResults(defaultRussianCities)
+      setCityLoading(false)
+      return
+    }
+    let cancelled = false
+    const controller = new AbortController()
+    const run = async () => {
+      try {
+        setCityLoading(true)
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&countrycodes=ru&limit=20&city=${encodeURIComponent(query)}`
+        const res = await fetch(url, { signal: controller.signal })
+        if (!res.ok) {
+          if (!cancelled) setCityResults(defaultRussianCities)
+          return
+        }
+        const data = (await res.json()) as { display_name?: string }[]
+        if (cancelled) return
+        const names = data.map((item) => {
+          const name = item.display_name ?? ''
+          const comma = name.indexOf(',')
+          return comma > 0 ? name.slice(0, comma) : name
+        })
+        const merged = names.length > 0 ? names : defaultRussianCities
+        const unique = Array.from(new Set(merged))
+        setCityResults(unique)
+      } catch {
+        if (!cancelled) setCityResults(defaultRussianCities)
+      } finally {
+        if (!cancelled) setCityLoading(false)
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [citySearch])
+
+  const handleCreate = async () => {
+    if (!name.trim() || !userId) return
+    setLoading(true)
+    const client = getSupabase()
+    if (!client) {
+      setLoading(false)
+      return
+    }
+
+    const slug = `${slugify(name)}-${Math.floor(Math.random() * 10000)}`
+    
+    try {
+      const { data: store, error: storeError } = await client
+        .from('stores')
+        .insert({
+          name: name.trim(),
+          slug,
+          description: description.trim(),
+          city: city.trim(),
+          owner_id: userId
+        })
+        .select()
+        .single()
+
+      if (storeError) throw storeError
+
+      // Add owner
+      const members = [
+        { store_id: store.id, user_id: userId, role: 'owner' },
+        ...selectedStaff.map(uid => ({ store_id: store.id, user_id: uid, role: 'member' }))
+      ]
+
+      const { error: memberError } = await client
+        .from('store_members')
+        .insert(members)
+
+      if (memberError) throw memberError
+
+      onCreated({
+        id: store.id,
+        name: store.name,
+        avatar_url: store.avatar_url
+      })
+    } catch (e) {
+      console.error('Error creating store:', e)
+      alert('Ошибка при создании магазина.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleStaff = (id: string) => {
+    setSelectedStaff(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
+      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <div className="absolute left-0 top-0 h-[812px] w-[375px] bg-[#0A0A0A]" />
+
+        <div className="absolute left-0 w-full top-0 h-[88px] flex items-center px-6 z-10">
+          <button onClick={step === 1 ? onClose : () => setStep(s => s - 1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all active:scale-95">
+            {step === 1 ? <X size={24} className="text-white" /> : <ChevronLeft size={28} className="text-white" />}
+          </button>
+        </div>
+
+        <div className="absolute inset-0 pt-[88px] px-8 overflow-y-auto pb-32">
+          <AnimatePresence mode="wait">
+            {step === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                <div>
+                  <h2 className="text-[32px] font-ttc-bold text-white leading-tight">Как назовем<br/>ваш магазин?</h2>
+                  <p className="mt-2 text-white/40 text-[16px] font-sf-ui-light">Это название будут видеть все покупатели</p>
+                </div>
+                <div className="space-y-6">
+                  <div className="relative">
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Название магазина"
+                      autoFocus
+                      className="w-full bg-transparent border-b border-white/10 py-4 text-[24px] text-white outline-none focus:border-white/30 transition-all placeholder:text-white/10 font-sf-ui-medium"
+                    />
+                  </div>
+                  <div>
+                    <div className="mb-2 text-[14px] text-white/40 ml-1">Город</div>
+                    <button
+                      onClick={() => setShowCityStep(true)}
+                      className="h-[56px] w-full rounded-2xl bg-white/5 border border-white/10 px-4 text-white text-left flex items-center justify-between hover:bg-white/[0.08] transition-all group"
+                    >
+                      <span className={city ? 'text-white font-sf-ui-medium' : 'text-white/20 font-sf-ui-light'}>
+                        {city || 'Выберите город'}
+                      </span>
+                      <ChevronRight size={20} className="text-white/20 group-hover:text-white/40 transition-colors" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {showCityStep && (
+              <motion.div
+                key="cityStep"
+                initial={{ opacity: 0, x: '100%' }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: '100%' }}
+                className="fixed inset-0 z-[100] bg-[#0A0A0A] flex flex-col"
+              >
+                <div className="h-[88px] flex items-center px-6">
+                  <button onClick={() => setShowCityStep(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 backdrop-blur-xl">
+                    <ChevronLeft size={28} className="text-white" />
+                  </button>
+                </div>
+                <div className="flex-1 px-8 pb-10 overflow-hidden flex flex-col">
+                  <h2 className="text-[32px] font-ttc-bold text-white leading-tight mb-6">Выберите город</h2>
+                  
+                  <div className="relative mb-6">
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20">
+                      <Search size={20} />
+                    </span>
+                    <input
+                      value={citySearch}
+                      onChange={(e) => setCitySearch(e.target.value)}
+                      placeholder="Поиск города"
+                      autoFocus
+                      className="h-[64px] w-full rounded-2xl border border-white/10 bg-white/5 pl-12 pr-5 text-[18px] text-white outline-none focus:border-white/20 transition-all backdrop-blur-md"
+                    />
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    {cityResults.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => {
+                          setCity(c)
+                          setShowCityStep(false)
+                        }}
+                        className={`w-full rounded-2xl px-5 py-4 text-left text-[17px] border transition-all ${
+                          city === c 
+                            ? 'bg-white text-black border-white' 
+                            : 'bg-white/5 text-white border-white/10'
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                    {cityLoading && <div className="text-center text-white/40 py-4 italic">Загрузка...</div>}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                <div>
+                  <h2 className="text-[32px] font-ttc-bold text-white leading-tight">Расскажите<br/>о себе</h2>
+                  <p className="mt-2 text-white/40 text-[16px] font-sf-ui-light">Краткое описание поможет покупателям доверять вам</p>
+                </div>
+                <div className="space-y-6">
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Привлекательное описание вашего магазина..."
+                    autoFocus
+                    className="w-full h-[200px] bg-white/5 border border-white/10 rounded-3xl p-6 text-[18px] text-white outline-none focus:border-white/20 transition-all placeholder:text-white/10 resize-none font-sf-ui-light"
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {step === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                <div>
+                  <h2 className="text-[32px] font-ttc-bold text-white leading-tight">Добавьте<br/>команду</h2>
+                  <p className="mt-2 text-white/40 text-[16px] font-sf-ui-light">Выберите людей из своих подписок, которые смогут публиковать товары от имени магазина</p>
+                </div>
+                
+                <div className="space-y-2">
+                  {subscriptions.length > 0 ? (
+                    subscriptions.map(sub => (
+                      <button
+                        key={sub.id}
+                        onClick={() => toggleStaff(sub.id)}
+                        className={`w-full flex items-center gap-4 p-4 rounded-3xl border transition-all ${
+                          selectedStaff.includes(sub.id) 
+                            ? 'bg-white border-white' 
+                            : 'bg-white/5 border-white/10'
+                        }`}
+                      >
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10">
+                          {sub.avatarUrl ? (
+                            <img src={sub.avatarUrl} alt={sub.tag} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white font-vk-demi bg-gradient-to-br from-blue-500 to-purple-500">
+                              {sub.tag[0].toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className={`text-[17px] font-sf-ui-medium ${selectedStaff.includes(sub.id) ? 'text-black' : 'text-white'}`}>
+                            {sub.tag}
+                          </div>
+                        </div>
+                        {selectedStaff.includes(sub.id) && (
+                          <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
+                            <Plus size={14} className="text-white rotate-45" />
+                          </div>
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="py-12 text-center text-white/20 font-sf-ui-light">
+                      У вас пока нет подписок,<br/>кого можно было бы добавить
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="absolute bottom-0 left-0 w-full p-8 pb-12 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent">
+          <button
+            onClick={step === 3 ? handleCreate : () => setStep(s => s + 1)}
+            disabled={loading || (step === 1 && !name.trim())}
+            className="h-[64px] w-full rounded-full bg-white text-black font-vk-demi text-[18px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-20"
+          >
+            {loading ? 'Создание...' : (
+              <>
+                {step === 3 ? 'Готово' : 'Продолжить'}
+                <ChevronRight size={20} />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,28 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="120" fill="white"/>
-  <path d="M160 210C160 196.742 170.742 186 184 186H250.343C256.708 186 262.813 188.529 267.314 193.029L362.343 288.059C371.716 297.431 371.716 312.627 362.343 322L322 362.343C312.627 371.716 297.431 371.716 288.059 362.343L193.029 267.314C188.529 262.813 186 256.708 186 250.343V184C186 170.742 175.258 160 162 160C148.742 160 138 170.742 138 184V250.343C138 269.429 145.586 287.737 159.088 301.24L267.314 409.466C291.53 433.682 330.813 433.682 355.029 409.466L409.466 355.029C433.682 330.813 433.682 291.53 409.466 267.314L301.24 159.088C287.737 145.586 269.429 138 250.343 138H184C142.026 138 108 172.026 108 214V250.343C108 262.272 112.741 273.712 121.172 282.142L229.398 390.368C241.114 402.084 260.109 402.084 271.825 390.368L390.368 271.825C402.084 260.109 402.084 241.114 390.368 229.398L282.142 121.172C273.712 112.741 262.272 108 250.343 108H184C142.026 108 108 142.026 108 184" fill="#3B82F6" fill-opacity="0.1"/>
-  <path d="M250.343 138C269.429 138 287.737 145.586 301.24 159.088L409.466 267.314C433.682 291.53 433.682 330.813 409.466 355.029L355.029 409.466C330.813 433.682 291.53 433.682 267.314 409.466L159.088 301.24C145.586 287.737 138 269.429 138 250.343V184C138 158.595 158.595 138 184 138H250.343Z" stroke="#3B82F6" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="212" cy="212" r="28" fill="#3B82F6"/>
+  <!-- Фон: Черный Squircle -->
+  <rect width="512" height="512" rx="128" fill="#000000" />
+  
+  <!-- Тонкая белая рамка для глубины -->
+  <rect x="4" y="4" width="504" height="504" rx="124" stroke="white" stroke-opacity="0.1" stroke-width="8"/>
+
+  <!-- Монограмма HW -->
+  <g filter="url(#glow)">
+    <!-- Буква H (оставляем жирность для баланса, но чуть тоньше) -->
+    <path d="M120 160V352M120 256H210M210 160V352" stroke="white" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Буква W (делаем заметно тоньше, чтобы линии не сливались) -->
+    <path d="M270 160L300 352L335 230L370 352L400 160" stroke="white" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <defs>
+    <filter id="glow" x="70" y="110" width="380" height="292" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="0"/>
+      <feGaussianBlur stdDeviation="12"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.3 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+  </defs>
 </svg>

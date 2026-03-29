@@ -5,16 +5,13 @@
 
 /* Prevent zoom on mobile devices и заливаем фон по всей области */
 html, body {
-  touch-action: manipulation;
-  touch-action: pan-x pan-y;
+  touch-action: pan-y;
   -webkit-user-scalable: none;
-  -moz-user-scalable: none;
-  -ms-user-scalable: none;
   user-scalable: none;
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   min-height: -webkit-fill-available;
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -62,8 +59,8 @@ button, input, textarea, select, a, img, div {
   --foreground: #171717;
   --home-header-offset: 10px;
   --nav-bottom-offset: 12px;
-  --bottom-nav-height: 96px;
-  --bottom-nav-pill-height: 64px;
+  --bottom-nav-height: 80px;
+  --bottom-nav-pill-height: 56px;
   --ad-detail-price-size: 34px;
   --ad-detail-tag-size: 15px;
   --ad-detail-title-size: 22px;

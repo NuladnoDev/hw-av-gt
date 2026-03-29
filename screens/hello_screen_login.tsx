@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { getSupabase, saveLocalAuth } from '@/lib/supabaseClient'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
-import { AdCardSkeleton } from './ads'
+import PasswordRecovery from './PasswordRecovery'
 
 export default function HelloScreenLogin({
   onBack,
@@ -19,12 +19,13 @@ export default function HelloScreenLogin({
   const [passwordError, setPasswordError] = useState('')
   const [loading, setLoading] = useState(false)
   const [tagExists, setTagExists] = useState<boolean | null>(null)
+  const [showRecovery, setShowRecovery] = useState(false)
   const tagCheckTimer = useRef<number | null>(null)
 
   const handleTagChange = (value: string) => {
     setTag(value)
     setTagError('')
-    const trimmed = value.trim()
+    const trimmed = value.trim().replace(/^@/, '')
     if (tagCheckTimer.current) {
       window.clearTimeout(tagCheckTimer.current)
       tagCheckTimer.current = null
@@ -35,17 +36,23 @@ export default function HelloScreenLogin({
     }
     tagCheckTimer.current = window.setTimeout(async () => {
       const client = getSupabase()
-      if (!client) {
-        try {
-          const usersRaw = window.localStorage.getItem('hw-users')
-          const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
-          const existsLocal = users.some((u) => u.tag === trimmed)
-          setTagExists(existsLocal)
-        } catch {
-          setTagExists(null)
+      
+      // Сначала проверяем локально, если нет клиента или если хотим поддержать обоих
+      try {
+        const usersRaw = window.localStorage.getItem('hw-users')
+        const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
+        const existsLocal = users.some((u) => u.tag.replace(/^@/, '') === trimmed)
+        if (existsLocal) {
+          setTagExists(true)
+          return
         }
+      } catch (e) {}
+
+      if (!client) {
+        setTagExists(false)
         return
       }
+
       try {
         const { count, error } = await client
           .from('profiles')
@@ -88,7 +95,8 @@ export default function HelloScreenLogin({
   const handleLogin = async () => {
     setTagError('')
     setPasswordError('')
-    if (!tag.trim()) {
+    const normalizedTag = tag.trim().replace(/^@/, '')
+    if (!normalizedTag) {
       setTagError('введите тег')
       return
     }
@@ -100,65 +108,81 @@ export default function HelloScreenLogin({
     setLoading(true)
     const client = getSupabase()
     
-    if (!client) {
+    // Сначала ищем в локальном хранилище
+    try {
       const usersRaw = window.localStorage.getItem('hw-users')
       const users: Array<{ tag: string; pass: string; uid: string; email: string }> = usersRaw ? JSON.parse(usersRaw) : []
+      
       const enc = new TextEncoder()
       const data = enc.encode(password)
       const buf = await window.crypto.subtle.digest('SHA-256', data)
       const arr = Array.from(new Uint8Array(buf))
       const hash = arr.map((b) => b.toString(16).padStart(2, '0')).join('')
-      const user = users.find((u) => u.tag === tag && u.pass === hash)
       
-      if (!user) {
-        setPasswordError('неверный тег или пароль')
+      const user = users.find((u) => u.tag.replace(/^@/, '') === normalizedTag)
+      
+      if (user) {
+        if (user.pass !== hash) {
+          setPasswordError('неверный пароль')
+          setLoading(false)
+          return
+        }
+        
+        await saveLocalAuth({
+          tag: user.tag,
+          uid: user.uid,
+          uuid: user.uid,
+          email: user.email,
+        })
+        window.dispatchEvent(new CustomEvent('local-auth-changed'))
         setLoading(false)
         return
       }
-      
+    } catch (e) {}
+
+    // Если не нашли локально и есть клиент - ищем в Supabase
+    if (client) {
+      const { data: profile, error: profErr } = await client
+        .from('profiles')
+        .select('id, email')
+        .eq('tag', normalizedTag)
+        .maybeSingle()
+
+      if (profErr || !profile) {
+        setTagError('пользователь не найден')
+        setLoading(false)
+        return
+      }
+
+      // Если email не сохранен в профиле (для старых юзеров), используем стандартный формат
+      const userEmail = profile.email || `${normalizedTag}@hw-app.com`
+
+      const { data: authData, error: authErr } = await client.auth.signInWithPassword({
+        email: userEmail,
+        password: password,
+      })
+
+      if (authErr) {
+        if (authErr.message.includes('Invalid login credentials')) {
+          setPasswordError('неверный пароль')
+        } else {
+          setPasswordError(authErr.message)
+        }
+        setLoading(false)
+        return
+      }
+
       await saveLocalAuth({
-        tag: user.tag,
-        uid: user.uid,
-        uuid: user.uid,
-        email: user.email,
+        tag: normalizedTag,
+        uid: profile.id,
+        uuid: profile.id,
+        email: userEmail,
       })
       window.dispatchEvent(new CustomEvent('local-auth-changed'))
-      setLoading(false)
-      return
-    }
-
-    const { data: profile, error: profErr } = await client
-      .from('profiles')
-      .select('id, password_hash, email')
-      .eq('tag', tag.trim())
-      .single()
-
-    if (profErr || !profile) {
+    } else {
       setTagError('пользователь не найден')
-      setLoading(false)
-      return
     }
-
-    const enc = new TextEncoder()
-    const passData = enc.encode(password)
-    const buf = await window.crypto.subtle.digest('SHA-256', passData)
-    const hash = Array.from(new Uint8Array(buf))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
-
-    if (profile.password_hash !== hash) {
-      setPasswordError('неверный пароль')
-      setLoading(false)
-      return
-    }
-
-    await saveLocalAuth({
-      tag: tag.trim(),
-      uid: profile.id,
-      uuid: profile.id,
-      email: profile.email || '',
-    })
-    window.dispatchEvent(new CustomEvent('local-auth-changed'))
+    
     setLoading(false)
   }
 
@@ -266,6 +290,17 @@ export default function HelloScreenLogin({
                   </motion.p>
                 )}
               </AnimatePresence>
+
+              {/* Forgot Password Button */}
+              <button
+                type="button"
+                onClick={() => setShowRecovery(true)}
+                className="w-fit ml-1 flex items-center gap-2 py-1 text-[14px] text-white/20 hover:text-white/40 transition-all active:scale-95 group"
+                style={{ fontFamily: 'var(--font-inter)' }}
+              >
+                <HelpCircle size={14} className="opacity-50 transition-transform group-hover:rotate-[15deg]" />
+                <span>Забыли пароль?</span>
+              </button>
             </div>
 
             <button
@@ -287,6 +322,21 @@ export default function HelloScreenLogin({
           </div>
           </div>
         </motion.div>
+
+        {/* Password Recovery Overlay */}
+        <AnimatePresence>
+          {showRecovery && (
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute inset-0 z-[100]"
+            >
+              <PasswordRecovery onBack={() => setShowRecovery(false)} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <style jsx>{`
       `}</style>

@@ -62,7 +62,7 @@ export default function ProjectVersion({ onClose }: ProjectVersionProps) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in"
+      className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in"
       initial={{ opacity: 0, x: -40 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.22, ease: 'easeOut' }}
@@ -78,13 +78,13 @@ export default function ProjectVersion({ onClose }: ProjectVersionProps) {
             <button
               type="button"
               onClick={handleClose}
-              className="absolute left-4 p-2 -ml-1 rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-300"
+              className="absolute left-6 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
               aria-label="Назад"
             >
               <ChevronLeft size={24} className="text-white" />
             </button>
-            <div className="font-ttc-bold text-white" style={{ fontSize: 'var(--about-title-size)' }}>
-              О проекте
+            <div className="text-[24px] font-bold leading-[1em] text-white font-ttc-bold">
+              Настройки
             </div>
           </div>
         </div>

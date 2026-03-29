@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronLeft,
+  ChevronRight,
   Bell,
   BellRing,
   ShieldCheck,
   Share2,
   Flag,
+  Info,
   Monitor,
   Moon,
   Sun,
@@ -239,12 +241,12 @@ export default function Setting({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in">
+    <div className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden edit-screen-in">
       <div
-        className="relative h-[812px] w-[375px]"
-        style={{ transform: `scale(${scale})`, '--settings-scale': 2, '--settings-list-top-margin': '18px' } as React.CSSProperties}
+        className="relative h-full w-full"
+        style={{ '--settings-scale': 2, '--settings-list-top-margin': '18px' } as React.CSSProperties}
       >
-        <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
+        <div className="absolute inset-0" style={{ backgroundColor: '#0A0A0A' }} />
 
         <div
           className="absolute left-0 w-full bg-[#0A0A0A]"
@@ -268,12 +270,21 @@ export default function Setting({
         </div>
 
         <div
-          className="absolute left-0 w-full px-6 overflow-y-auto"
+          className="absolute left-0 w-full px-6 overflow-y-auto scrollbar-hide"
           style={{
             top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
             height: 'calc(812px - 56px - var(--home-header-offset))',
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
           }}
         >
+          <style jsx global>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none !important;
+              width: 0 !important;
+              height: 0 !important;
+            }
+          `}</style>
           <div className="relative w-full pb-8">
             {/* User Profile Card */}
             <div className="mt-4 mb-6">
@@ -339,6 +350,7 @@ export default function Setting({
                   </div>
                   <span className={labelStyle}>Обо мне</span>
                 </div>
+                <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
               
               <div className="h-[1px] bg-white/[0.03] mx-4" />
@@ -350,6 +362,7 @@ export default function Setting({
                   </div>
                   <span className={labelStyle}>Устройства</span>
                 </div>
+                <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
 
               <div className="h-[1px] bg-white/[0.03] mx-4" />
@@ -361,6 +374,7 @@ export default function Setting({
                   </div>
                   <span className={labelStyle}>Уведомления</span>
                 </div>
+                <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
 
               <div className="h-[1px] bg-white/[0.03] mx-4" />
@@ -372,6 +386,7 @@ export default function Setting({
                   </div>
                   <span className={labelStyle}>Контакты</span>
                 </div>
+                <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
             </div>
 
@@ -384,6 +399,7 @@ export default function Setting({
                   </div>
                   <span className={labelStyle}>Настройки сайта</span>
                 </div>
+                <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
 
               <div className="h-[1px] bg-white/[0.03] mx-4" />
@@ -400,7 +416,31 @@ export default function Setting({
                   </div>
                   <span className={labelStyle}>Подтверждение аккаунта</span>
                 </div>
+                <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
+            </div>
+
+            {/* Auto-save Info Card */}
+            <div className="mt-8 mb-16 px-2">
+              <div className="flex items-center justify-center gap-3 py-4 px-6 rounded-[24px] bg-white/[0.03] border border-white/[0.06] backdrop-blur-md">
+                <div className="relative w-7 h-7 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="white" strokeOpacity="0.1" strokeWidth="1.5" />
+                    
+                    <motion.path 
+                      d="M8 12L11 15L16 9" 
+                      stroke="white" strokeOpacity="0.8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                      animate={{ 
+                        opacity: [0.3, 1, 0.3]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                  </svg>
+                </div>
+                <p className="text-[14px] text-white/30 font-sf-ui-light tracking-wide">
+                  Все настройки сохраняются автоматически
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -690,57 +730,6 @@ export default function Setting({
         </AnimatePresence>
 
         <AnimatePresence>
-          {showVerification && (
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute inset-0 z-[60] bg-[#0A0A0A] flex flex-col"
-            >
-              {/* Header */}
-              <div 
-                className="flex items-center px-6 bg-[#0A0A0A]"
-                style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setShowVerification(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  <ChevronLeft size={24} className="text-white" />
-                </button>
-              </div>
-
-              <div className="flex-1 px-6 flex flex-col items-center justify-center text-center space-y-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500/20 blur-[60px] rounded-full" />
-                  <div className="relative p-6 rounded-[32px] bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl">
-                    <ShieldCheck className="w-12 h-12 text-blue-400" strokeWidth={1.5} />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h2 className="text-[24px] font-ttc-bold text-white tracking-tight">
-                    Подайте заявку
-                  </h2>
-                  <p className="text-[16px] text-white/40 font-sf-ui-regular leading-relaxed max-w-[280px]">
-                    Для получения значка верификации необходимо заполнить специальную форму в нашем Telegram канале.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full max-w-[280px] py-4 rounded-[26px] bg-white/5 border border-white/5 text-white/40 font-sf-ui-medium text-[16px] active:scale-[0.98] transition-all cursor-not-allowed"
-                >
-                  Скоро
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
           {showAppearance && (
             <motion.div
               initial={{ x: '100%' }}
@@ -887,6 +876,86 @@ export default function Setting({
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
       </div>
+
+      <AnimatePresence>
+        {showVerification && (
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-[10000] bg-black flex flex-col items-center justify-between px-8 pb-16 pt-24 overflow-hidden font-ttc-bold"
+          >
+            {/* Background gradients for Liquid Glass effect */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  rotate: [0, 45, 0],
+                  opacity: [0.05, 0.1, 0.05]
+                }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-white blur-[120px] rounded-full" 
+              />
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.3, 1],
+                  rotate: [0, -45, 0],
+                  opacity: [0.03, 0.08, 0.03]
+                }}
+                transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-white blur-[120px] rounded-full" 
+              />
+            </div>
+
+            <div className="relative z-10 flex flex-col items-start justify-start w-full max-w-sm flex-1">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.6 }}
+                className="text-left space-y-8"
+              >
+                <h1 className="text-6xl font-bold tracking-tighter text-white">
+                  hw-project
+                </h1>
+                <div className="max-w-[300px] space-y-4">
+                  <p className="text-[17px] font-light leading-relaxed text-white/70" style={{ fontFamily: 'var(--font-inter)' }}>
+                    Верификация аккаунта позволяет получить специальный значок и повысить доверие пользователей.
+                  </p>
+                  <p className="text-[15px] font-light leading-relaxed text-white/40" style={{ fontFamily: 'var(--font-inter)' }}>
+                    Для подтверждения личности необходимо заполнить специальную форму в нашем Telegram канале.
+                  </p>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+                className="mt-20 w-full flex flex-col items-start gap-10"
+              >
+                <button
+                  type="button"
+                  className="h-[72px] w-[72px] rounded-full bg-white text-black flex items-center justify-center transition-all active:scale-[0.9] hover:bg-white/90 shadow-[0_0_40px_rgba(255,255,255,0.15)] group"
+                  onClick={() => window.open('https://t.me/your_channel', '_blank')}
+                >
+                  <ChevronRight size={32} className="transition-transform group-hover:translate-x-0.5" />
+                </button>
+
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-all text-[15px]"
+                  style={{ fontFamily: 'var(--font-inter)' }}
+                  onClick={() => setShowVerification(false)}
+                >
+                  <ChevronLeft size={16} className="opacity-50" />
+                  <span className="font-light">Вернуться в настройки</span>
+                </button>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

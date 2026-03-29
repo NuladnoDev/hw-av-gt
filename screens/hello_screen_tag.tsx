@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { getSupabase } from '@/lib/supabaseClient'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { AdCardSkeleton } from './ads'
 
@@ -19,6 +19,7 @@ export default function HelloScreenTag({
 }) {
   const [value, setValue] = useState(initialValue ?? '')
   const [error, setError] = useState(initialError ?? '')
+  const [isAdult, setIsAdult] = useState(false)
   const [scale, setScale] = useState(1)
   const [checking, setChecking] = useState(false)
   const [available, setAvailable] = useState(false)
@@ -178,14 +179,28 @@ export default function HelloScreenTag({
                 </div>
               </div>
 
+              {/* 18+ Checkbox */}
+              <div 
+                className="flex items-center gap-3 cursor-pointer group select-none"
+                onClick={() => setIsAdult(!isAdult)}
+              >
+                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isAdult ? 'bg-white border-white' : 'bg-transparent border-white/20 group-hover:border-white/40'}`}>
+                  {isAdult && <Check size={16} className="text-black" strokeWidth={3} />}
+                </div>
+                <span className={`text-[15px] transition-colors duration-300 ${isAdult ? 'text-white/80' : 'text-white/40'}`}>
+                  Мне есть 18 лет
+                </span>
+              </div>
+
               <button
                 type="button"
                 className={`h-[64px] w-[64px] rounded-full text-center transition-all duration-300 flex items-center justify-center relative overflow-hidden group shadow-xl ${
-                  validFormat && !checking
+                  validFormat && !checking && isAdult
                     ? 'bg-white text-black active:scale-[0.9]'
                     : 'bg-white/10 text-white/20'
                 }`}
                 onClick={() => {
+                  if (!isAdult) return
                   if (!validLength) {
                     setError(trimmed.length < 3 ? 'минимум 3 символа' : 'максимум 12 символов')
                     return
@@ -244,12 +259,12 @@ export default function HelloScreenTag({
                     window.dispatchEvent(event)
                   })()
                 }}
-                disabled={!validFormat || checking}
+                disabled={!validFormat || checking || !isAdult}
               >
                 {checking ? (
                   <div className="w-6 h-6 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                 ) : (
-                  <ChevronRight size={28} className="transition-transform group-hover:translate-x-0.5" />
+                  <ChevronRight size={28} className={`transition-transform ${isAdult ? 'group-hover:translate-x-0.5' : ''}`} />
                 )}
               </button>
             </div>

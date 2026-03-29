@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Send, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, Trash2, Plus } from 'lucide-react'
+import { ChevronLeft, Send, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, Trash2, Plus, X, ArrowUp } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 
 type Message = {
@@ -42,8 +42,64 @@ export default function Support({ onClose }: { onClose: () => void }) {
   const [sending, setSending] = useState(false)
   const [showClosedNotice, setShowClosedNotice] = useState(false)
   const [showSupportNotice, setShowSupportNotice] = useState(false)
+  const [isInputModalOpen, setIsInputModalOpen] = useState(false)
+  const [viewportHeight, setViewportHeight] = useState('100%')
+  const [viewportTop, setViewportTop] = useState(0)
+  const [modalViewportHeight, setModalViewportHeight] = useState(0)
+  const [modalViewportOffset, setModalViewportOffset] = useState(0)
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const modalInputRef = useRef<HTMLTextAreaElement>(null)
+
+  // TikTok-style focus logic
+  useEffect(() => {
+    if (isInputModalOpen) {
+      const timer = setTimeout(() => {
+        if (modalInputRef.current) {
+          modalInputRef.current.focus()
+          window.scrollTo(0, 0)
+        }
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [isInputModalOpen])
+
+  useEffect(() => {
+    const handleVisualViewportResize = () => {
+      if (window.visualViewport) {
+        const height = window.visualViewport.height
+        const offsetTop = window.visualViewport.offsetTop
+        
+        if (!isInputModalOpen) {
+          setViewportHeight(`${height}px`)
+          setViewportTop(offsetTop)
+        } else {
+          setModalViewportHeight(height)
+          setModalViewportOffset(offsetTop)
+        }
+        
+        const isOpen = height < window.innerHeight * 0.85
+        setIsKeyboardOpen(isOpen)
+        
+        if (isOpen && !isInputModalOpen) {
+          scrollToBottom()
+          window.scrollTo(0, 0)
+        }
+      }
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleVisualViewportResize)
+      window.visualViewport.addEventListener('scroll', handleVisualViewportResize)
+    }
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleVisualViewportResize)
+        window.visualViewport.removeEventListener('scroll', handleVisualViewportResize)
+      }
+    }
+  }, [isInputModalOpen])
 
   const quickQuestions = [
     "Как создать объявление?",
@@ -626,7 +682,16 @@ export default function Support({ onClose }: { onClose: () => void }) {
       exit={{ opacity: 0, x: 20 }}
       className="fixed inset-0 z-[100] bg-[#0A0A0A] flex flex-col overflow-hidden"
     >
-      <div className="flex flex-col h-full mx-auto w-full max-w-[375px] bg-[#0A0A0A] relative shadow-2xl">
+      <div 
+        className="relative w-full flex flex-col mx-auto max-w-[375px] bg-[#0A0A0A] shadow-2xl"
+        style={{ 
+          height: viewportHeight, 
+          top: `${viewportTop}px`,
+          position: 'fixed',
+          left: '50%',
+          transform: 'translateX(-50%)'
+        } as any}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-10">
           <button 
@@ -910,39 +975,102 @@ export default function Support({ onClose }: { onClose: () => void }) {
               )}
             </AnimatePresence>
 
-            <div className="flex items-center gap-3 bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[26px] p-2 focus-within:border-white/20 focus-within:bg-white/[0.06] transition-all duration-500 group/input shadow-[0_4px_24px_rgba(0,0,0,0.1)]">
-                <button 
-                  onClick={() => {/* fileInputRef.current?.click() */}}
-                  disabled={true}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl transition-all text-white/10 cursor-not-allowed hover:bg-white/5"
-                >
+            {/* Support Input (Trigger) */}
+            <div 
+              className="flex items-center gap-3 bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[26px] p-2 hover:bg-white/[0.05] transition-all cursor-text shadow-[0_4px_24px_rgba(0,0,0,0.1)]"
+              onClick={() => setIsInputModalOpen(true)}
+            >
+                <div className="w-10 h-10 flex items-center justify-center rounded-xl text-white/10">
                   <Plus className="w-5 h-5" />
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  disabled={sending}
-                />
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSendMessage()
-                    }
-                  }}
-                  placeholder="Сообщение..."
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-white/30 text-[15px] py-2"
-                  disabled={sending}
-                />
+                </div>
+                <div className="flex-1 text-white/30 text-[15px] py-2">
+                  Сообщение...
+                </div>
             </div>
           </div>
         )}
+
+        {/* TikTok-style Input Modal for Support */}
+        <AnimatePresence>
+          {isInputModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md"
+              style={{ 
+                height: modalViewportHeight > 0 ? `${modalViewportHeight}px` : '100dvh',
+                top: `${modalViewportOffset}px`,
+                position: 'fixed',
+                left: '50%',
+                width: '100%',
+                maxWidth: '375px',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'end'
+              } as any}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setIsInputModalOpen(false)
+              }}
+            >
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 30, stiffness: 350 }}
+                className="bg-[#121212] rounded-t-[32px] border-t border-white/10 p-4 pb-[calc(env(safe-area-inset-bottom, 0px) + 16px)]"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <button 
+                    onClick={() => setIsInputModalOpen(false)}
+                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-white/60"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <span className="text-white/40 font-sf-ui-medium text-[14px]">Запрос в поддержку</span>
+                </div>
+
+                <div className="relative flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <textarea
+                      ref={modalInputRef}
+                      value={newMessage}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value)
+                        e.target.style.height = '52px'
+                        e.target.style.height = `${e.target.scrollHeight}px`
+                      }}
+                      placeholder="Опишите проблему..."
+                      className="w-full max-h-[160px] min-h-[52px] bg-white/5 border border-white/10 rounded-[24px] px-5 py-[14px] text-[16px] text-white outline-none focus:border-white/20 transition-all placeholder:text-white/20 resize-none font-sf-ui-light leading-normal scrollbar-hidden"
+                      rows={1}
+                      style={{ height: '52px' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSendMessage()
+                          setIsInputModalOpen(false)
+                        }
+                      }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSendMessage()
+                      setIsInputModalOpen(false)
+                    }}
+                    disabled={!newMessage.trim() || sending}
+                    className={`w-11 h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 self-end mb-[2px] ${
+                      newMessage.trim() && !sending ? 'bg-white text-black active:scale-90' : 'bg-white/5 text-white/20'
+                    }`}
+                  >
+                    <ArrowUp className="w-6 h-6" strokeWidth={2.5} />
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <style jsx>{`
