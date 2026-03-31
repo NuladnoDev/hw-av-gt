@@ -37,7 +37,7 @@ export default function RootLayout({
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
         />
-        <meta name="theme-color" content="#0A0A0A" />
+        <meta name="theme-color" content="#0d0d0d" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <script
@@ -65,7 +65,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased overflow-hidden text-white`}
         style={{
-          backgroundColor: '#0A0A0A',
+          backgroundColor: '#0d0d0d',
           fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"',
         }}
       >

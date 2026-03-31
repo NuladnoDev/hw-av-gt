@@ -711,6 +711,7 @@ export default function Ads({
   const [sortType, setSortType] = useState<'new' | 'cheap' | 'rating'>('new')
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false)
   const sortMenuRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -743,7 +744,34 @@ export default function Ads({
     }
     return true
   })
-  const adsHeaderSpacer = showCategories ? 132 : 78
+  const adsHeaderSpacer = showCategories ? 136 : 82
+
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+
+    let startY = 0
+    const onTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0]?.clientY ?? 0
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      const currentY = e.touches[0]?.clientY ?? 0
+      const delta = currentY - startY
+      const atTop = el.scrollTop <= 0
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1
+
+      if ((atTop && delta > 0) || (atBottom && delta < 0)) {
+        e.preventDefault()
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [])
 
   useEffect(() => {
     const handleUpdate = (e: any) => {
@@ -1038,7 +1066,7 @@ export default function Ads({
     return sorted
   }, [items, searchQuery, activeFilters, selectedCategory, sortType])
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden" style={{ touchAction: 'none' }}>
       <div className="absolute left-0 top-0 w-full z-[80]">
         <div className="relative mb-2">
           <div
@@ -1232,18 +1260,65 @@ export default function Ads({
         </div>
       </div>
       <div
+        ref={listRef}
         className="absolute inset-0 overflow-y-auto scrollbar-hidden"
         style={{
           paddingLeft: ADS_SIDE_PADDING,
           paddingRight: ADS_SIDE_PADDING,
           paddingTop: adsHeaderSpacer,
           paddingBottom: 16,
-          overscrollBehaviorY: 'contain',
-          WebkitOverflowScrolling: 'touch',
+          overscrollBehaviorY: 'none',
+          WebkitOverflowScrolling: 'auto',
+          touchAction: 'pan-y',
         }}
       >
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="mx-2 mb-[15.5px] overflow-hidden rounded-[24px] border border-white/[0.05] bg-[#121212]"
+          style={{
+            minHeight: 116,
+            boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
+          }}
+        >
+          <div className="relative h-full w-full p-4">
+            <div
+              className="absolute inset-0 opacity-90"
+              style={{
+                background:
+                  'radial-gradient(circle at 15% 20%, rgba(86, 86, 86, 0.28) 0%, transparent 45%), radial-gradient(circle at 85% 70%, rgba(70, 70, 70, 0.24) 0%, transparent 50%), linear-gradient(135deg, #161616 0%, #111111 100%)',
+              }}
+            />
+            <div className="relative z-10 flex h-full items-center justify-between gap-4">
+              <div className="max-w-[62%]">
+                <div className="text-[12px] tracking-[0.04em] text-white/45">Рекламный слот</div>
+                <div className="mt-1 text-[20px] leading-[1.1] font-ttc-bold text-white">Здесь могла быть ваша реклама</div>
+                <div className="mt-2 text-[13px] text-white/45">Подробнее о партнерских отношениях</div>
+              </div>
+              <motion.svg
+                width="108"
+                height="76"
+                viewBox="0 0 108 76"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="shrink-0"
+                animate={{ y: [0, -2, 0] }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <rect x="10" y="10" width="74" height="52" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.14)" />
+                <rect x="22" y="22" width="42" height="6" rx="3" fill="rgba(255,255,255,0.25)" />
+                <rect x="22" y="34" width="32" height="5" rx="2.5" fill="rgba(255,255,255,0.14)" />
+                <rect x="22" y="43" width="24" height="5" rx="2.5" fill="rgba(255,255,255,0.1)" />
+                <circle cx="88" cy="22" r="10" fill="rgba(255,255,255,0.12)" />
+                <path d="M88 17V27M83 22H93" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" />
+              </motion.svg>
+            </div>
+          </div>
+        </motion.div>
+
         <div
-          className="grid grid-cols-2 pb-4"
+          className="w-full rounded-[20px] bg-white/[0.028] grid grid-cols-2 pt-[1px] pb-4"
           style={{
             columnGap: ADS_GRID_GAP,
             rowGap: ADS_GRID_GAP,

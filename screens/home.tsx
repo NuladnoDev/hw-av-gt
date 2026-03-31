@@ -817,7 +817,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           <div
             className="absolute left-0 top-0 w-full z-[99] pointer-events-none"
             style={{
-              height: 'env(safe-area-inset-top, 0px)',
+              height: 'calc(env(safe-area-inset-top, 0px) + 2px)',
               background: adsTopHeaderBackground,
             }}
           />
@@ -835,22 +835,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               WebkitBackdropFilter: tab === 'ads' ? 'none' : (isStandaloneIOS ? 'blur(10px)' : 'none'),
             }}
           >
-            <div className="relative h-[56px] w-full px-6 flex items-center justify-center" style={{ marginTop: headerInnerMarginTop }}>
-            <div className="absolute left-6 flex h-full items-center">
-              <button
-                type="button"
-                onClick={() => setAlphaModalOpen(true)}
-                className="px-2 py-0.5 rounded-lg bg-[#FFD700] text-black text-[11px] font-sf-ui-bold lowercase tracking-tight shadow-lg active:scale-95 transition-all border border-black/5"
-              >
-                test
-              </button>
-            </div>
+            <div className="relative h-[56px] w-full px-6 flex items-center justify-start" style={{ marginTop: headerInnerMarginTop }}>
             <button 
               type="button"
-              className="flex items-center gap-2.5"
+              className="flex items-center gap-2.5 pl-1"
             >
               <div className="text-[22px] font-sf-ui-medium leading-[1em] text-[var(--text-primary)]">
-                {tab === 'ads' ? 'HelloWorld-store' : tab === 'store' || viewStoreId ? 'Магазин' : 'Профиль'}
+                {tab === 'ads' ? 'Обьявления для вас' : tab === 'store' || viewStoreId ? 'Магазин' : 'Профиль'}
               </div>
             </button>
             <div className="absolute right-6 flex h-full items-center">
