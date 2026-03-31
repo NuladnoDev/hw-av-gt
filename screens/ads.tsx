@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart } from 'lucide-react'
+import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart, Check } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import AdsCreate, { CONDITION_OPTIONS } from './Ads_Create'
 import AdsEdit from './Ads_Edit'
@@ -24,6 +24,8 @@ interface AdCardProps {
   createdAt?: number
   specs?: AdSpecItem[]
   storeId?: string | null
+  storeName?: string | null
+  storeAvatarUrl?: string | null
   onOpenStore?: (id: string) => void
 }
 
@@ -68,6 +70,8 @@ export type StoredAd = {
   location: string | null
   category: string | null
   storeId?: string | null
+  storeName?: string | null
+  storeAvatarUrl?: string | null
   specs?: AdSpecItem[]
   createdAt: number
 }
@@ -103,8 +107,48 @@ type AdsTableRow = {
   location: string | null
   category: string | null
   store_id: string | null
+  stores?: {
+    name: string | null
+    avatar_url: string | null
+  } | null
   specs: string | null
   created_at: string | null
+}
+
+const toCacheAd = (ad: StoredAd): Partial<StoredAd> => {
+  const imageUrl = typeof ad.imageUrl === 'string' && ad.imageUrl.startsWith('data:') ? '/logo.svg' : ad.imageUrl
+  return {
+    id: ad.id,
+    userId: ad.userId,
+    userTag: ad.userTag,
+    title: ad.title,
+    price: ad.price,
+    imageUrl,
+    condition: ad.condition,
+    location: ad.location,
+    category: ad.category,
+    createdAt: ad.createdAt,
+    storeId: ad.storeId,
+    storeName: ad.storeName,
+    storeAvatarUrl: ad.storeAvatarUrl,
+  }
+}
+
+const persistAdsCache = (ads: StoredAd[]) => {
+  if (typeof window === 'undefined') return
+  const cached = ads.slice(0, 200).map(toCacheAd)
+  try {
+    localStorage.setItem('hw-ads', JSON.stringify(cached))
+  } catch {
+    try {
+      localStorage.setItem('hw-ads', JSON.stringify(cached.slice(0, 80)))
+    } catch {
+      try {
+        localStorage.removeItem('hw-ads')
+      } catch {
+      }
+    }
+  }
 }
 
 const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
@@ -165,6 +209,8 @@ const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
     location: row.location,
     category: row.category,
     storeId: row.store_id,
+    storeName: row.stores?.name ?? null,
+    storeAvatarUrl: row.stores?.avatar_url ?? null,
     specs,
     createdAt: created,
   }
@@ -176,7 +222,7 @@ export const loadAdsFromStorage = async (): Promise<StoredAd[]> => {
   try {
     const { data, error } = await client
       .from('ads')
-      .select('*')
+      .select('*, stores(name, avatar_url)')
       .order('created_at', { ascending: false })
     if (error || !data) return []
     return (data as AdsTableRow[]).map(mapRowToStoredAd)
@@ -269,6 +315,8 @@ export function AdCard({
   createdAt,
   specs,
   storeId,
+  storeName,
+  storeAvatarUrl,
   onOpenStore,
 }: AdCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -362,18 +410,21 @@ export function AdCard({
           {!showEditLabel && (
             <div className="absolute left-2 top-2 z-20 rounded-md bg-black/40 px-2 py-1 backdrop-blur-md border border-white/5">
               <div className="flex items-center gap-1.5 truncate">
-                <div className={`w-3.5 h-3.5 ${storeId ? 'rounded-sm' : 'rounded-full'} overflow-hidden bg-white/20 flex-shrink-0 flex items-center justify-center text-[7px] font-ttc-bold text-white`}>
-                  <span className="translate-y-[0.5px]">
-                    {storeId ? 'M' : username[0].toUpperCase()}
-                  </span>
+                <div className={`w-3.5 h-3.5 ${storeId ? 'rounded-[3px]' : 'rounded-full'} overflow-hidden bg-white/20 flex-shrink-0 flex items-center justify-center text-[7px] font-ttc-bold text-white`}>
+                  {storeId && storeAvatarUrl ? (
+                    <img src={storeAvatarUrl} alt={storeName ?? 'store'} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="translate-y-[0.5px]">
+                      {storeId ? (storeName?.[0]?.toUpperCase() ?? 'M') : username[0].toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div className="truncate text-[10px] font-sf-ui-medium text-white/60">
-                  {storeId ? 'Магазин' : `@${username}`}
+                  {storeId ? (storeName ?? 'Магазин') : `@${username}`}
                 </div>
               </div>
             </div>
           )}
-          
           {isOwn && (
             <button
               type="button"
@@ -432,7 +483,7 @@ export function AdCard({
             </div>
           </div>
 
-          <div className="pt-2 flex items-center justify-between border-t border-white/5">
+          <div className="pt-2 flex items-center justify-between border-t border-white/[0.02]">
             <div className="flex items-center gap-1 opacity-40">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -563,7 +614,7 @@ const FAKE_ADS: StoredAd[] = [
     title: 'Elf Bar BC5000',
     description: 'Пробег 500 кадров. На гарантии.',
     price: '2300',
-    imageUrl: 'https://static.insales-cdn.com/images/products/1/4845/604328685/Blue_Razz_Ice_-_Черника_Малина_Лёд.jpg?q=80&w=800&auto=format&fit=crop',
+    imageUrl: 'https://shop.aladdin-vape.ru/wa-data/public/shop/products/87/17/1787/images/3962/3962.970.jpg',
     condition: 'Новое',
     location: 'Казань',
     category: 'things',
@@ -864,7 +915,7 @@ export default function Ads({
       const sorted = merged.sort((a, b) => b.createdAt - a.createdAt)
       setItems(sorted)
       // Save to localStorage for other components (like AdDetail recommendations)
-      localStorage.setItem('hw-ads', JSON.stringify(sorted))
+      persistAdsCache(sorted)
       setInitialLoading(false)
     }
     load()
@@ -875,7 +926,7 @@ export default function Ads({
         setItems((prev) => {
           if (prev.some((x) => x.id === ad.id)) return prev
           const updated = [ad, ...prev]
-          localStorage.setItem('hw-ads', JSON.stringify(updated))
+          persistAdsCache(updated)
           return updated
         })
         return
@@ -883,7 +934,7 @@ export default function Ads({
       if (ev.detail?.type === 'deleted' && ev.detail.id) {
         setItems((prev) => {
           const updated = prev.filter((a) => a.id !== ev.detail.id)
-          localStorage.setItem('hw-ads', JSON.stringify(updated))
+          persistAdsCache(updated)
           return updated
         })
         return
@@ -996,9 +1047,9 @@ export default function Ads({
         }}
       >
         <div
-          className="flex w-full flex-col items-center pt-3 pb-2"
+          className="flex w-full flex-col items-stretch pt-3 pb-2"
         >
-          <div className="flex items-center gap-2 mb-1 w-full max-w-[355px] px-0">
+          <div className="flex items-center gap-2 mb-1 w-full px-1">
             <div
               className="flex items-stretch flex-1 min-w-0"
               style={{ height: 54 }}
@@ -1129,24 +1180,8 @@ export default function Ads({
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="w-full relative overflow-hidden"
               >
-                {/* Left fade gradient – только вокруг карусели */}
                 <div 
-                  className="absolute left-[-24px] top-0 bottom-0 z-10 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(to right, var(--bg-primary), transparent)',
-                    width: 48,
-                  }}
-                />
-                {/* Right fade gradient – только вокруг карусели */}
-                <div 
-                  className="absolute right-[-24px] top-0 bottom-0 z-10 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(to left, var(--bg-primary), transparent)',
-                    width: 48,
-                  }}
-                />
-                <div 
-                  className="flex overflow-x-auto scrollbar-hidden category-carousel px-1 w-full max-w-[355px] mx-auto" 
+                  className="flex overflow-x-auto scrollbar-hidden category-carousel w-full px-0" 
                 >
                   <div className="flex gap-2 py-1">
                     {[
@@ -1215,6 +1250,8 @@ export default function Ads({
                     onDelete={isOwn ? () => deleteAdById(ad.id) : undefined}
                     isOwn={isOwn}
                     storeId={ad.storeId}
+                    storeName={ad.storeName}
+                    storeAvatarUrl={ad.storeAvatarUrl}
                     onClick={() => {
                       if (onOpenAd) {
                         onOpenAd(ad)
@@ -1265,7 +1302,7 @@ export default function Ads({
             {/* Само уведомление - выше всего */}
              <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
                <motion.div
-                 className="relative w-full max-w-[375px] rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                 className="relative w-full rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
                  initial={{ translateY: '100%' }}
                  animate={{ translateY: 0 }}
                  exit={{ translateY: '100%' }}
@@ -1278,7 +1315,7 @@ export default function Ads({
                      Укажите способы связи
                    </h3>
                    <p className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px]">
-                     Чтобы покупатели могли вам написать или позвонить — добавьте Telegram или VK в профиле
+                     Чтобы покупатели могли вам написать или позвонить - добавьте Telegram или VK в профиле
                    </p>
                  </div>
                  
@@ -1330,7 +1367,7 @@ export default function Ads({
             
              <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
                <motion.div
-                 className="relative w-full max-w-[375px] rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                 className="relative w-full rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
                  initial={{ translateY: '100%' }}
                  animate={{ translateY: 0 }}
                  exit={{ translateY: '100%' }}
@@ -1343,7 +1380,7 @@ export default function Ads({
                      Вам есть 18 лет?
                    </h3>
                    <p className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px]">
-                     Чтобы публиковать объявления и общаться — подтвердите свой возраст
+                     Чтобы публиковать объявления и общаться - подтвердите свой возраст
                    </p>
                  </div>
 
@@ -1402,3 +1439,4 @@ export default function Ads({
     </div>
   )
 }
+

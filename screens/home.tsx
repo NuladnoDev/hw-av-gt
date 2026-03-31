@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -20,6 +20,7 @@ import Ads, { type StoredAd } from './ads'
 import AdDetail from './AdDetail'
 import Support from './Support'
 import Chat from './Chat'
+import Favorites from './Favorites'
 
 export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [scale, setScale] = useState(1)
@@ -170,6 +171,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notificationsClosing, setNotificationsClosing] = useState(false)
   const [navVisible, setNavVisible] = useState(true)
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
 
   const openNotifications = () => {
     setNotificationsClosing(false)
@@ -249,6 +251,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     window.addEventListener('theme-updated', handleThemeUpdate)
     return () => window.removeEventListener('theme-updated', handleThemeUpdate)
   }, [])
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const meta = document.querySelector('meta[name=\"theme-color\"]')
+    if (meta) {
+      meta.setAttribute('content', theme === 'light' ? '#F5F5F7' : '#0A0A0A')
+    }
+  }, [theme])
 
   useEffect(() => {
     const handleToastVisible = (e: Event) => {
@@ -346,6 +355,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     setPhoneOpen(false)
     setSelectedAd(null)
     setSupportOpen(false)
+    setFavoritesOpen(false)
   }
 
   const searchUsers = async (query: string) => {
@@ -586,6 +596,30 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     }
   }, [])
   useEffect(() => {
+    const handleCloseStoreProfile = () => {
+      closeAllWindows()
+      setTab('store')
+      setViewStoreId(null)
+      setViewProfileMode('own')
+      setViewProfileUserId(null)
+      setProfileReturnAd(null)
+      setProfileStack([])
+    }
+    window.addEventListener('close-store-profile', handleCloseStoreProfile)
+    return () => {
+      window.removeEventListener('close-store-profile', handleCloseStoreProfile)
+    }
+  }, [])
+  useEffect(() => {
+    const handleOpenFavorites = () => {
+      setFavoritesOpen(true)
+    }
+    window.addEventListener('open-favorites', handleOpenFavorites)
+    return () => {
+      window.removeEventListener('open-favorites', handleOpenFavorites)
+    }
+  }, [])
+  useEffect(() => {
     const client = getSupabase()
     if (!client) return
     ;(async () => {
@@ -734,24 +768,45 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     return () => clearTimeout(t)
   }, [storeAuthWarningOpen])
 
+  const isStandaloneIOS = isIOS && isStandalone
+  const frameWidth = isStandaloneIOS ? '100vw' : '375px'
+  const frameHeight = isStandaloneIOS ? '100dvh' : '812px'
+  const frameTransform = isStandaloneIOS ? 'none' : `scale(${scale})`
+  const safeTop = 'env(safe-area-inset-top, 0px)'
+  const homeHeaderOffset = isStandaloneIOS ? '0px' : 'var(--home-header-offset)'
+  const headerTop = isStandaloneIOS ? '0px' : `calc(${safeTop} + ${homeHeaderOffset})`
+  const headerHeight = isStandaloneIOS ? `calc(${safeTop} + 56px)` : '56px'
+  const headerInnerMarginTop = isStandaloneIOS ? safeTop : '0px'
+  const iosHeaderBackground =
+    theme === 'light'
+      ? 'linear-gradient(to bottom, rgba(245,245,247,0.92), rgba(245,245,247,0.55), rgba(245,245,247,0))'
+      : 'linear-gradient(to bottom, rgba(10,10,10,0.72), rgba(10,10,10,0.25), rgba(10,10,10,0))'
+  const homeContentTop = isStandaloneIOS
+    ? '56px'
+    : `calc(${safeTop} + ${homeHeaderOffset} + 56px)`
+  const homeContentHeight = `calc(${frameHeight} - (${homeContentTop}))`
+
   return (
-    <div className="fixed inset-0 flex w-full items-center justify-center bg-[var(--bg-primary)] overflow-hidden">
-      <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, fontSmooth: 'antialiased', WebkitFontSmoothing: 'antialiased', touchAction: 'pan-y' } as React.CSSProperties}>
+    <div className={`fixed inset-0 w-full bg-[var(--bg-primary)] overflow-hidden ${isStandaloneIOS ? '' : 'flex items-center justify-center'}`}>
+      <div className="relative" style={{ width: frameWidth, height: frameHeight, transform: frameTransform, transformOrigin: 'center center', fontSmooth: 'antialiased', WebkitFontSmoothing: 'antialiased', touchAction: 'pan-y' } as React.CSSProperties}>
         <div
-          className="absolute left-0 top-0 h-[812px] w-[375px]"
+          className="absolute left-0 top-0 h-full w-full"
           style={{ backgroundColor: 'var(--bg-primary)' }}
         />
 
         {tab !== 'profile' ? (
           <div
-            className="absolute left-0 w-full px-6 flex items-center justify-center z-[100]"
+            className="absolute left-0 w-full z-[100]"
             style={{ 
-              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', 
-              height: '56px',
-              backgroundColor: 'var(--bg-primary)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
+              top: headerTop,
+              height: headerHeight,
+              background: isStandaloneIOS ? iosHeaderBackground : 'var(--bg-primary)',
+              boxShadow: isStandaloneIOS ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.4)',
+              backdropFilter: isStandaloneIOS ? 'blur(10px)' : 'none',
+              WebkitBackdropFilter: isStandaloneIOS ? 'blur(10px)' : 'none',
             }}
           >
+            <div className="relative h-[56px] w-full px-6 flex items-center justify-center" style={{ marginTop: headerInnerMarginTop }}>
             <div className="absolute left-6 flex h-full items-center">
               <button
                 type="button"
@@ -782,17 +837,21 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 />
               </button>
             </div>
+            </div>
           </div>
         ) : (
           <div
-            className="absolute left-0 w-full bg-[var(--bg-primary)] z-[100]"
+            className="absolute left-0 w-full z-[100]"
             style={{ 
-              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', 
-              height: '56px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)'
+              top: headerTop,
+              height: headerHeight,
+              background: isStandaloneIOS ? iosHeaderBackground : 'var(--bg-primary)',
+              boxShadow: isStandaloneIOS ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.4)',
+              backdropFilter: isStandaloneIOS ? 'blur(10px)' : 'none',
+              WebkitBackdropFilter: isStandaloneIOS ? 'blur(10px)' : 'none',
             }}
           >
-            <div className="relative h-full w-full">
+            <div className="relative h-[56px] w-full" style={{ marginTop: headerInnerMarginTop }}>
               {viewProfileMode === 'own' ? (
                 <button
                   type="button"
@@ -867,7 +926,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             <div 
               className="absolute left-0 w-full z-[85] pointer-events-none bg-gradient-to-b from-[#0A0A0A] to-transparent"
               style={{ 
-                top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
+                top: homeContentTop,
                 height: '32px'
               }}
             />
@@ -875,8 +934,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               key={`profile-screen-${viewProfileMode}-${viewStoreId ? `store-${viewStoreId}` : (viewProfileUserId ?? 'own')}`}
             className="absolute left-0 w-full overflow-hidden"
             style={{
-              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-              height: 'calc(812px - var(--bottom-nav-height) - 56px - var(--home-header-offset))',
+              top: homeContentTop,
+              height: homeContentHeight,
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -949,16 +1008,16 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               <>
                 <button
                   type="button"
-                  className="absolute inset-0"
-                  style={{ zIndex: 70 }}
+                  className="fixed inset-0"
+                  style={{ zIndex: 130 }}
                   onClick={closeProfileMenu}
                 />
                 <motion.div
                   layoutId="store-create-expansion"
-                  className="absolute right-4"
+                  className="fixed right-4"
                   style={{
-                    top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px + var(--profile-menu-offset-y))',
-                    zIndex: 80,
+                    top: `calc(${headerTop} + 56px + 12px)`,
+                    zIndex: 140,
                   }}
                   >
                     <motion.div
@@ -1209,73 +1268,136 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                         background: 'var(--profile-menu-share-divider-color)',
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeProfileMenu()
-                        if (userStores.length > 0) {
-                          openStoreProfile(userStores[0].id)
-                        } else {
-                          setShowCreateStore(true)
-                        }
-                      }}
-                      className="flex w-full items-center"
-                      style={{
-                        height: 'var(--profile-menu-item-height)',
-                        paddingLeft: 'var(--profile-menu-item-padding-x)',
-                        paddingRight: 'var(--profile-menu-item-padding-x)',
-                        background: 'var(--profile-menu-item-bg)',
-                      }}
-                    >
-                      <div
-                        className="flex w-full items-center"
-                        style={{ columnGap: 'var(--profile-menu-item-gap)' }}
-                      >
-                        <span
-                          className="font-sf-ui-light"
+                    {viewProfileMode === 'own' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            closeProfileMenu()
+                            if (userStores.length > 0) {
+                              openStoreProfile(userStores[0].id)
+                            } else {
+                              setShowCreateStore(true)
+                            }
+                          }}
+                          className="flex w-full items-center"
                           style={{
-                            fontSize: 'var(--profile-menu-item-font-size)',
-                            color: 'var(--profile-menu-item-text-color)',
-                            whiteSpace: 'nowrap',
+                            height: 'var(--profile-menu-item-height)',
+                            paddingLeft: 'var(--profile-menu-item-padding-x)',
+                            paddingRight: 'var(--profile-menu-item-padding-x)',
+                            background: 'var(--profile-menu-item-bg)',
                           }}
                         >
-                          {userStores.length > 0 ? 'Мой магазин' : 'Создать магазин'}
-                        </span>
+                          <div
+                            className="flex w-full items-center"
+                            style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                          >
+                            <span
+                              className="font-sf-ui-light"
+                              style={{
+                                fontSize: 'var(--profile-menu-item-font-size)',
+                                color: 'var(--profile-menu-item-text-color)',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {userStores.length > 0 ? 'Мой магазин' : 'Создать магазин'}
+                            </span>
+                            <div
+                              style={{
+                                marginLeft: 'auto',
+                                width: 'var(--profile-menu-item-icon-size)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'flex-end',
+                              }}
+                            >
+                              {userStores.length > 0 ? (
+                                <ShoppingCart
+                                  size={20}
+                                  className="text-white/50"
+                                  style={{
+                                    filter: 'var(--profile-menu-item-icon-filter)',
+                                  }}
+                                />
+                              ) : (
+                                <Plus
+                                  size={20}
+                                  className="text-white/50"
+                                  style={{
+                                    filter: 'var(--profile-menu-item-icon-filter)',
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </button>
                         <div
                           style={{
-                            marginLeft: 'auto',
-                            width: 'var(--profile-menu-item-icon-size)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
+                            height: 'var(--profile-menu-divider-thickness)',
+                            background: 'var(--profile-menu-divider-color)',
+                          }}
+                        />
+                      </>
+                    )}
+                    {viewProfileMode === 'foreign' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            closeProfileMenu()
+                            setSupportOpen(true)
+                          }}
+                          className="flex w-full items-center"
+                          style={{
+                            height: 'var(--profile-menu-item-height)',
+                            paddingLeft: 'var(--profile-menu-item-padding-x)',
+                            paddingRight: 'var(--profile-menu-item-padding-x)',
+                            background: 'var(--profile-menu-item-bg)',
                           }}
                         >
-                          {userStores.length > 0 ? (
-                            <ShoppingCart
-                              size={20}
-                              className="text-white/50"
+                          <div
+                            className="flex w-full items-center"
+                            style={{ columnGap: 'var(--profile-menu-item-gap)' }}
+                          >
+                            <span
+                              className="font-sf-ui-light"
                               style={{
-                                filter: 'var(--profile-menu-item-icon-filter)',
+                                fontSize: 'var(--profile-menu-item-font-size)',
+                                color: 'var(--profile-menu-item-text-color)',
+                                whiteSpace: 'nowrap',
                               }}
-                            />
-                          ) : (
-                            <Plus
-                              size={20}
-                              className="text-white/50"
+                            >
+                              Пожаловаться
+                            </span>
+                            <div
                               style={{
-                                filter: 'var(--profile-menu-item-icon-filter)',
+                                marginLeft: 'auto',
+                                width: 'var(--profile-menu-item-icon-size)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'flex-end',
                               }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                    <div
-                      style={{
-                        height: 'var(--profile-menu-divider-thickness)',
-                        background: 'var(--profile-menu-divider-color)',
-                      }}
-                    />
+                            >
+                              <img
+                                src="/interface/info-square-01-contained.svg"
+                                alt=""
+                                style={{
+                                  width: 'var(--profile-menu-item-icon-size)',
+                                  height: 'var(--profile-menu-item-icon-size)',
+                                  filter: 'var(--profile-menu-item-icon-filter)',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </button>
+                        <div
+                          style={{
+                            height: 'var(--profile-menu-divider-thickness)',
+                            background: 'var(--profile-menu-divider-color)',
+                          }}
+                        />
+                      </>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -1350,8 +1472,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             key="store-catalog-screen"
             className="absolute left-0 w-full overflow-hidden"
             style={{
-              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-              height: 'calc(812px - var(--bottom-nav-height) - 56px - var(--home-header-offset))',
+              top: homeContentTop,
+              height: homeContentHeight,
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1363,9 +1485,14 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   setStoreAuthWarningOpen(true)
                   return
                 }
+                if (userStores.length > 0) {
+                  openStoreProfile(userStores[0].id)
+                  return
+                }
                 setShowCreateStore(true)
               }}
               onOpenStore={(id) => openStoreProfile(id)}
+              myStores={userStores}
             />
           </motion.div>
         )}
@@ -1375,8 +1502,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             key="ads-screen"
             className="absolute left-0 w-full overflow-hidden"
             style={{
-              top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset) + 56px)',
-              height: 'calc(812px - var(--bottom-nav-height) - 56px - var(--home-header-offset))',
+              top: homeContentTop,
+              height: homeContentHeight,
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1397,7 +1524,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
         {/* profile content moved to Profile component */}
 
         <AnimatePresence>
-          {navVisible && (
+          {navVisible && !favoritesOpen && (
             <motion.div
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -1445,7 +1572,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                           }}
                           className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
                         >
-                          <div className={tab === 'ads' ? 'text-white' : 'text-white/40'}>
+                          <div className={tab === 'ads' ? 'text-white' : 'text-white opacity-40'}>
                             <NavIcon type="ads" active={tab === 'ads'} />
                           </div>
                         </button>
@@ -1459,7 +1586,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                           }}
                           className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
                         >
-                          <div className={tab === 'store' || (tab === 'profile' && !!viewStoreId) ? 'text-white' : 'text-white/40'}>
+                          <div className={tab === 'store' || (tab === 'profile' && !!viewStoreId) ? 'text-white' : 'text-white opacity-40'}>
                             <NavIcon type="store" active={tab === 'store' || (tab === 'profile' && !!viewStoreId)} />
                           </div>
                         </button>
@@ -1474,7 +1601,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                           }}
                           className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
                         >
-                          <div className="text-white/40">
+                          <div className="text-white opacity-40">
                             <NavIcon type="create" active={false} />
                           </div>
                         </button>
@@ -1492,7 +1619,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                           }}
                           className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
                         >
-                          <div className={tab === 'profile' && !viewStoreId && viewProfileMode === 'own' ? 'text-white' : 'text-white/40'}>
+                          <div className={tab === 'profile' && !viewStoreId && viewProfileMode === 'own' ? 'text-white' : 'text-white opacity-40'}>
                             <NavIcon type="profile" active={tab === 'profile' && !viewStoreId && viewProfileMode === 'own'} />
                           </div>
                         </button>
@@ -1669,7 +1796,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                     if (!type || !url) return null
                     return { type, url }
                   })
-                  .filter((x: any) => !!x)
+                  .filter((x): x is { type: 'vk' | 'telegram'; url: string } => !!x)
               } catch {}
               return []
             })()}
@@ -1703,7 +1830,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               
                <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
                  <motion.div
-                   className="relative w-full max-w-[375px] rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                   className="relative w-full rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
                    initial={{ translateY: '100%' }}
                    animate={{ translateY: 0 }}
                    exit={{ translateY: '100%' }}
@@ -1848,8 +1975,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               <button
                 onClick={() => {
                   setFavoriteToast({ visible: false, adId: null })
-                  setTab('profile')
-                  setTimeout(() => window.dispatchEvent(new Event('open-favorites')), 100)
+                  setFavoritesOpen(true)
                 }}
                 className="w-full flex items-center justify-between px-5 py-4 rounded-[22px] bg-[#1C1C1E] border border-white/10 shadow-2xl backdrop-blur-xl active:scale-95 transition-all"
               >
@@ -1880,7 +2006,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   animate={{ translateY: 0 }}
                   exit={{ translateY: '100%' }}
                   transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-                  className="relative w-full max-w-[375px] bg-[#121212] border-t border-white/10 rounded-t-[32px] p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                  className="relative w-full bg-[#121212] border-t border-white/10 rounded-t-[32px] p-8 flex flex-col items-center text-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
                 >
                   <div className="space-y-2">
                     <h3 className="text-[22px] font-ttc-bold text-white leading-tight flex items-center justify-center gap-2.5">
@@ -1923,6 +2049,18 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 </motion.div>
               </div>
             </>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {favoritesOpen && (
+            <Favorites
+              onClose={() => setFavoritesOpen(false)}
+              onOpenStoreById={openStoreProfile}
+              onOpenAd={(ad) => {
+                setFavoritesOpen(false)
+                setSelectedAd(ad)
+              }}
+            />
           )}
         </AnimatePresence>
       </div>
@@ -2038,3 +2176,4 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     </div>
   )
 }
+

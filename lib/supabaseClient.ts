@@ -64,3 +64,7 @@ export async function saveLocalAuth(info: { tag: string; uid: string; uuid?: str
   } catch {
   }
 }
+
+export function normalizeTag(input: string): string {
+  return input.trim().replace(/^@+/, '')
+}

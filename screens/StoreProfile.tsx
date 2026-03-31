@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ChevronLeft, 
@@ -23,6 +23,7 @@ import { getSupabase } from '../lib/supabaseClient'
 import VerifiedBadge from '../components/VerifiedBadge'
 import QualityBadge from '../components/QualityBadge'
 import ModeratorBadge from '../components/ModeratorBadge'
+import { AdCard } from './ads'
 
 interface Store {
   id: string
@@ -53,9 +54,55 @@ interface Ad {
   id: string
   title: string
   price: string
-  images: string[]
-  category: string
-  created_at: string
+  image_url: string | null
+  imageUrls: string[]
+  category: string | null
+  created_at: string | null
+  condition: string | null
+  location: string | null
+  user_id: string | null
+  user_tag: string | null
+  description: string | null
+  specs?: Array<{ label: string; value: string }>
+}
+
+const parseImageUrls = (raw: string | null): string[] => {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (Array.isArray(parsed)) {
+      return parsed.filter((x): x is string => typeof x === 'string' && x.length > 0)
+    }
+    if (typeof parsed === 'string' && parsed.length > 0) {
+      return [parsed]
+    }
+    return [raw]
+  } catch {
+    return [raw]
+  }
+}
+
+const parseSpecs = (raw: unknown): Array<{ label: string; value: string }> | undefined => {
+  if (!raw) return undefined
+  if (Array.isArray(raw)) {
+    return raw
+      .map((it) => {
+        if (!it || typeof it !== 'object') return null
+        const label = (it as any).label
+        const value = (it as any).value
+        if (typeof label !== 'string' || typeof value !== 'string') return null
+        return { label, value }
+      })
+      .filter((x): x is { label: string; value: string } => !!x)
+  }
+  if (typeof raw === 'string') {
+    try {
+      return parseSpecs(JSON.parse(raw))
+    } catch {
+      return undefined
+    }
+  }
+  return undefined
 }
 
 export default function StoreProfile({
@@ -118,8 +165,24 @@ export default function StoreProfile({
         .select('*')
         .eq('store_id', storeId)
         .order('created_at', { ascending: false })
-      
-      setAds(adsData || [])
+
+      const mappedAds: Ad[] = (adsData || []).map((row: any) => ({
+        id: row.id,
+        title: row.title ?? '',
+        price: row.price ?? '',
+        image_url: row.image_url ?? null,
+        imageUrls: parseImageUrls(row.image_url ?? null),
+        category: row.category ?? null,
+        created_at: row.created_at ?? null,
+        condition: row.condition ?? null,
+        location: row.location ?? null,
+        user_id: row.user_id ?? null,
+        user_tag: row.user_tag ?? null,
+        description: row.description ?? null,
+        specs: parseSpecs(row.specs),
+      }))
+
+      setAds(mappedAds)
 
       // Check following
       if (currentUserId) {
@@ -240,12 +303,12 @@ export default function StoreProfile({
   return (
     <div className="h-full w-full overflow-hidden flex flex-col bg-[#0A0A0A]">
       {/* Header / Cover Area - Fully Transparent */}
-      <div className="relative w-full h-[100px] bg-transparent overflow-hidden" />
+      <div className="relative w-full h-[64px] bg-transparent overflow-hidden" />
 
       {/* Profile Content */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-6 -mt-[50px] relative z-10 pb-20 scrollbar-hidden"
+        className="flex-1 overflow-y-auto px-6 -mt-[34px] relative z-10 pb-20 scrollbar-hidden"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -416,22 +479,46 @@ export default function StoreProfile({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="grid grid-cols-2 gap-3"
+                className="grid grid-cols-2 gap-[1px]"
               >
                 {ads.length > 0 ? (
                   ads.map((ad) => (
-                    <button 
+                    <AdCard
                       key={ad.id}
-                      className="aspect-[4/5] rounded-3xl bg-white/5 border border-white/10 overflow-hidden relative group active:scale-95 transition-all"
-                    >
-                      {ad.images?.[0] && (
-                        <img src={ad.images[0]} alt={ad.title} className="w-full h-full object-cover" />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4">
-                        <div className="text-white font-ttc-bold text-[15px] truncate">{ad.title}</div>
-                        <div className="text-white/60 text-[13px]">{ad.price} ₽</div>
-                      </div>
-                    </button>
+                      id={ad.id}
+                      title={ad.title}
+                      price={ad.price}
+                      imageUrl={ad.imageUrls[0] || '/logo.svg'}
+                      username={(ad.user_tag || 'store').replace(/^@/, '')}
+                      condition={ad.condition || undefined}
+                      location={ad.location || undefined}
+                      createdAt={ad.created_at ? new Date(ad.created_at).getTime() : Date.now()}
+                      storeId={store.id}
+                      storeName={store.name}
+                      storeAvatarUrl={store.avatar_url}
+                      onClick={() => {
+                        const firstImage = ad.imageUrls[0] ?? ''
+                        const detail = {
+                          id: ad.id,
+                          userId: ad.user_id,
+                          userTag: ad.user_tag,
+                          title: ad.title,
+                          description: ad.description,
+                          price: ad.price,
+                          imageUrl: firstImage,
+                          imageUrls: ad.imageUrls,
+                          condition: ad.condition,
+                          location: ad.location,
+                          category: ad.category,
+                          storeId: store.id,
+                          storeName: store.name,
+                          storeAvatarUrl: store.avatar_url,
+                          specs: ad.specs,
+                          createdAt: ad.created_at ? new Date(ad.created_at).getTime() : Date.now(),
+                        }
+                        window.dispatchEvent(new CustomEvent('open-ad-detail', { detail }))
+                      }}
+                    />
                   ))
                 ) : (
                   <div className="col-span-2 py-20 text-center text-white/20 font-sf-ui-light">
@@ -511,6 +598,13 @@ export default function StoreProfile({
               setStore(updated)
               loadStoreData() // Refresh to get updated members etc
             }}
+            onDeleted={() => {
+              setShowSettings(false)
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('refresh-user-stores'))
+                window.dispatchEvent(new Event('close-store-profile'))
+              }
+            }}
           />
         )}
       </AnimatePresence>
@@ -522,12 +616,14 @@ function StoreSettingsModal({
   store, 
   members,
   onClose, 
-  onUpdate 
+  onUpdate,
+  onDeleted
 }: { 
   store: Store
   members: Member[]
   onClose: () => void
-  onUpdate: (store: Store) => void 
+  onUpdate: (store: Store) => void
+  onDeleted: () => void
 }) {
   const [name, setName] = useState(store.name)
   const [description, setDescription] = useState(store.description || '')
@@ -630,6 +726,41 @@ function StoreSettingsModal({
     }
   }
 
+  const deleteStore = async () => {
+    const client = getSupabase()
+    if (!client) return
+    if (!confirm('Удалить магазин? Это действие нельзя отменить.')) return
+    if (!confirm('Точно удалить магазин вместе с товарами и командой?')) return
+
+    setLoading(true)
+    try {
+      const { data: authData } = await client.auth.getUser()
+      const uid = authData.user?.id ?? null
+      if (!uid || uid !== store.owner_id) {
+        alert('Удалять магазин может только создатель.')
+        return
+      }
+
+      await client.from('ads').delete().eq('store_id', store.id)
+      await client.from('store_follows').delete().eq('store_id', store.id)
+      await client.from('store_members').delete().eq('store_id', store.id)
+
+      const { error } = await client
+        .from('stores')
+        .delete()
+        .eq('id', store.id)
+        .eq('owner_id', uid)
+
+      if (error) throw error
+      onDeleted()
+    } catch (e) {
+      console.error('Error deleting store:', e)
+      alert('Ошибка при удалении магазина')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -692,6 +823,13 @@ function StoreSettingsModal({
                 className="w-full h-14 rounded-2xl bg-white/5 border border-white/10 px-4 text-white outline-none focus:border-white/20 transition-all"
               />
             </div>
+            <button
+              onClick={deleteStore}
+              disabled={loading}
+              className="w-full h-12 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 font-sf-ui-medium text-[15px] active:scale-95 transition-all disabled:opacity-40"
+            >
+              Удалить магазин
+            </button>
             <button
               onClick={handleSave}
               disabled={loading}
@@ -775,3 +913,4 @@ function StoreSettingsModal({
     </motion.div>
   )
 }
+

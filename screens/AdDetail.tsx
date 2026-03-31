@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from 'motion/react'
-import { ChevronDown, ChevronLeft, ChevronRight, X, Sparkles, Star, ThumbsUp, CircleAlert, ShieldCheck, Share2, Flag, MoreVertical, Info, Heart, ArrowRight } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, X, Sparkles, Star, ThumbsUp, CircleAlert, ShieldCheck, Share2, Flag, Check, MoreVertical, Info, Heart, ArrowRight } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 import { AdCard, type StoredAd } from './ads'
+
 
 const CONDITION_COLORS: Record<string, string> = {
   Новое: 'text-emerald-400',
@@ -246,7 +247,7 @@ export default function AdDetail({
     ad.description && ad.description.trim().length > 0 ? ad.description : ad.title
 
   const handlePurchase = () => {
-    if (onOpenChat) {
+    if (onOpenChat && ad.userId) {
       onOpenChat(ad, {
         id: ad.userId,
         name: ad.storeId && storeInfo ? storeInfo.name : (ad.userTag || 'Продавец'),
@@ -967,7 +968,7 @@ export default function AdDetail({
             
              <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
                <motion.div
-                 className="relative w-full max-w-[375px] rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                 className="relative w-full rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
                  initial={{ translateY: '100%' }}
                  animate={{ translateY: 0 }}
                  exit={{ translateY: '100%' }}
@@ -1040,7 +1041,7 @@ export default function AdDetail({
             
              <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
                <motion.div
-                 className="relative w-full max-w-[375px] rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
+                 className="relative w-full rounded-t-[32px] bg-[#121212] border-t border-white/10 p-8 flex flex-col items-center space-y-6 pointer-events-auto pb-[calc(env(safe-area-inset-bottom, 0px) + 24px)]"
                  initial={{ translateY: '100%' }}
                  animate={{ translateY: 0 }}
                  exit={{ translateY: '100%' }}
@@ -1196,7 +1197,7 @@ function MediaViewer({
       <div className="w-full h-full flex items-center justify-center overflow-hidden" ref={constraintsRef}>
         <motion.div
           key={index}
-          drag={scale > 1 ? "both" : "y"}
+          drag={scale > 1 ? true : "y"}
           dragConstraints={scale > 1 ? { left: -500, right: 500, top: -500, bottom: 500 } : { top: 0, bottom: 0 }}
           dragElastic={0.1}
           onDragEnd={onDragEnd}

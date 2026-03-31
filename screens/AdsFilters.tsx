@@ -61,7 +61,7 @@ export default function AdsFilters({ onClose, onApply, initialFilters }: AdsFilt
 
       {/* Modal */}
       <motion.div
-        className="fixed left-0 right-0 bottom-0 z-[160] flex flex-col bg-[#0A0A0A] rounded-t-[32px] overflow-hidden shadow-2xl mx-auto w-full max-w-[375px]"
+        className="fixed left-0 right-0 bottom-0 z-[160] flex flex-col bg-[#0A0A0A] rounded-t-[32px] overflow-hidden shadow-2xl mx-auto w-full"
         style={{ maxHeight: '90vh' }}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}

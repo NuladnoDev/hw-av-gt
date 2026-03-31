@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { getSupabase } from '@/lib/supabaseClient'
+import { getSupabase, normalizeTag } from '@/lib/supabaseClient'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { AdCardSkeleton } from './ads'
@@ -215,7 +215,8 @@ export default function HelloScreenTag({
                     if (!client) {
                       const usersRaw = window.localStorage.getItem('hw-users')
                       const users: Array<{ tag: string }> = usersRaw ? JSON.parse(usersRaw) : []
-                      const takenLocal = users.some((u) => u.tag === trimmed)
+                      const lowered = normalizeTag(trimmed).toLowerCase()
+                      const takenLocal = users.some((u) => normalizeTag(u.tag).toLowerCase() === lowered)
                       if (takenLocal) {
                         setError('тег занят')
                         setChecking(false)
@@ -233,7 +234,7 @@ export default function HelloScreenTag({
                     const { count, error: qErr } = await client
                       .from('profiles')
                       .select('tag', { count: 'exact', head: true })
-                      .eq('tag', trimmed)
+                      .ilike('tag', trimmed)
                     if (qErr) {
                       setChecking(false)
                       if (onNext) {

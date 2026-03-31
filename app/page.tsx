@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSupabase } from '@/lib/supabaseClient'
+import { getSupabase, normalizeTag } from '@/lib/supabaseClient'
 import HelloScreen from '@/screens/hello_screen_hello'
 import HomeScreen from '@/screens/home'
 import HelloScreenTag from '@/screens/hello_screen_tag'
@@ -98,6 +98,8 @@ export default function Home() {
   }, [])
 
   async function signUpWithTagAndPassword(tag: string, password: string, city?: string) {
+    const cleanTag = normalizeTag(tag)
+    const canonicalTag = cleanTag.toLowerCase()
     const client = getSupabase()
     const regMetadata = {
       userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
@@ -110,7 +112,7 @@ export default function Home() {
     if (!client) {
       const usersRaw = window.localStorage.getItem('hw-users')
       const users: Array<{ tag: string; uid: string; email: string; pass: string; reg_info?: any }> = usersRaw ? JSON.parse(usersRaw) : []
-      const exists = users.some((u) => u.tag === tag)
+      const exists = users.some((u) => normalizeTag(u.tag).toLowerCase() === canonicalTag)
       if (exists) {
         setTagError('тег занят')
         setScreen('tag')
@@ -123,10 +125,10 @@ export default function Home() {
       const hash = arr.map((b) => b.toString(16).padStart(2, '0')).join('')
       const cnt = users.length + 1
       const uid = `hw-${String(cnt).padStart(4, '0')}`
-      const email = `${tag}@hw-app.com`
-      const nextUsers = [...users, { tag, uid, email, pass: hash, reg_info: regMetadata }]
+      const email = `${canonicalTag}@hw-app.com`
+      const nextUsers = [...users, { tag: canonicalTag, uid, email, pass: hash, reg_info: regMetadata }]
       window.localStorage.setItem('hw-users', JSON.stringify(nextUsers))
-      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid, email }))
+      window.localStorage.setItem('hw-auth', JSON.stringify({ tag: canonicalTag, uid, email }))
       try {
         const profRaw = window.localStorage.getItem('hw-profiles')
         const profMap = profRaw
@@ -141,11 +143,11 @@ export default function Home() {
       window.dispatchEvent(new Event('local-auth-changed'))
       return
     }
-    const email = `${tag}@hw-app.com`
+    const email = `${canonicalTag}@hw-app.com`
     const { data, error } = await client.auth.signUp({
       email,
       password,
-      options: { data: { tag, ...regMetadata } },
+      options: { data: { tag: canonicalTag, ...regMetadata } },
     })
     if (error) {
       if (/registered|exists/i.test(error.message)) {
@@ -175,15 +177,15 @@ export default function Home() {
     // Attempting to store metadata in profiles if columns exist, or fallback to metadata
     const profileData: any = {
       id: userId,
-      tag,
+      tag: canonicalTag,
       uid,
       email,
       city: typeof city === 'string' && city.trim().length > 0 ? city.trim() : null,
       reg_info: regMetadata,
     }
 
-    await client.from('profiles').insert(profileData)
-    await client.auth.updateUser({ data: { tag, uid, ...regMetadata } })
+    await client.from('profiles').upsert(profileData, { onConflict: 'id' })
+    await client.auth.updateUser({ data: { tag: canonicalTag, uid, ...regMetadata } })
     if (userId) {
       try {
         const profRaw = window.localStorage.getItem('hw-profiles')
@@ -196,7 +198,7 @@ export default function Home() {
         window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
       } catch {
       }
-      window.localStorage.setItem('hw-auth', JSON.stringify({ tag, uid: userId, uuid: userId, email }))
+      window.localStorage.setItem('hw-auth', JSON.stringify({ tag: canonicalTag, uid: userId, uuid: userId, email }))
       window.dispatchEvent(new Event('local-auth-changed'))
     }
   }

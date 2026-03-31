@@ -399,6 +399,23 @@ export default function AdsCreate({
     const client = getSupabase()
     if (!client) return false
 
+    let finalStoreId: string | null = selectedStoreId
+    if (selectedStoreId && uid) {
+      try {
+        const { data: member } = await client
+          .from('store_members')
+          .select('id')
+          .eq('store_id', selectedStoreId)
+          .eq('user_id', uid)
+          .maybeSingle()
+        if (!member) {
+          finalStoreId = null
+        }
+      } catch {
+        finalStoreId = null
+      }
+    }
+
     const basePayload = {
       user_id: uid,
       user_tag: userTag,
@@ -408,7 +425,7 @@ export default function AdsCreate({
       condition: conditionLabel,
       location,
       category,
-      store_id: selectedStoreId,
+      store_id: finalStoreId,
       created_at: new Date().toISOString(),
     }
 

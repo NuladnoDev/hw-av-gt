@@ -1186,16 +1186,16 @@ export default function Profile({
       <AnimatePresence>
         {toast.visible && (
           <motion.div
-            initial={{ y: -50, opacity: 0, x: '-50%' }}
-            animate={{ y: -46, opacity: 1, x: '-50%' }}
-            exit={{ y: -50, opacity: 0, x: '-50%' }}
-            className="absolute left-1/2 z-[9999] flex items-center justify-center px-5 py-2 backdrop-blur-3xl border border-[var(--border-light)] shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+            initial={{ y: -40, opacity: 0, x: '-50%' }}
+            animate={{ y: 0, opacity: 1, x: '-50%' }}
+            exit={{ y: -30, opacity: 0, x: '-50%' }}
+            className="fixed left-1/2 z-[1200] flex items-center justify-center px-5 py-2 backdrop-blur-3xl border border-[var(--border-light)] shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
             style={{
               background: theme === 'dark' 
                 ? 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)'
                 : 'linear-gradient(135deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.03) 100%)',
               borderRadius: '20px',
-              top: '10px',
+              top: 'calc(env(safe-area-inset-top, 0px) + 8px)',
               minWidth: '180px',
             }}
           >
@@ -2316,6 +2316,7 @@ function CreateStoreFlow({
   const [loading, setLoading] = useState(false)
   const [scale, setScale] = useState(1)
   const [showCityStep, setShowCityStep] = useState(false)
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(userId)
 
   useEffect(() => {
     const baseW = 375
@@ -2330,6 +2331,20 @@ function CreateStoreFlow({
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
+
+  useEffect(() => {
+    if (userId) {
+      setResolvedUserId(userId)
+      return
+    }
+    try {
+      const raw = window.localStorage.getItem('hw-auth')
+      const auth = raw ? (JSON.parse(raw) as { uid?: string; uuid?: string }) : null
+      setResolvedUserId(auth?.uuid || auth?.uid || null)
+    } catch {
+      setResolvedUserId(null)
+    }
+  }, [userId])
 
   useEffect(() => {
     const query = citySearch.trim()
@@ -2373,7 +2388,7 @@ function CreateStoreFlow({
   }, [citySearch])
 
   const handleCreate = async () => {
-    if (!name.trim() || !userId) return
+    if (!name.trim() || !resolvedUserId) return
     setLoading(true)
     const client = getSupabase()
     if (!client) {
@@ -2384,6 +2399,19 @@ function CreateStoreFlow({
     const slug = `${slugify(name)}-${Math.floor(Math.random() * 10000)}`
     
     try {
+      const { data: existingStore, error: existingStoreError } = await client
+        .from('stores')
+        .select('id')
+        .eq('owner_id', resolvedUserId)
+        .limit(1)
+        .maybeSingle()
+
+      if (existingStoreError) throw existingStoreError
+      if (existingStore?.id) {
+        alert('У вас уже есть магазин. Можно создать только один.')
+        return
+      }
+
       const { data: store, error: storeError } = await client
         .from('stores')
         .insert({
@@ -2391,7 +2419,7 @@ function CreateStoreFlow({
           slug,
           description: description.trim(),
           city: city.trim(),
-          owner_id: userId
+          owner_id: resolvedUserId
         })
         .select()
         .single()
@@ -2400,7 +2428,7 @@ function CreateStoreFlow({
 
       // Add owner
       const members = [
-        { store_id: store.id, user_id: userId, role: 'owner' },
+        { store_id: store.id, user_id: resolvedUserId, role: 'owner' },
         ...selectedStaff.map(uid => ({ store_id: store.id, user_id: uid, role: 'member' }))
       ]
 
@@ -2616,7 +2644,7 @@ function CreateStoreFlow({
         <div className="absolute bottom-0 left-0 w-full p-8 pb-12 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent">
           <button
             onClick={step === 3 ? handleCreate : () => setStep(s => s + 1)}
-            disabled={loading || (step === 1 && !name.trim())}
+            disabled={loading || (step === 1 && !name.trim()) || (step === 3 && !resolvedUserId)}
             className="h-[64px] w-full rounded-full bg-white text-black font-vk-demi text-[18px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-20"
           >
             {loading ? 'Создание...' : (

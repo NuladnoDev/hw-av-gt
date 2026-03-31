@@ -50,11 +50,13 @@ const slugify = (text: string) => {
 export default function CreateStoreFlow({ 
   onClose, 
   userId, 
-  onCreated 
+  onCreated,
+  onSuccess,
 }: { 
   onClose: () => void; 
-  userId: string | null; 
-  onCreated: (store: { id: string; name: string; avatar_url: string | null }) => void 
+  userId?: string | null; 
+  onCreated?: (store: { id: string; name: string; avatar_url: string | null }) => void;
+  onSuccess?: (storeId: string) => void;
 }) {
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
@@ -68,6 +70,7 @@ export default function CreateStoreFlow({
   const [scale, setScale] = useState(1)
   const [showCityStep, setShowCityStep] = useState(false)
   const [subscriptions, setSubscriptions] = useState<{ id: string; tag: string; avatarUrl: string | null }[]>([])
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(userId ?? null)
 
   useEffect(() => {
     const baseW = 375
@@ -84,15 +87,29 @@ export default function CreateStoreFlow({
   }, [])
 
   useEffect(() => {
+    if (userId) {
+      setResolvedUserId(userId)
+      return
+    }
+    try {
+      const raw = window.localStorage.getItem('hw-auth')
+      const auth = raw ? (JSON.parse(raw) as { uid?: string; uuid?: string }) : null
+      setResolvedUserId(auth?.uuid || auth?.uid || null)
+    } catch {
+      setResolvedUserId(null)
+    }
+  }, [userId])
+
+  useEffect(() => {
     const loadSubscriptions = async () => {
-      if (!userId) return
+      if (!resolvedUserId) return
       const client = getSupabase()
       if (!client) return
       try {
         const { data, error } = await client
           .from('follows')
           .select('target_id, profiles!follows_target_id_fkey(tag, avatar_url)')
-          .eq('follower_id', userId)
+          .eq('follower_id', resolvedUserId)
         
         if (!error && data) {
           const subs = data.map((f: any) => ({
@@ -107,7 +124,7 @@ export default function CreateStoreFlow({
       }
     }
     loadSubscriptions()
-  }, [userId])
+  }, [resolvedUserId])
 
   useEffect(() => {
     const query = citySearch.trim()
@@ -151,7 +168,7 @@ export default function CreateStoreFlow({
   }, [citySearch])
 
   const handleCreate = async () => {
-    if (!name.trim() || !userId) return
+    if (!name.trim() || !resolvedUserId) return
     setLoading(true)
     const client = getSupabase()
     if (!client) {
@@ -162,6 +179,19 @@ export default function CreateStoreFlow({
     const slug = `${slugify(name)}-${Math.floor(Math.random() * 10000)}`
     
     try {
+      const { data: existingStore, error: existingStoreError } = await client
+        .from('stores')
+        .select('id')
+        .eq('owner_id', resolvedUserId)
+        .limit(1)
+        .maybeSingle()
+
+      if (existingStoreError) throw existingStoreError
+      if (existingStore?.id) {
+        alert('У вас уже есть магазин. Можно создать только один.')
+        return
+      }
+
       const { data: store, error: storeError } = await client
         .from('stores')
         .insert({
@@ -169,7 +199,7 @@ export default function CreateStoreFlow({
           slug,
           description: description.trim(),
           city: city.trim(),
-          owner_id: userId
+          owner_id: resolvedUserId
         })
         .select()
         .single()
@@ -178,7 +208,7 @@ export default function CreateStoreFlow({
 
       // Add owner
       const members = [
-        { store_id: store.id, user_id: userId, role: 'owner' },
+        { store_id: store.id, user_id: resolvedUserId, role: 'owner' },
         ...selectedStaff.map(uid => ({ store_id: store.id, user_id: uid, role: 'member' }))
       ]
 
@@ -188,11 +218,12 @@ export default function CreateStoreFlow({
 
       if (memberError) throw memberError
 
-      onCreated({
+      onCreated?.({
         id: store.id,
         name: store.name,
         avatar_url: store.avatar_url
       })
+      onSuccess?.(store.id)
     } catch (e) {
       console.error('Error creating store:', e)
       alert('Ошибка при создании магазина.')
@@ -395,7 +426,7 @@ export default function CreateStoreFlow({
         <div className="absolute bottom-0 left-0 w-full p-8 pb-12 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent">
           <button
             onClick={step === 3 ? handleCreate : () => setStep(s => s + 1)}
-            disabled={loading || (step === 1 && !name.trim())}
+            disabled={loading || (step === 1 && !name.trim()) || (step === 3 && !resolvedUserId)}
             className="h-[64px] w-full rounded-full bg-white text-black font-vk-demi text-[18px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-20"
           >
             {loading ? 'Создание...' : (
