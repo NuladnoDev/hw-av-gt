@@ -1067,7 +1067,10 @@ export default function Ads({
   }, [items, searchQuery, activeFilters, selectedCategory, sortType])
   return (
     <div className="relative h-full w-full overflow-hidden" style={{ touchAction: 'none' }}>
-      <div className="absolute left-0 top-0 w-full z-[80]">
+      <div
+        className="absolute left-0 top-0 w-full z-[80]"
+        style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+      >
         <div className="relative mb-2">
           <div
             className="absolute inset-0 rounded-b-[34px] pointer-events-none"
@@ -1089,7 +1092,7 @@ export default function Ads({
                 style={{
                   borderRadius: 24,
                   background: theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.03)',
-                  border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(0, 0, 0, 0.08)',
+                  border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid rgba(0, 0, 0, 0.06)',
                   paddingLeft: 16,
                   paddingRight: 0,
                 }}
@@ -1202,7 +1205,7 @@ export default function Ads({
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setFiltersOpen(true)}
-              className="h-[54px] w-[54px] flex items-center justify-center rounded-2xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl"
+              className="h-[54px] w-[54px] flex items-center justify-center rounded-2xl bg-white/[0.02] border border-white/[0.04] backdrop-blur-xl"
             >
               <img src="/interface/filter.svg" alt="" className="w-6 h-6 opacity-40" />
             </motion.button>
@@ -1239,7 +1242,7 @@ export default function Ads({
                             ? 'opacity-30 grayscale cursor-not-allowed' 
                             : selectedCategory === category.name 
                               ? 'bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.1)]' 
-                              : 'bg-white/[0.025] text-white/60 border border-white/[0.05] hover:bg-white/[0.05]'
+                              : 'bg-white/[0.02] text-white/60 border border-white/[0.035] hover:bg-white/[0.04]'
                         } active:scale-95`}
                         whileTap={category.disabled ? {} : { scale: 0.95 }}
                         onClick={() => {

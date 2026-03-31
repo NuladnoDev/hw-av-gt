@@ -786,6 +786,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
         ? 'linear-gradient(to bottom, rgba(245,245,247,0.92), rgba(245,245,247,0.55), rgba(245,245,247,0))'
         : 'linear-gradient(to bottom, rgba(10,10,10,0.72), rgba(10,10,10,0.25), rgba(10,10,10,0))'
   const adsTopHeaderBackground = theme === 'light' ? '#d6d6d6' : '#0d0d0d'
+  const topInsetColor =
+    tab === 'ads'
+      ? adsTopHeaderBackground
+      : (theme === 'light' ? '#f5f5f7' : '#0a0a0a')
   const homeContentTop = isStandaloneIOS
     ? '56px'
     : `calc(${safeTop} + ${homeHeaderOffset} + 56px)`
@@ -793,10 +797,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
 
   useEffect(() => {
     if (typeof document === 'undefined') return
-    const color =
-      tab === 'ads'
-        ? (theme === 'light' ? '#d6d6d6' : '#0d0d0d')
-        : (theme === 'light' ? '#f5f5f7' : '#0a0a0a')
+    const color = topInsetColor
     let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
     if (!meta) {
       meta = document.createElement('meta')
@@ -804,7 +805,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       document.head.appendChild(meta)
     }
     meta.setAttribute('content', color)
-  }, [tab, theme])
+  }, [topInsetColor])
 
   return (
     <div className={`fixed inset-0 w-full bg-[var(--bg-primary)] overflow-hidden ${isStandaloneIOS ? '' : 'flex items-center justify-center'}`}>
@@ -813,12 +814,12 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           className="absolute left-0 top-0 h-full w-full"
           style={{ backgroundColor: 'var(--bg-primary)' }}
         />
-        {tab === 'ads' && isStandaloneIOS && (
+        {isStandaloneIOS && (
           <div
             className="absolute left-0 top-0 w-full z-[99] pointer-events-none"
             style={{
               height: 'calc(env(safe-area-inset-top, 0px) + 2px)',
-              background: adsTopHeaderBackground,
+              background: topInsetColor,
             }}
           />
         )}
@@ -829,7 +830,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             style={{ 
               top: headerTop,
               height: headerHeight,
-              background: tab === 'ads' ? adsTopHeaderBackground : (isStandaloneIOS ? iosHeaderBackground : 'var(--bg-primary)'),
+              background: isStandaloneIOS ? topInsetColor : (tab === 'ads' ? adsTopHeaderBackground : 'var(--bg-primary)'),
               boxShadow: tab === 'ads' ? 'none' : (isStandaloneIOS ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.4)'),
               backdropFilter: tab === 'ads' ? 'none' : (isStandaloneIOS ? 'blur(10px)' : 'none'),
               WebkitBackdropFilter: tab === 'ads' ? 'none' : (isStandaloneIOS ? 'blur(10px)' : 'none'),
