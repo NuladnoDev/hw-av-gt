@@ -614,7 +614,7 @@ const FAKE_ADS: StoredAd[] = [
     title: 'Elf Bar BC5000',
     description: 'Пробег 500 кадров. На гарантии.',
     price: '2300',
-    imageUrl: 'https://shop.aladdin-vape.ru/wa-data/public/shop/products/87/17/1787/images/3962/3962.970.jpg?v=1594247201?id=05e9b293eff60c7ec97d5024d5e543ff_l-4297394-images-thumbs&n=13?q=80&w=800&auto=format&fit=crop',
+    imageUrl: 'https://justfreid.ru/_obmen/photo/2ecb85c9-f3c8-11ed-b806-18c04d5eb1f0_1.jpg?v=1594247201?id=05e9b293eff60c7ec97d5024d5e543ff_l-4297394-images-thumbs&n=13?q=80&w=800&auto=format&fit=crop',
     condition: 'Новое',
     location: 'Казань',
     category: 'things',
