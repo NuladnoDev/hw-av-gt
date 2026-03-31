@@ -743,6 +743,7 @@ export default function Ads({
     }
     return true
   })
+  const adsHeaderSpacer = showCategories ? 132 : 78
 
   useEffect(() => {
     const handleUpdate = (e: any) => {
@@ -1038,28 +1039,29 @@ export default function Ads({
   }, [items, searchQuery, activeFilters, selectedCategory, sortType])
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <div
-        className="h-full overflow-y-auto scrollbar-hidden transition-all duration-300"
-        style={{
-          paddingLeft: ADS_SIDE_PADDING,
-          paddingRight: ADS_SIDE_PADDING,
-          paddingBottom: 16,
-        }}
-      >
-        <div
-          className="flex w-full flex-col items-stretch pt-3 pb-2"
-        >
+      <div className="absolute left-0 top-0 w-full z-[80]">
+        <div className="relative mb-2">
+          <div
+            className="absolute inset-0 rounded-b-[34px] pointer-events-none"
+            style={{
+              background: theme === 'dark' ? '#0d0d0d' : '#d6d6d6',
+              boxShadow: theme === 'dark' ? '0 10px 18px rgba(0,0,0,0.22)' : '0 8px 16px rgba(0,0,0,0.06)',
+            }}
+          />
+          <div
+            className="relative flex w-full flex-col items-stretch rounded-b-[34px] pt-2 pb-2"
+          >
           <div className="flex items-center gap-2 mb-1 w-full px-1">
             <div
               className="flex items-stretch flex-1 min-w-0"
-              style={{ height: 54 }}
+              style={{ height: 56 }}
             >
               <motion.div
                 className="flex h-full items-center backdrop-blur-xl relative overflow-hidden group w-full"
                 style={{
                   borderRadius: 24,
-                  background: theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
-                  border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
+                  background: theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.03)',
+                  border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(0, 0, 0, 0.08)',
                   paddingLeft: 16,
                   paddingRight: 0,
                 }}
@@ -1085,7 +1087,7 @@ export default function Ads({
                 <motion.div
                   className="flex h-full items-center relative z-10 w-full"
                   style={{
-                    paddingRight: 16,
+                    paddingRight: 8,
                   }}
                 >
                   <img
@@ -1108,66 +1110,74 @@ export default function Ads({
                       lineHeight: '18px',
                       color: theme === 'dark' ? '#A8A8A8' : '#3C3C43',
                     }}
-                    onFocus={() => setIsSearchActive(true)}
+                    onFocus={() => {
+                      setIsSearchActive(true)
+                      setIsSortMenuOpen(false)
+                    }}
                     onBlur={() => setIsSearchActive(false)}
                   />
+
+                  <div className="relative" ref={sortMenuRef}>
+                    <AnimatePresence>
+                      {!isSearchActive && (
+                        <motion.button
+                          initial={{ opacity: 0, scale: 0.9, x: 8 }}
+                          animate={{ opacity: 1, scale: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, x: 8 }}
+                          transition={{ duration: 0.16 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                          className="h-[36px] w-[36px] flex items-center justify-center"
+                        >
+                          <ArrowUpDown className={`w-4 h-4 ${sortType !== 'new' ? 'text-blue-400' : 'text-white/40'}`} />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                      {isSortMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
+                          animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
+                          className="absolute top-[52px] right-0 w-[200px] z-[100] rounded-2xl bg-[#1C1C1E] border border-white/10 shadow-2xl overflow-hidden"
+                        >
+                          <button
+                            onClick={() => { setSortType('new'); setIsSortMenuOpen(false); }}
+                            className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'new' ? 'text-white' : 'text-white/40'}`}
+                          >
+                            <span className="text-[14px] font-sf-ui-medium">Новинки</span>
+                            <Clock className={`w-4 h-4 ${sortType === 'new' ? 'text-blue-400' : 'opacity-0'}`} />
+                          </button>
+                          <button
+                            onClick={() => { setSortType('cheap'); setIsSortMenuOpen(false); }}
+                            className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'cheap' ? 'text-white' : 'text-white/40'}`}
+                          >
+                            <span className="text-[14px] font-sf-ui-medium">Сначала дешевле</span>
+                            <Tag className={`w-4 h-4 ${sortType === 'cheap' ? 'text-blue-400' : 'opacity-0'}`} />
+                          </button>
+                          <button
+                            onClick={() => { setSortType('rating'); setIsSortMenuOpen(false); }}
+                            className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'rating' ? 'text-white' : 'text-white/40'}`}
+                          >
+                            <span className="text-[14px] font-sf-ui-medium">По рейтингу</span>
+                            <UserCheck className={`w-4 h-4 ${sortType === 'rating' ? 'text-blue-400' : 'opacity-0'}`} />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </motion.div>
               </motion.div>
             </div>
 
-            {/* Sort & Filter Buttons */}
-            <div className="flex items-center gap-2">
-              <div className="relative" ref={sortMenuRef}>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
-                  className="h-[54px] w-[54px] flex items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl"
-                >
-                  <ArrowUpDown className={`w-5 h-5 ${sortType !== 'new' ? 'text-blue-400' : 'text-white/40'}`} />
-                </motion.button>
-
-                <AnimatePresence>
-                  {isSortMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
-                      animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
-                      className="absolute top-[64px] right-0 w-[200px] z-[100] rounded-2xl bg-[#1C1C1E] border border-white/10 shadow-2xl overflow-hidden"
-                    >
-                      <button
-                        onClick={() => { setSortType('new'); setIsSortMenuOpen(false); }}
-                        className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'new' ? 'text-white' : 'text-white/40'}`}
-                      >
-                        <span className="text-[14px] font-sf-ui-medium">Новинки</span>
-                        <Clock className={`w-4 h-4 ${sortType === 'new' ? 'text-blue-400' : 'opacity-0'}`} />
-                      </button>
-                      <button
-                        onClick={() => { setSortType('cheap'); setIsSortMenuOpen(false); }}
-                        className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'cheap' ? 'text-white' : 'text-white/40'}`}
-                      >
-                        <span className="text-[14px] font-sf-ui-medium">Сначала дешевле</span>
-                        <Tag className={`w-4 h-4 ${sortType === 'cheap' ? 'text-blue-400' : 'opacity-0'}`} />
-                      </button>
-                      <button
-                        onClick={() => { setSortType('rating'); setIsSortMenuOpen(false); }}
-                        className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'rating' ? 'text-white' : 'text-white/40'}`}
-                      >
-                        <span className="text-[14px] font-sf-ui-medium">По рейтингу</span>
-                        <UserCheck className={`w-4 h-4 ${sortType === 'rating' ? 'text-blue-400' : 'opacity-0'}`} />
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setFiltersOpen(true)}
-                className="h-[54px] w-[54px] flex items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl"
-              >
-                <img src="/interface/filter.svg" alt="" className="w-6 h-6 opacity-40" />
-              </motion.button>
-            </div>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setFiltersOpen(true)}
+              className="h-[54px] w-[54px] flex items-center justify-center rounded-2xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl"
+            >
+              <img src="/interface/filter.svg" alt="" className="w-6 h-6 opacity-40" />
+            </motion.button>
           </div>
 
           {/* Category Carousel */}
@@ -1178,12 +1188,12 @@ export default function Ads({
                 animate={{ height: 'auto', opacity: 1, marginTop: 4 }}
                 exit={{ height: 0, opacity: 0, marginTop: 0 }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="w-full relative overflow-hidden"
+                className="w-full relative overflow-hidden px-2"
               >
                 <div 
-                  className="flex overflow-x-auto scrollbar-hidden category-carousel w-full px-0" 
+                  className="flex overflow-x-auto scrollbar-hidden category-carousel w-full overflow-y-hidden" 
                 >
-                  <div className="flex gap-2 py-1">
+                  <div className="flex gap-2 py-1 pl-1 pr-3">
                     {[
                       { name: 'Новые' },
                       { name: 'Популярные' },
@@ -1201,7 +1211,7 @@ export default function Ads({
                             ? 'opacity-30 grayscale cursor-not-allowed' 
                             : selectedCategory === category.name 
                               ? 'bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.1)]' 
-                              : 'bg-white/[0.04] text-white/60 border border-white/[0.06] hover:bg-white/[0.08]'
+                              : 'bg-white/[0.025] text-white/60 border border-white/[0.05] hover:bg-white/[0.05]'
                         } active:scale-95`}
                         whileTap={category.disabled ? {} : { scale: 0.95 }}
                         onClick={() => {
@@ -1218,8 +1228,20 @@ export default function Ads({
               </motion.div>
             )}
           </AnimatePresence>
+          </div>
         </div>
-
+      </div>
+      <div
+        className="absolute inset-0 overflow-y-auto scrollbar-hidden"
+        style={{
+          paddingLeft: ADS_SIDE_PADDING,
+          paddingRight: ADS_SIDE_PADDING,
+          paddingTop: adsHeaderSpacer,
+          paddingBottom: 16,
+          overscrollBehaviorY: 'contain',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         <div
           className="grid grid-cols-2 pb-4"
           style={{

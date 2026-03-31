@@ -778,13 +778,33 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const headerHeight = isStandaloneIOS ? `calc(${safeTop} + 56px)` : '56px'
   const headerInnerMarginTop = isStandaloneIOS ? safeTop : '0px'
   const iosHeaderBackground =
-    theme === 'light'
-      ? 'linear-gradient(to bottom, rgba(245,245,247,0.92), rgba(245,245,247,0.55), rgba(245,245,247,0))'
-      : 'linear-gradient(to bottom, rgba(10,10,10,0.72), rgba(10,10,10,0.25), rgba(10,10,10,0))'
+    tab === 'ads'
+      ? theme === 'light'
+        ? '#d6d6d6'
+        : '#0d0d0d'
+      : theme === 'light'
+        ? 'linear-gradient(to bottom, rgba(245,245,247,0.92), rgba(245,245,247,0.55), rgba(245,245,247,0))'
+        : 'linear-gradient(to bottom, rgba(10,10,10,0.72), rgba(10,10,10,0.25), rgba(10,10,10,0))'
+  const adsTopHeaderBackground = theme === 'light' ? '#d6d6d6' : '#0d0d0d'
   const homeContentTop = isStandaloneIOS
     ? '56px'
     : `calc(${safeTop} + ${homeHeaderOffset} + 56px)`
   const homeContentHeight = `calc(${frameHeight} - (${homeContentTop}))`
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const color =
+      tab === 'ads'
+        ? (theme === 'light' ? '#d6d6d6' : '#0d0d0d')
+        : (theme === 'light' ? '#f5f5f7' : '#0a0a0a')
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'theme-color')
+      document.head.appendChild(meta)
+    }
+    meta.setAttribute('content', color)
+  }, [tab, theme])
 
   return (
     <div className={`fixed inset-0 w-full bg-[var(--bg-primary)] overflow-hidden ${isStandaloneIOS ? '' : 'flex items-center justify-center'}`}>
@@ -793,6 +813,15 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           className="absolute left-0 top-0 h-full w-full"
           style={{ backgroundColor: 'var(--bg-primary)' }}
         />
+        {tab === 'ads' && isStandaloneIOS && (
+          <div
+            className="absolute left-0 top-0 w-full z-[99] pointer-events-none"
+            style={{
+              height: 'env(safe-area-inset-top, 0px)',
+              background: adsTopHeaderBackground,
+            }}
+          />
+        )}
 
         {tab !== 'profile' ? (
           <div
@@ -800,10 +829,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             style={{ 
               top: headerTop,
               height: headerHeight,
-              background: isStandaloneIOS ? iosHeaderBackground : 'var(--bg-primary)',
-              boxShadow: isStandaloneIOS ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.4)',
-              backdropFilter: isStandaloneIOS ? 'blur(10px)' : 'none',
-              WebkitBackdropFilter: isStandaloneIOS ? 'blur(10px)' : 'none',
+              background: tab === 'ads' ? adsTopHeaderBackground : (isStandaloneIOS ? iosHeaderBackground : 'var(--bg-primary)'),
+              boxShadow: tab === 'ads' ? 'none' : (isStandaloneIOS ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.4)'),
+              backdropFilter: tab === 'ads' ? 'none' : (isStandaloneIOS ? 'blur(10px)' : 'none'),
+              WebkitBackdropFilter: tab === 'ads' ? 'none' : (isStandaloneIOS ? 'blur(10px)' : 'none'),
             }}
           >
             <div className="relative h-[56px] w-full px-6 flex items-center justify-center" style={{ marginTop: headerInnerMarginTop }}>
