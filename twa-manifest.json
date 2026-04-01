@@ -1,0 +1,53 @@
+{
+  "packageId": "app.vercel.hw_project_omega.twa",
+  "host": "hw-project-omega.vercel.app/manifest.json",
+  "name": "hw-project",
+  "launcherName": "hw-project",
+  "display": "fullscreen",
+  "themeColor": "#0D0D0D",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#0D0D0D",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://hw-project-omega.vercel.app/logo.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "C:\\Users\\lario\\Desktop\\hw-project\\web\\android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://hw-project-omega.vercel.app/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": true
+    },
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://hw-project-omega.vercel.app/",
+  "minSdkVersion": 21,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1"
+}
