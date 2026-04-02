@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { RefreshCcw, ShoppingBag, User, Settings, Plus, ShoppingCart, Bell, ChevronRight, Heart, ChevronLeft } from 'lucide-react'
+import { RefreshCcw, ShoppingBag, User, Settings, Plus, ShoppingCart, Bell, ChevronRight, Heart, ChevronLeft, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import Profile from './profile'
 import StoreProfile from './StoreProfile'
@@ -172,6 +172,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [notificationsClosing, setNotificationsClosing] = useState(false)
   const [navVisible, setNavVisible] = useState(true)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
+  const PATCH_NOTES_VERSION = '2026-04-02-2'
+  const [patchNotesOpen, setPatchNotesOpen] = useState(false)
 
   const openNotifications = () => {
     setNotificationsClosing(false)
@@ -202,6 +204,14 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     }
   ])
 
+  const closePatchNotes = () => {
+    try {
+      localStorage.setItem(`hw-patch-notes-seen:${PATCH_NOTES_VERSION}`, '1')
+    } catch {
+    }
+    setPatchNotesOpen(false)
+  }
+
   useEffect(() => {
     const handleFavoriteAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail
@@ -221,6 +231,16 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       window.removeEventListener('open-ad-detail', handleOpenAdDetail)
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const seen = localStorage.getItem(`hw-patch-notes-seen:${PATCH_NOTES_VERSION}`)
+      if (!seen) setPatchNotesOpen(true)
+    } catch {
+      setPatchNotesOpen(true)
+    }
+  }, [PATCH_NOTES_VERSION])
 
   useEffect(() => {
     if (alphaModalOpen) {
@@ -842,7 +862,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               className="flex items-center gap-2.5 pl-1"
             >
               <div className="text-[22px] font-sf-ui-medium leading-[1em] text-[var(--text-primary)]">
-                {tab === 'ads' ? 'Обьявления для вас' : tab === 'store' || viewStoreId ? 'Магазин' : 'Профиль'}
+                {tab === 'ads' ? 'Обьявления для вас' : tab === 'store' || viewStoreId ? 'Витрины' : 'Профиль'}
               </div>
             </button>
             <div className="absolute right-6 flex h-full items-center">
@@ -935,7 +955,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   className="text-[28px] font-bold leading-[1em] text-[var(--text-primary)] font-ttc-bold transition-opacity duration-200"
                   style={{ opacity: profileToastActive ? 0 : 1 }}
                 >
-                  {viewStoreId ? 'Магазин' : 'Профиль'}
+                  {viewStoreId ? 'Витрины' : 'Профиль'}
                 </div>
               </div>
             </div>
@@ -1557,9 +1577,9 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset, 0px))',
               }}
             >
-              <div className="absolute inset-x-0 bottom-4 px-6">
+              <div className="absolute inset-x-0 bottom-3 px-6">
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-[28px] backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4)]" />
+                  <div className="absolute inset-0 rounded-[28px] bg-[#1F1F1F]/95 border border-white/[0.06] shadow-[0_8px_28px_rgba(0,0,0,0.42)]" />
                   
                   <div className="relative flex items-center justify-between p-1.5">
                     {adsNavNextVisible ? (
@@ -1981,6 +2001,66 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 )}
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {patchNotesOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={closePatchNotes}
+                className="fixed inset-0 z-[165] bg-black/75 backdrop-blur-md"
+              />
+              <div className="fixed inset-0 z-[170] flex items-end justify-center pointer-events-none">
+                <motion.div
+                  initial={{ translateY: '100%' }}
+                  animate={{ translateY: 0 }}
+                  exit={{ translateY: '100%' }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+                  className="relative w-full bg-[#121212] border-t border-white/10 rounded-t-[32px] px-6 pt-7 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pointer-events-auto"
+                >
+                  <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/15" />
+                  <div className="flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-[14px] bg-white/8 border border-white/10 flex items-center justify-center flex-shrink-0">
+                      <RefreshCcw size={18} className="text-white/80" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-[22px] font-ttc-bold text-white leading-tight">
+                        Что нового
+                      </h3>
+                      <p className="mt-2 text-[14px] text-white/45 font-sf-ui-light leading-relaxed">
+                        Мы обновили интерфейс и сделали ключевые экраны аккуратнее и удобнее.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 space-y-2.5">
+                    {[
+                      'Обновили оформление страницы объявления',
+                      'Доработали верхнюю плашку на главном экране',
+                      'Улучшили блок витрин продавцов',
+                      'Исправили визуальные мелочи в навигации и карточках',
+                    ].map((item) => (
+                      <div key={item} className="flex items-start gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.06] px-4 py-3">
+                        <Check className="w-4 h-4 text-white/75 mt-0.5 flex-shrink-0" />
+                        <span className="text-[14px] text-white/80 font-sf-ui-regular leading-relaxed">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={closePatchNotes}
+                    className="mt-6 h-14 w-full rounded-[22px] bg-white text-black font-sf-ui-bold text-[16px] active:scale-[0.97] transition-all"
+                  >
+                    Понятно
+                  </button>
+                </motion.div>
+              </div>
+            </>
           )}
         </AnimatePresence>
 

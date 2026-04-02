@@ -8,9 +8,9 @@ import { AdCard, type StoredAd } from './ads'
 
 
 const CONDITION_COLORS: Record<string, string> = {
-  Новое: 'text-emerald-400',
-  Отличное: 'text-green-400',
-  Хорошее: 'text-yellow-400',
+  'Новое': 'text-emerald-400',
+  'Отличное': 'text-green-400',
+  'Хорошее': 'text-yellow-400',
   'Не очень': 'text-orange-400',
 }
 
@@ -401,7 +401,7 @@ export default function AdDetail({
 
   return (
     <motion.div
-      className="absolute inset-0 z-[120] flex flex-col bg-[#0A0A0A] text-white"
+      className="absolute inset-0 z-[120] flex flex-col bg-[#0D0D0D] text-white"
       initial={{ opacity: 0, x: '100%' }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: '100%' }}
@@ -418,7 +418,7 @@ export default function AdDetail({
               onClose()
             }
           }}
-          className="absolute left-6 z-[130] w-11 h-11 flex items-center justify-center rounded-2xl bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
+          className="absolute left-5 z-[130] w-11 h-11 flex items-center justify-center rounded-[14px] bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset, 10px))' }}
         >
           <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.5} />
@@ -428,7 +428,7 @@ export default function AdDetail({
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={toggleFavorite}
-          className="absolute right-[72px] z-[130] w-11 h-11 flex items-center justify-center rounded-2xl bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
+          className="absolute right-[68px] z-[130] w-11 h-11 flex items-center justify-center rounded-[14px] bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset, 10px))' }}
         >
           <Heart 
@@ -441,17 +441,17 @@ export default function AdDetail({
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={openMenu}
-          className="absolute right-6 z-[130] w-11 h-11 flex items-center justify-center rounded-2xl bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
+          className="absolute right-5 z-[130] w-11 h-11 flex items-center justify-center rounded-[14px] bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset, 10px))' }}
         >
           <MoreVertical className="w-6 h-6 text-white" strokeWidth={2.5} />
         </motion.button>
 
-        <div className="flex-1 overflow-y-auto scrollbar-hidden" ref={scrollRef}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden" ref={scrollRef}>
           {/* Images */}
-          <div className="relative group pt-2 px-2">
+          <div className="relative group pt-2 px-3">
             {images.length > 0 ? (
-              <div className="relative overflow-hidden rounded-[28px] bg-zinc-950">
+              <div className="relative overflow-hidden rounded-[26px] bg-zinc-950 border border-white/[0.06]">
                 <div 
                   ref={imageScrollRef}
                   className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hidden"
@@ -527,9 +527,9 @@ export default function AdDetail({
             )}
           </div>
 
-          <div className="px-6 pb-32">
+          <div className="px-4 pb-24">
             {/* Title & Seller */}
-            <div className="py-6 flex flex-col gap-4">
+            <div className="py-5 flex flex-col gap-4 rounded-[24px] bg-white/[0.025] border border-white/[0.05] px-4 mt-3">
               <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-1.5 flex-1 pr-4">
                   <h1 className="text-[26px] font-ttc-bold leading-[1.15] text-white/95 tracking-tight">
@@ -588,8 +588,10 @@ export default function AdDetail({
                 </motion.button>
               </div>
               
-              <div className="text-[28px] font-ttc-bold leading-none tracking-tight text-white/90">
-                {Number(ad.price).toLocaleString('ru-RU')} ₽ 
+              <div className="inline-flex w-fit items-center gap-2 rounded-[14px] px-4 py-2 bg-white/[0.06] border border-white/[0.07]">
+                <span className="text-[28px] font-ttc-bold leading-none tracking-tight text-white/95">
+                  {Number(ad.price).toLocaleString('ru-RU')} ₽
+                </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
@@ -604,7 +606,7 @@ export default function AdDetail({
                   </div>
                 )}
                 
-                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-white/40">
+                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.05] text-white/45">
                   <span className="text-[12px] font-sf-ui-medium uppercase tracking-wider">{locationText}</span>
                   {publishedText && (
                     <>
@@ -669,7 +671,7 @@ export default function AdDetail({
             </div>
 
             {/* Characteristics */}
-            <div className="space-y-4 py-6 border-t border-white/5">
+            <div className="space-y-4 py-6 mt-4 rounded-[22px] bg-white/[0.02] border border-white/[0.05] px-3">
               <h2 className="text-[17px] font-ttc-bold text-white/90">
                 Характеристики
               </h2>
@@ -725,7 +727,7 @@ export default function AdDetail({
 
             {/* Description */}
             {descriptionText && (
-              <div className="space-y-4 py-6 border-t border-white/5">
+              <div className="space-y-4 py-6 mt-4 rounded-[22px] bg-white/[0.02] border border-white/[0.05] px-3">
                 <h2 className="text-[17px] font-ttc-bold text-white/90">
                   Описание
                 </h2>
@@ -763,7 +765,7 @@ export default function AdDetail({
             {contactsVisible && (
               <div 
                 ref={contactsRef}
-                className="mt-6 space-y-4 py-6 border-t border-white/5 animate-in fade-in slide-in-from-top-4 duration-500"
+                className="mt-6 space-y-4 py-6 rounded-[22px] bg-white/[0.02] border border-white/[0.05] px-3 animate-in fade-in slide-in-from-top-4 duration-500"
               >
                 <h2 className="text-[17px] font-ttc-bold text-white/90">
                   Способы связи
@@ -817,10 +819,21 @@ export default function AdDetail({
               </div>
             )}
 
+            <div className="mt-6">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                type="button"
+                onClick={handlePurchase}
+                className="mx-auto h-[52px] w-[92%] rounded-[17px] bg-white text-black font-sf-ui-bold text-[15px] active:bg-zinc-200 transition-colors shadow-[0_8px_20px_rgba(255,255,255,0.08)]"
+              >
+                Купить
+              </motion.button>
+            </div>
+
             {/* Recommendations */}
             {recommendations.length > 0 && (
-              <div className="mt-12 space-y-6 px-0 pb-8">
-                <div className="flex items-center justify-between px-1">
+              <div className="mt-12 space-y-6 -mx-4 pb-8">
+                <div className="flex items-center justify-between px-5">
                   <h2 className="text-[20px] font-ttc-bold text-white/95">Вам может понравиться</h2>
                   <div className="flex items-center gap-1 text-blue-400 text-[13px] font-sf-ui-medium">
                     Все <ArrowRight className="w-3.5 h-3.5" />
@@ -832,11 +845,7 @@ export default function AdDetail({
                   style={{
                     columnGap: 1,
                     rowGap: 1,
-                    paddingLeft: 4,
-                    paddingRight: 4,
-                    marginLeft: -24,
-                    marginRight: -24,
-                    width: 'calc(100% + 48px)',
+                    width: '100%',
                   }}
                 >
                   {recommendations.map((rec) => (
@@ -1261,3 +1270,5 @@ function MediaViewer({
     </motion.div>
   )
 }
+
+
