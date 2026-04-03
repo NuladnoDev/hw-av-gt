@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from 'motion/react'
 import { ChevronDown, ChevronLeft, ChevronRight, X, Sparkles, Star, ThumbsUp, CircleAlert, ShieldCheck, Share2, Flag, Check, MoreVertical, Info, Heart } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
-import { AdCard, type StoredAd } from './ads'
+import { AdCard, loadAdsFromStorage, type StoredAd } from './ads'
 
 
 const CONDITION_COLORS: Record<string, string> = {
@@ -112,36 +112,81 @@ export default function AdDetail({
   const [reportSent, setReportSent] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [recommendations, setRecommendations] = useState<StoredAd[]>([])
+  const [visibleRecommendations, setVisibleRecommendations] = useState(12)
+  const [showRecommendations, setShowRecommendations] = useState(true)
 
   useEffect(() => {
     // Load recommendations from same category or random fallback
-    const loadRecommendations = () => {
+    const toTokens = (value: string): string[] =>
+      value
+        .toLowerCase()
+        .split(/[^a-zа-яё0-9]+/i)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 3)
+
+    const baseTokens = new Set(toTokens(ad.title))
+
+    const getRelated = (allAds: StoredAd[]) => {
+      const sameCategory = allAds
+        .filter(item => item.id !== ad.id && item.category === ad.category)
+
+      const filteredByTopic = sameCategory.filter((item) => {
+        if (baseTokens.size === 0) return true
+        const itemTokens = toTokens(item.title)
+        return itemTokens.some((token) => baseTokens.has(token))
+      })
+
+      const source = filteredByTopic.length >= 2 ? filteredByTopic : sameCategory
+
+      return source
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 4)
+    }
+
+    const loadRecommendations = async () => {
       const savedAds = localStorage.getItem('hw-ads')
       if (savedAds) {
         try {
           const allAds = JSON.parse(savedAds) as StoredAd[]
-          let filtered = allAds
-            .filter(item => item.id !== ad.id && item.category === ad.category)
-          
-          // Fallback if no ads in same category
-          if (filtered.length === 0) {
-            filtered = allAds
-              .filter(item => item.id !== ad.id)
+          const shuffled = getRelated(allAds)
+
+          const hasLogoFallback = shuffled.some((item) => item.imageUrl === '/logo.svg')
+          if (hasLogoFallback) {
+            const freshAds = await loadAdsFromStorage()
+            if (freshAds.length > 0) {
+              const freshRelated = getRelated(freshAds)
+              if (freshRelated.length >= 2) {
+                setRecommendations(freshRelated)
+                setVisibleRecommendations(12)
+                setShowRecommendations(true)
+                return
+              }
+            }
           }
 
-          const shuffled = filtered
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 4)
-          setRecommendations(shuffled)
+          if (shuffled.length >= 2) {
+            setRecommendations(shuffled)
+            setVisibleRecommendations(12)
+            setShowRecommendations(true)
+          } else {
+            setRecommendations([])
+            setShowRecommendations(false)
+          }
         } catch (e) {
           console.error('Failed to parse ads for recommendations', e)
         }
+      } else {
+        setRecommendations([])
+        setShowRecommendations(false)
       }
     }
-    loadRecommendations()
+    void loadRecommendations()
     // Re-load if ads are updated elsewhere
-    window.addEventListener('ads-updated', loadRecommendations)
-    return () => window.removeEventListener('ads-updated', loadRecommendations)
+    const handleAdsUpdated = () => {
+      void loadRecommendations()
+    }
+    window.addEventListener('ads-updated', handleAdsUpdated)
+    return () => window.removeEventListener('ads-updated', handleAdsUpdated)
   }, [ad.id, ad.category])
 
   useEffect(() => {
@@ -201,10 +246,36 @@ export default function AdDetail({
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const imageScrollRef = useRef<HTMLDivElement | null>(null)
   const contactsRef = useRef<HTMLDivElement | null>(null)
+  const recommendationsAnchorRef = useRef<HTMLDivElement | null>(null)
 
   const { scrollXProgress } = useScroll({
     container: imageScrollRef,
   })
+
+  useEffect(() => {
+    if (!recommendations.length) return
+    const rootEl = scrollRef.current
+    const anchorEl = recommendationsAnchorRef.current
+    if (!rootEl || !anchorEl) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisibleRecommendations((prev) => prev + 12)
+          }
+        })
+      },
+      {
+        root: rootEl,
+        rootMargin: '220px 0px',
+        threshold: 0.1,
+      },
+    )
+
+    observer.observe(anchorEl)
+    return () => observer.disconnect()
+  }, [recommendations])
 
   const images =
     ad.imageUrls && ad.imageUrls.length > 0
@@ -456,7 +527,7 @@ export default function AdDetail({
               onClose()
             }
           }}
-          className="absolute left-5 z-[130] w-11 h-11 flex items-center justify-center rounded-[14px] bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
+          className="absolute left-5 z-[130] w-11 h-11 flex items-center justify-center rounded-full bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset, 10px))' }}
         >
           <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.5} />
@@ -466,7 +537,7 @@ export default function AdDetail({
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={toggleFavorite}
-          className="absolute right-[68px] z-[130] w-11 h-11 flex items-center justify-center rounded-[14px] bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
+          className="absolute right-[68px] z-[130] w-11 h-11 flex items-center justify-center rounded-full bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset, 10px))' }}
         >
           <Heart 
@@ -479,7 +550,7 @@ export default function AdDetail({
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={openMenu}
-          className="absolute right-5 z-[130] w-11 h-11 flex items-center justify-center rounded-[14px] bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
+          className="absolute right-5 z-[130] w-11 h-11 flex items-center justify-center rounded-full bg-black/35 backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-black/50"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset, 10px))' }}
         >
           <MoreVertical className="w-6 h-6 text-white" strokeWidth={2.5} />
@@ -657,121 +728,110 @@ export default function AdDetail({
                   </AnimatePresence>
                 </div>
               )}
-            </div>
-
-            {/* Characteristics */}
-            <div className="space-y-4 py-6 mt-4 rounded-[22px] bg-white/[0.02] border border-white/[0.05] px-3">
-              <h2 className="text-[17px] font-ttc-bold text-white/90">
-                Характеристики
-              </h2>
-              <div className="grid gap-y-3.5">
-                {mainSpecs.map((spec, idx) => (
-                  <div key={spec.label} className="flex items-baseline justify-between gap-4">
-                    <span className="text-[14px] text-white/40 font-sf-ui-light whitespace-nowrap">
-                      {spec.label}
-                    </span>
-                    <div className="h-px flex-1 bg-white/5 mb-1" />
-                    <span className="text-[14px] text-white/90 font-sf-ui-medium text-right">
-                      {spec.value}
-                    </span>
-                  </div>
-                ))}
-
-                <AnimatePresence initial={false}>
-                  {showAllSpecs && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                      className="overflow-hidden grid gap-y-3.5"
-                    >
-                      {extraSpecs.map((spec, idx) => (
-                        <div key={spec.label} className="flex items-baseline justify-between gap-4">
-                          <span className="text-[14px] text-white/40 font-sf-ui-light whitespace-nowrap">
-                            {spec.label}
-                          </span>
-                          <div className="h-px flex-1 bg-white/5 mb-1" />
-                          <span className="text-[14px] text-white/90 font-sf-ui-medium text-right">
-                            {spec.value}
-                          </span>
-                        </div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                
-                {hasExtraSpecs && (
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 text-[13px] text-blue-400 font-sf-ui-medium pt-2 active:opacity-60 transition-opacity"
-                    onClick={() => setShowAllSpecs(!showAllSpecs)}
-                  >
-                    {showAllSpecs ? 'Свернуть' : `Показать все (${specs.length})`}
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showAllSpecs ? 'rotate-180' : ''}`} />
-                  </button>
-                )}
+              <div className="mt-3">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={handlePurchase}
+                  className="group w-full flex items-center justify-center gap-3 -translate-x-14 text-[13px] font-sf-ui-semibold text-white/88 active:opacity-70 transition-opacity"
+                >
+                  <span className="h-[44px] w-[44px] rounded-full bg-white text-black shadow-[0_8px_18px_rgba(0,0,0,0.28)] flex items-center justify-center">
+                    <ChevronRight size={22} className="transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                  <span>{'\u041f\u0440\u0438\u043e\u0431\u0440\u0435\u0441\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \u043f\u043b\u043e\u0449\u0430\u0434\u043a\u0443'}</span>
+                </motion.button>
               </div>
-            </div>
+              <div className="mt-4 h-px w-full bg-white/[0.06]" />
 
-            {/* Description */}
-            {descriptionText && (
-              <div className="space-y-4 py-6 mt-4 rounded-[22px] bg-white/[0.02] border border-white/[0.05] px-3">
+              <div className="space-y-4 pt-1">
                 <h2 className="text-[17px] font-ttc-bold text-white/90">
-                  Описание
+                  Характеристики
                 </h2>
-                <div className="relative">
-                  <p
-                    className={`text-[15px] text-white/70 font-sf-ui-light leading-relaxed transition-all duration-300 ${
-                      !showFullDescription && descriptionText.length > 200 ? 'line-clamp-4' : ''
-                    }`}
-                  >
-                    {descriptionText}
-                  </p>
-                  {!showFullDescription && descriptionText.length > 200 && (
+                <div className="grid gap-y-3.5">
+                  {mainSpecs.map((spec) => (
+                    <div key={spec.label} className="flex items-baseline justify-between gap-4">
+                      <span className="text-[14px] text-white/40 font-sf-ui-light whitespace-nowrap">
+                        {spec.label}
+                      </span>
+                      <div className="h-px flex-1 bg-white/5 mb-1" />
+                      <span className="text-[14px] text-white/90 font-sf-ui-medium text-right">
+                        {spec.value}
+                      </span>
+                    </div>
+                  ))}
+
+                  <AnimatePresence initial={false}>
+                    {showAllSpecs && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden grid gap-y-3.5"
+                      >
+                        {extraSpecs.map((spec) => (
+                          <div key={spec.label} className="flex items-baseline justify-between gap-4">
+                            <span className="text-[14px] text-white/40 font-sf-ui-light whitespace-nowrap">
+                              {spec.label}
+                            </span>
+                            <div className="h-px flex-1 bg-white/5 mb-1" />
+                            <span className="text-[14px] text-white/90 font-sf-ui-medium text-right">
+                              {spec.value}
+                            </span>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {hasExtraSpecs && (
                     <button
                       type="button"
-                      className="mt-2 text-[14px] text-blue-400 font-sf-ui-medium active:opacity-60 transition-opacity"
-                      onClick={() => setShowFullDescription(true)}
+                      className="flex items-center gap-2 text-[13px] text-blue-400 font-sf-ui-medium pt-2 active:opacity-60 transition-opacity"
+                      onClick={() => setShowAllSpecs(!showAllSpecs)}
                     >
-                      Читать полностью
-                    </button>
-                  )}
-                  {showFullDescription && descriptionText.length > 200 && (
-                    <button
-                      type="button"
-                      className="mt-2 text-[14px] text-blue-400 font-sf-ui-medium active:opacity-60 transition-opacity"
-                      onClick={() => setShowFullDescription(false)}
-                    >
-                      Свернуть
+                      {showAllSpecs ? 'Свернуть' : `Показать все (${specs.length})`}
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showAllSpecs ? 'rotate-180' : ''}`} />
                     </button>
                   )}
                 </div>
               </div>
-            )}
 
-            <div className="mt-4 grid grid-cols-2 gap-2.5 px-1">
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={handlePurchase}
-                className="h-[52px] rounded-[16px] bg-[#1F1F1F]/95 border border-white/[0.07] text-white font-sf-ui-bold text-[15px] active:bg-[#292929] transition-colors"
-              >
-                Купить
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => {
-                  setReportAdOpen(true)
-                  setReportAdLocked(true)
-                  setReportSent(false)
-                  setTimeout(() => setReportAdLocked(false), 500)
-                }}
-                className="h-[52px] rounded-[16px] bg-[#1F1F1F]/95 border border-white/[0.07] text-white/90 font-sf-ui-bold text-[15px] active:bg-[#292929] transition-colors"
-              >
-                Пожаловаться
-              </motion.button>
+              {descriptionText && (
+                <>
+                  <div className="h-px w-full bg-white/[0.06]" />
+                  <div className="space-y-3">
+                    <h2 className="text-[17px] font-ttc-bold text-white/90">Описание</h2>
+                    <div className="relative">
+                      <p
+                        className={`text-[15px] text-white/70 font-sf-ui-light leading-relaxed transition-all duration-300 ${
+                          !showFullDescription && descriptionText.length > 200 ? 'line-clamp-4' : ''
+                        }`}
+                      >
+                        {descriptionText}
+                      </p>
+                      {!showFullDescription && descriptionText.length > 200 && (
+                        <button
+                          type="button"
+                          className="mt-2 text-[14px] text-blue-400 font-sf-ui-medium active:opacity-60 transition-opacity"
+                          onClick={() => setShowFullDescription(true)}
+                        >
+                          Читать полностью
+                        </button>
+                      )}
+                      {showFullDescription && descriptionText.length > 200 && (
+                        <button
+                          type="button"
+                          className="mt-2 text-[14px] text-blue-400 font-sf-ui-medium active:opacity-60 transition-opacity"
+                          onClick={() => setShowFullDescription(false)}
+                        >
+                          Свернуть
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <motion.button
@@ -787,7 +847,7 @@ export default function AdDetail({
               className="mt-5 w-full px-1 py-3 text-left active:opacity-80 transition-opacity"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-14 h-14 rounded-[16px] bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
                   {ad.storeId && storeInfo ? (
                     storeInfo.avatar_url ? (
                       <img src={storeInfo.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -808,13 +868,13 @@ export default function AdDetail({
                 <div className="min-w-0 flex-1">
                   <div className="text-[22px] font-ttc-bold text-white/95 truncate">{sellerName}</div>
                   <div className="text-[13px] text-white/45 font-sf-ui-medium mt-0.5">{sellerTypeLabel}</div>
-                  <div className="text-[13px] text-blue-400 font-sf-ui-medium mt-2">Открыть профиль</div>
+                  <div className="text-[13px] text-emerald-400 font-sf-ui-medium mt-2">Открыть профиль</div>
                 </div>
               </div>
             </motion.button>
 
             <div className="mt-3 space-y-3 px-1">
-              <h2 className="text-[22px] font-ttc-bold text-white/95">Найти больше вариантов</h2>
+              <h2 className="text-[21px] font-ttc-bold text-white/72">Найти больше вариантов</h2>
               <div className="space-y-2.5">
                 {findMoreQueries.map((query) => (
                   <button
@@ -891,10 +951,17 @@ export default function AdDetail({
             )}
 
             {/* Recommendations */}
-            {recommendations.length > 0 && (
-              <div className="mt-12 space-y-6 -mx-4 overflow-hidden pb-8">
-                <div className="flex items-center justify-start px-4">
-                  <h2 className="text-[20px] font-ttc-bold text-white/95">Вам может понравиться</h2>
+            {showRecommendations && recommendations.length > 0 && (
+              <div className="mt-12 -mx-4 overflow-hidden rounded-[22px] border border-white/[0.05] bg-white/[0.02] pb-6 pt-5">
+                <div className="flex items-start justify-between px-4">
+                  <h2 className="-translate-y-0.5 text-[20px] font-ttc-bold text-white/95">{'\u0412\u0430\u043c \u043c\u043e\u0436\u0435\u0442 \u043f\u043e\u043d\u0440\u0430\u0432\u0438\u0442\u044c\u0441\u044f'}</h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowRecommendations(false)}
+                    className="text-[13px] font-sf-ui-medium text-white/58 active:opacity-70 transition-opacity"
+                  >
+                    {'\u0421\u043a\u0440\u044b\u0442\u044c'}
+                  </button>
                 </div>
                 
                 <div 
@@ -905,9 +972,12 @@ export default function AdDetail({
                     width: '100%',
                   }}
                 >
-                  {recommendations.map((rec) => (
+                  {Array.from(
+                    { length: Math.max(visibleRecommendations, recommendations.length) },
+                    (_, index) => recommendations[index % recommendations.length],
+                  ).map((rec, index) => (
                     <AdCard
-                      key={rec.id}
+                      key={`${rec.id}-${index}`}
                       id={rec.id}
                       title={rec.title}
                       price={rec.price}
@@ -927,6 +997,7 @@ export default function AdDetail({
                     />
                   ))}
                 </div>
+                <div ref={recommendationsAnchorRef} className="h-2 w-full" />
               </div>
             )}
           </div>
@@ -1327,6 +1398,7 @@ function MediaViewer({
     </motion.div>
   )
 }
+
 
 
 
