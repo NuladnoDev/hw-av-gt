@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from 'motion/react'
-import { ChevronDown, ChevronLeft, ChevronRight, X, Sparkles, Star, ThumbsUp, CircleAlert, ShieldCheck, Share2, Flag, Check, MoreVertical, Info, Heart, ArrowRight } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, X, Sparkles, Star, ThumbsUp, CircleAlert, ShieldCheck, Share2, Flag, Check, MoreVertical, Info, Heart } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 import { AdCard, type StoredAd } from './ads'
 
@@ -98,7 +98,7 @@ export default function AdDetail({
   onClose: () => void
   onOpenSellerProfile?: (ad: StoredAd) => void
   onOpenStoreProfile?: (storeId: string) => void
-  onOpenChat?: (ad: StoredAd, receiver: { id: string; name: string; avatar: string | null }) => void
+  onOpenChat?: (ad: StoredAd, receiver: { id: string; name: string; avatar: string | null }, initialMessage?: string) => void
 }) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [mediaViewerOpen, setMediaViewerOpen] = useState(false)
@@ -246,13 +246,44 @@ export default function AdDetail({
   const descriptionText =
     ad.description && ad.description.trim().length > 0 ? ad.description : ad.title
 
-  const handlePurchase = () => {
+  const sellerName = ad.storeId && storeInfo ? storeInfo.name : (ad.userTag || 'Продавец')
+  const sellerTypeLabel = ad.storeId ? 'Магазин' : 'Частное лицо'
+
+  const openChatWithMessage = (text?: string) => {
     if (onOpenChat && ad.userId) {
-      onOpenChat(ad, {
-        id: ad.userId,
-        name: ad.storeId && storeInfo ? storeInfo.name : (ad.userTag || 'Продавец'),
-        avatar: ad.storeId && storeInfo ? storeInfo.avatar_url : sellerAvatar
-      })
+      onOpenChat(
+        ad,
+        {
+          id: ad.userId,
+          name: sellerName,
+          avatar: ad.storeId && storeInfo ? storeInfo.avatar_url : sellerAvatar,
+        },
+        text,
+      )
+      return true
+    }
+    return false
+  }
+
+  const titleTokens = ad.title
+    .split(/[\s,./\\|:;"'`~!@#$%^&*()_+=?<>[\]{}-]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3)
+    .slice(0, 2)
+
+  const findMoreQueries = Array.from(
+    new Set([
+      ad.title,
+      ...titleTokens.map((token) => `${token} в ${locationText}`),
+      ...titleTokens.map((token) => `${token} ${ad.condition || ''}`.trim()),
+      categoryLabel ? `${categoryLabel} ${locationText}` : '',
+      `${ad.title} дешевле`,
+      `${ad.title} с доставкой`,
+    ].filter(Boolean)),
+  ).slice(0, 6)
+
+  const handlePurchase = () => {
+    if (openChatWithMessage()) {
       return
     }
     setContactsVisible((prev) => {
@@ -399,6 +430,13 @@ export default function AdDetail({
   const extraSpecs = specs.slice(mainSpecsCount)
   const hasExtraSpecs = extraSpecs.length > 0
 
+  const applyFindMoreQuery = (query: string) => {
+    onClose()
+    window.dispatchEvent(new CustomEvent('ads-apply-search', {
+      detail: { query, category: ad.category ?? null },
+    }))
+  }
+
   return (
     <motion.div
       className="absolute inset-0 z-[120] flex flex-col bg-[#0D0D0D] text-white"
@@ -449,9 +487,9 @@ export default function AdDetail({
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden" ref={scrollRef}>
           {/* Images */}
-          <div className="relative group pt-2 px-3">
+          <div className="relative group pt-2">
             {images.length > 0 ? (
-              <div className="relative overflow-hidden rounded-[26px] bg-zinc-950 border border-white/[0.06]">
+              <div className="relative overflow-hidden rounded-t-[26px] bg-zinc-950 border border-white/[0.06] border-b-0">
                 <div 
                   ref={imageScrollRef}
                   className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hidden"
@@ -529,70 +567,21 @@ export default function AdDetail({
 
           <div className="px-4 pb-24">
             {/* Title & Seller */}
-            <div className="py-5 flex flex-col gap-4 rounded-[24px] bg-white/[0.025] border border-white/[0.05] px-4 mt-3">
-              <div className="flex items-start justify-between">
-                <div className="flex flex-col gap-1.5 flex-1 pr-4">
-                  <h1 className="text-[26px] font-ttc-bold leading-[1.15] text-white/95 tracking-tight">
-                    {ad.title}
-                  </h1>
-                  {categoryLabel && (
-                    <div className="text-[13px] text-white/40 font-sf-ui-medium uppercase tracking-wider">
-                      {categoryLabel}
-                    </div>
-                  )}
-                </div>
-
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  type="button"
-                  onClick={() => {
-                    if (ad.storeId && onOpenStoreProfile) {
-                      onOpenStoreProfile(ad.storeId)
-                    } else if (onOpenSellerProfile) {
-                      onOpenSellerProfile(ad)
-                    }
-                  }}
-                  className="flex items-center gap-3 group shrink-0"
-                >
-                  <div className={`w-12 h-12 rounded-full bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center group-hover:bg-white/10 transition-colors`}>
-                    {ad.storeId && storeInfo ? (
-                      storeInfo.avatar_url ? (
-                        <img src={storeInfo.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[16px] font-ttc-bold">
-                          <span className="translate-y-[0.5px]">
-                            {storeInfo.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )
-                    ) : sellerAvatar ? (
-                      <img src={sellerAvatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[16px] font-ttc-bold">
-                        <span className="translate-y-[0.5px]">
-                          {sellerTag.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+            <div className="-mx-4 py-5 flex flex-col gap-4 rounded-b-[24px] rounded-t-none bg-white/[0.025] border border-white/[0.05] border-t-0 px-4 mt-0">
+              <div className="flex flex-col gap-1.5">
+                <h1 className="text-[26px] font-ttc-bold leading-[1.15] text-white/95 tracking-tight">
+                  {ad.title}
+                </h1>
+                {categoryLabel && (
+                  <div className="text-[13px] text-white/40 font-sf-ui-medium uppercase tracking-wider">
+                    {categoryLabel}
                   </div>
-                  <div className="flex flex-col items-start hidden xs:flex">
-                    <span className="text-[15px] font-ttc-bold text-white group-hover:text-blue-400 transition-colors truncate max-w-[100px]">
-                      {ad.storeId && storeInfo ? storeInfo.name : ad.userTag || 'Продавец'}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-white/40 font-sf-ui-light uppercase tracking-wider">
-                        {ad.storeId ? 'Магазин' : 'Продавец'}
-                      </span>
-                    </div>
-                  </div>
-                </motion.button>
+                )}
               </div>
               
-              <div className="inline-flex w-fit items-center gap-2 rounded-[14px] px-4 py-2 bg-white/[0.06] border border-white/[0.07]">
-                <span className="text-[28px] font-ttc-bold leading-none tracking-tight text-white/95">
-                  {Number(ad.price).toLocaleString('ru-RU')} ₽
-                </span>
-              </div>
+              <span className="text-[30px] font-ttc-bold leading-none tracking-tight text-white/95">
+                {Number(ad.price).toLocaleString('ru-RU')} ₽
+              </span>
 
               <div className="flex flex-wrap items-center gap-2.5">
                 {ad.condition === 'Новое' ? (
@@ -761,6 +750,88 @@ export default function AdDetail({
               </div>
             )}
 
+            <div className="mt-4 grid grid-cols-2 gap-2.5 px-1">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                type="button"
+                onClick={handlePurchase}
+                className="h-[52px] rounded-[16px] bg-[#1F1F1F]/95 border border-white/[0.07] text-white font-sf-ui-bold text-[15px] active:bg-[#292929] transition-colors"
+              >
+                Купить
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                type="button"
+                onClick={() => {
+                  setReportAdOpen(true)
+                  setReportAdLocked(true)
+                  setReportSent(false)
+                  setTimeout(() => setReportAdLocked(false), 500)
+                }}
+                className="h-[52px] rounded-[16px] bg-[#1F1F1F]/95 border border-white/[0.07] text-white/90 font-sf-ui-bold text-[15px] active:bg-[#292929] transition-colors"
+              >
+                Пожаловаться
+              </motion.button>
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.99 }}
+              type="button"
+              onClick={() => {
+                if (ad.storeId && onOpenStoreProfile) {
+                  onOpenStoreProfile(ad.storeId)
+                } else if (onOpenSellerProfile) {
+                  onOpenSellerProfile(ad)
+                }
+              }}
+              className="mt-5 w-full px-1 py-3 text-left active:opacity-80 transition-opacity"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-14 h-14 rounded-[16px] bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                  {ad.storeId && storeInfo ? (
+                    storeInfo.avatar_url ? (
+                      <img src={storeInfo.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[18px] font-ttc-bold">
+                        <span>{storeInfo.name.charAt(0).toUpperCase()}</span>
+                      </div>
+                    )
+                  ) : sellerAvatar ? (
+                    <img src={sellerAvatar} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[18px] font-ttc-bold">
+                      <span>{sellerTag.charAt(0).toUpperCase()}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="text-[22px] font-ttc-bold text-white/95 truncate">{sellerName}</div>
+                  <div className="text-[13px] text-white/45 font-sf-ui-medium mt-0.5">{sellerTypeLabel}</div>
+                  <div className="text-[13px] text-blue-400 font-sf-ui-medium mt-2">Открыть профиль</div>
+                </div>
+              </div>
+            </motion.button>
+
+            <div className="mt-3 space-y-3 px-1">
+              <h2 className="text-[22px] font-ttc-bold text-white/95">Найти больше вариантов</h2>
+              <div className="space-y-2.5">
+                {findMoreQueries.map((query) => (
+                  <button
+                    key={query}
+                    type="button"
+                    onClick={() => applyFindMoreQuery(query)}
+                    className="w-full px-0 py-2.5 flex items-center justify-between active:opacity-80 transition-opacity"
+                  >
+                    <span className="text-[14px] text-white/82 font-sf-ui-medium text-left pr-3 truncate">
+                      {query}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-white/35 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Contacts Section */}
             {contactsVisible && (
               <div 
@@ -819,25 +890,11 @@ export default function AdDetail({
               </div>
             )}
 
-            <div className="mt-6">
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={handlePurchase}
-                className="mx-auto h-[52px] w-[92%] rounded-[17px] bg-white text-black font-sf-ui-bold text-[15px] active:bg-zinc-200 transition-colors shadow-[0_8px_20px_rgba(255,255,255,0.08)]"
-              >
-                Купить
-              </motion.button>
-            </div>
-
             {/* Recommendations */}
             {recommendations.length > 0 && (
-              <div className="mt-12 space-y-6 -mx-4 pb-8">
-                <div className="flex items-center justify-between px-5">
+              <div className="mt-12 space-y-6 -mx-4 overflow-hidden pb-8">
+                <div className="flex items-center justify-start px-4">
                   <h2 className="text-[20px] font-ttc-bold text-white/95">Вам может понравиться</h2>
-                  <div className="flex items-center gap-1 text-blue-400 text-[13px] font-sf-ui-medium">
-                    Все <ArrowRight className="w-3.5 h-3.5" />
-                  </div>
                 </div>
                 
                 <div 
@@ -1270,5 +1327,6 @@ function MediaViewer({
     </motion.div>
   )
 }
+
 
 

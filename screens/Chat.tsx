@@ -36,6 +36,7 @@ export default function Chat({
   receiverName, 
   receiverAvatar,
   adContext,
+  initialMessage = '',
   contacts: initialContacts = []
 }: { 
   onClose: () => void 
@@ -43,6 +44,7 @@ export default function Chat({
   receiverName?: string
   receiverAvatar?: string | null
   adContext?: StoredAd | null
+  initialMessage?: string
   contacts?: Array<{ type: 'vk' | 'telegram', url: string }>
 }) {
   const [scale, setScale] = useState(1)
@@ -305,6 +307,11 @@ export default function Chat({
 
     initChat()
   }, [receiverId])
+
+  useEffect(() => {
+    if (!initialMessage || initialMessage.trim().length === 0) return
+    setNewMessage(initialMessage)
+  }, [initialMessage])
 
   const handleSendMessage = async (text: string, context: StoredAd | null = null) => {
     if (!text.trim() && !context) return

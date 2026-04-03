@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart, Check } from 'lucide-react'
+import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart, Check, X } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import AdsCreate, { CONDITION_OPTIONS } from './Ads_Create'
 import AdsEdit from './Ads_Edit'
@@ -692,6 +692,27 @@ export default function Ads({
     </div>
   )
 
+  const EmptySearchIllustration = () => (
+    <motion.svg
+      width="120"
+      height="92"
+      viewBox="0 0 120 92"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      animate={{ y: [0, -3, 0] }}
+      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      className="mx-auto"
+    >
+      <rect x="10" y="12" width="76" height="56" rx="14" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.14)" />
+      <rect x="22" y="26" width="40" height="5" rx="2.5" fill="rgba(255,255,255,0.22)" />
+      <rect x="22" y="36" width="30" height="4" rx="2" fill="rgba(255,255,255,0.12)" />
+      <rect x="22" y="44" width="24" height="4" rx="2" fill="rgba(255,255,255,0.08)" />
+      <circle cx="86" cy="62" r="16" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.24)" />
+      <path d="M93 69L103 79" stroke="rgba(255,255,255,0.5)" strokeWidth="3" strokeLinecap="round" />
+      <path d="M80.5 62H91.5" stroke="rgba(255,255,255,0.58)" strokeWidth="2.5" strokeLinecap="round" />
+    </motion.svg>
+  )
+
   const [createOpen, setCreateOpen] = useState(false)
   const [items, setItems] = useState<StoredAd[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -781,6 +802,21 @@ export default function Ads({
     }
     window.addEventListener('settings-categories-updated', handleUpdate)
     return () => window.removeEventListener('settings-categories-updated', handleUpdate)
+  }, [])
+
+  useEffect(() => {
+    const handleApplySearch = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { query?: string; category?: string | null } | undefined
+      const query = typeof detail?.query === 'string' ? detail.query.trim() : ''
+      if (!query) return
+      setSearchQuery(query)
+      setSelectedCategory(null)
+      if (listRef.current) {
+        listRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }
+    window.addEventListener('ads-apply-search', handleApplySearch)
+    return () => window.removeEventListener('ads-apply-search', handleApplySearch)
   }, [])
 
   const checkHasContacts = async (): Promise<boolean> => {
@@ -1148,7 +1184,27 @@ export default function Ads({
                     onBlur={() => setIsSearchActive(false)}
                   />
 
-                  <div className="relative" ref={sortMenuRef}>
+                  <div className="relative flex items-center" ref={sortMenuRef}>
+                    <AnimatePresence>
+                      {searchQuery.trim().length > 0 && (
+                        <motion.button
+                          initial={{ opacity: 0, scale: 0.9, x: 8 }}
+                          animate={{ opacity: 1, scale: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, x: 8 }}
+                          transition={{ duration: 0.16 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setSearchQuery('')
+                            setIsSortMenuOpen(false)
+                          }}
+                          className="h-[36px] w-[36px] flex items-center justify-center"
+                          aria-label="Очистить поиск"
+                        >
+                          <X className="w-5 h-5 text-white/45" />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+
                     <AnimatePresence>
                       {!isSearchActive && (
                         <motion.button
@@ -1320,49 +1376,64 @@ export default function Ads({
           </div>
         </motion.div>
 
-        <div
-          className="w-full rounded-[20px] bg-white/[0.028] grid grid-cols-2 pt-[1px] pb-4"
-          style={{
-            columnGap: ADS_GRID_GAP,
-            rowGap: ADS_GRID_GAP,
-          }}
-        >
-          {initialLoading
-            ? Array.from({ length: 6 }).map((_, index) => (
-                <AdCardSkeleton key={`skeleton-${index}`} />
-              ))
-            : visibleItems.map((ad) => {
-                const isOwn =
-                  (currentUserId !== null && ad.userId === currentUserId) ||
-                  (currentUserAltId !== null && ad.userId === currentUserAltId)
-                return (
-                  <AdCard
-                    key={ad.id}
-                    id={ad.id}
-                    title={ad.title}
-                    price={ad.price}
-                    imageUrl={ad.imageUrl}
-                    username={(ad.userTag ?? 'user').replace(/^@/, '')}
-                    condition={ad.condition ?? undefined}
-                    location={ad.location ?? undefined}
-                    createdAt={ad.createdAt}
-                    specs={ad.specs}
-                    onDelete={isOwn ? () => deleteAdById(ad.id) : undefined}
-                    isOwn={isOwn}
-                    storeId={ad.storeId}
-                    storeName={ad.storeName}
-                    storeAvatarUrl={ad.storeAvatarUrl}
-                    onClick={() => {
-                      if (onOpenAd) {
-                        onOpenAd(ad)
-                      }
-                    }}
-                    onEdit={isOwn ? () => setEditingAd(ad) : undefined}
-                    onOpenStore={onOpenStoreById}
-                  />
-                )
-              })}
-        </div>
+        {initialLoading ? (
+          <div
+            className="w-full rounded-[20px] bg-white/[0.028] grid grid-cols-2 pt-[1px] pb-4"
+            style={{ columnGap: ADS_GRID_GAP, rowGap: ADS_GRID_GAP }}
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <AdCardSkeleton key={`skeleton-${index}`} />
+            ))}
+          </div>
+        ) : visibleItems.length === 0 ? (
+          <div className="w-full min-h-[300px] rounded-[20px] bg-white/[0.028] border border-white/[0.05] px-5 py-8 flex flex-col items-center justify-center text-center">
+            <EmptySearchIllustration />
+            <div className="mt-5 text-[20px] font-ttc-bold text-white/92">Ничего не найдено</div>
+            <div className="mt-2 text-[14px] text-white/45 max-w-[260px] leading-relaxed">
+              Попробуйте изменить запрос или выбрать другую категорию
+            </div>
+          </div>
+        ) : (
+          <div
+            className="w-full rounded-[20px] bg-white/[0.028] grid grid-cols-2 pt-[1px] pb-4"
+            style={{
+              columnGap: ADS_GRID_GAP,
+              rowGap: ADS_GRID_GAP,
+            }}
+          >
+            {visibleItems.map((ad) => {
+              const isOwn =
+                (currentUserId !== null && ad.userId === currentUserId) ||
+                (currentUserAltId !== null && ad.userId === currentUserAltId)
+              return (
+                <AdCard
+                  key={ad.id}
+                  id={ad.id}
+                  title={ad.title}
+                  price={ad.price}
+                  imageUrl={ad.imageUrl}
+                  username={(ad.userTag ?? 'user').replace(/^@/, '')}
+                  condition={ad.condition ?? undefined}
+                  location={ad.location ?? undefined}
+                  createdAt={ad.createdAt}
+                  specs={ad.specs}
+                  onDelete={isOwn ? () => deleteAdById(ad.id) : undefined}
+                  isOwn={isOwn}
+                  storeId={ad.storeId}
+                  storeName={ad.storeName}
+                  storeAvatarUrl={ad.storeAvatarUrl}
+                  onClick={() => {
+                    if (onOpenAd) {
+                      onOpenAd(ad)
+                    }
+                  }}
+                  onEdit={isOwn ? () => setEditingAd(ad) : undefined}
+                  onOpenStore={onOpenStoreById}
+                />
+              )
+            })}
+          </div>
+        )}
       </div>
       {createOpen && (
         <AdsCreate

@@ -1,6 +1,6 @@
 {
   "packageId": "app.vercel.hw_project_omega.twa",
-  "host": "hw-project-omega.vercel.app/manifest.json",
+  "host": "hw-project-omega.vercel.app",
   "name": "hw-project",
   "launcherName": "hw-project",
   "display": "fullscreen",

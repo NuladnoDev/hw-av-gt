@@ -30,6 +30,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [activeChatAd, setActiveChatAd] = useState<StoredAd | null>(null)
   const [chatReceiver, setChatReceiver] = useState<{ id: string; name: string; avatar: string | null } | null>(null)
+  const [chatInitialMessage, setChatInitialMessage] = useState('')
   
   useEffect(() => {
     const ua = navigator.userAgent || navigator.vendor || ''
@@ -1768,9 +1769,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               setSelectedAd(null)
             }}
             onOpenStoreProfile={openStoreProfile}
-            onOpenChat={(ad, receiver) => {
+            onOpenChat={(ad, receiver, initialMessage) => {
               setChatReceiver(receiver)
               setActiveChatAd(ad)
+              setChatInitialMessage(initialMessage ?? '')
               setChatOpen(true)
             }}
           />
@@ -1816,11 +1818,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               setChatOpen(false)
               setActiveChatAd(null)
               setChatReceiver(null)
+              setChatInitialMessage('')
             }}
             receiverId={chatReceiver.id}
             receiverName={chatReceiver.name}
             receiverAvatar={chatReceiver.avatar}
             adContext={activeChatAd}
+            initialMessage={chatInitialMessage}
             contacts={(() => {
               if (!activeChatAd?.userId) return []
               try {

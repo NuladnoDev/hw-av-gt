@@ -22,7 +22,7 @@ plugins {
 
 def twaManifest = [
     applicationId: 'app.vercel.hw_project_omega.twa',
-    hostName: 'hw-project-omega.vercel.app/manifest.json', // The domain being opened in the TWA.
+    hostName: 'hw-project-omega.vercel.app', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
     name: 'hw-project', // The application name.
     launcherName: 'hw-project', // The name shown on the Android Launcher.
