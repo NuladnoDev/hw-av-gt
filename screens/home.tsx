@@ -1,8 +1,8 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { RefreshCcw, ShoppingBag, User, Settings, Plus, ShoppingCart, Bell, ChevronRight, Heart, ChevronLeft, Check } from 'lucide-react'
+import { RefreshCcw, ShoppingBag, Bell, ChevronRight, Heart, ChevronLeft, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import Profile from './profile'
 import StoreProfile from './StoreProfile'
@@ -23,6 +23,20 @@ import Chat from './Chat'
 import Favorites from './Favorites'
 
 export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
+  type ChatPreview = {
+    id: string
+    receiverId: string
+    receiverName: string
+    receiverAvatar: string | null
+    adId: string | null
+    adTitle: string | null
+    isDirect: boolean
+    updatedAt: string
+    lastMessage: string
+    lastMessageSenderId: string | null
+    lastMessageReadAt: string | null
+  }
+
   const [scale, setScale] = useState(1)
   const [isStandalone, setIsStandalone] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
@@ -44,10 +58,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     setShowIosTip(ios && !standalone)
   }, [])
 
-  const [tab, setTab] = useState<'ads' | 'profile' | 'store'>('ads')
+  const [tab, setTab] = useState<'ads' | 'profile' | 'messages'>('ads')
   const [profileTab, setProfileTab] = useState<'ads' | 'about' | 'friends' | 'favorites'>('favorites')
 
-  const NavIcon = ({ type, active }: { type: 'ads' | 'store' | 'create' | 'profile', active: boolean }) => {
+  const NavIcon = ({ type, active }: { type: 'ads' | 'messages' | 'create' | 'profile', active: boolean }) => {
     switch (type) {
       case 'ads':
         return (
@@ -68,7 +82,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             <rect x="3" y="14" width="7" height="7" rx="1" fill="none" />
           </motion.svg>
         )
-      case 'store':
+      case 'messages':
         return (
           <motion.svg
             width="24"
@@ -81,8 +95,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             strokeLinejoin="round"
             animate={active ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
           >
-            <path d="M3 21h18" fill="none" />
-            <path d="M3 7v1a3 3 0 0 0 6 0V7m6 0v1a3 3 0 0 0 6 0V7M3 7l2-4h14l2 4M5 21V10.85M19 21V10.85M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4" fill="none" />
+            <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5H7l-4 2V12A8.5 8.5 0 0 1 11.5 3.5h1A8.5 8.5 0 0 1 21 12Z" fill="none" />
+            <path d="M8.5 10.5h7M8.5 14h5" fill="none" />
           </motion.svg>
         )
       case 'create':
@@ -175,6 +189,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   const PATCH_NOTES_VERSION = '2026-04-02-2'
   const [patchNotesOpen, setPatchNotesOpen] = useState(false)
+  const [storeCatalogOpen, setStoreCatalogOpen] = useState(false)
+  const [chatPreviews, setChatPreviews] = useState<ChatPreview[]>([])
+  const [messagesQuery, setMessagesQuery] = useState('')
+  const [messagesSearchResults, setMessagesSearchResults] = useState<Array<{id: string, tag: string, avatarUrl: string | null}>>([])
+  const [messagesSearchLoading, setMessagesSearchLoading] = useState(false)
+  const [chatSwipeOffset, setChatSwipeOffset] = useState<Record<string, number>>({})
+  const [chatSwipeTracking, setChatSwipeTracking] = useState<{ id: string; startX: number } | null>(null)
 
   const openNotifications = () => {
     setNotificationsClosing(false)
@@ -377,6 +398,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     setSelectedAd(null)
     setSupportOpen(false)
     setFavoritesOpen(false)
+    setStoreCatalogOpen(false)
   }
 
   const searchUsers = async (query: string) => {
@@ -461,6 +483,71 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       setUserSearchResults([])
     } finally {
       setUserSearchLoading(false)
+    }
+  }
+
+  const searchUsersForMessages = async (query: string) => {
+    setMessagesQuery(query)
+    if (!query.trim() || query.trim().length < 2) {
+      setMessagesSearchResults([])
+      return
+    }
+    setMessagesSearchLoading(true)
+    try {
+      const client = getSupabase()
+      if (!client) {
+        setMessagesSearchResults([])
+        return
+      }
+      const { data, error } = await client
+        .from('profiles')
+        .select('id, tag, avatar_url')
+        .ilike('tag', `%${query}%`)
+        .limit(12)
+      if (error) {
+        setMessagesSearchResults([])
+        return
+      }
+      const results = (data || []).map((user) => ({
+        id: user.id,
+        tag: user.tag || 'user',
+        avatarUrl: user.avatar_url && user.avatar_url.startsWith('http') ? user.avatar_url : null,
+      }))
+      const filtered = currentUserId ? results.filter((user) => user.id !== currentUserId) : results
+      setMessagesSearchResults(filtered)
+    } catch {
+      setMessagesSearchResults([])
+    } finally {
+      setMessagesSearchLoading(false)
+    }
+  }
+
+  const deleteChatThread = (chat: ChatPreview) => {
+    if (!currentUserId) return
+    const scope = chat.adId ? `ad:${chat.adId}` : 'direct'
+    const ownerThreadKey = `hw-chat-thread:${currentUserId}:${chat.receiverId}:${scope}`
+    const ownerPreviewsKey = `hw-chat-previews:${currentUserId}`
+    try {
+      localStorage.removeItem(ownerThreadKey)
+      const raw = localStorage.getItem(ownerPreviewsKey)
+      const parsed = raw ? (JSON.parse(raw) as ChatPreview[]) : []
+      const next = (Array.isArray(parsed) ? parsed : []).filter((item) => item.id !== chat.id)
+      localStorage.setItem(ownerPreviewsKey, JSON.stringify(next))
+      setChatPreviews(next)
+      setChatSwipeOffset((prev) => {
+        const copy = { ...prev }
+        delete copy[chat.id]
+        return copy
+      })
+      const peerThreadKey = `hw-chat-thread:${chat.receiverId}:${currentUserId}:${scope}`
+      const peerPreviewsKey = `hw-chat-previews:${chat.receiverId}`
+      localStorage.removeItem(peerThreadKey)
+      const peerRaw = localStorage.getItem(peerPreviewsKey)
+      const peerParsed = peerRaw ? (JSON.parse(peerRaw) as ChatPreview[]) : []
+      const peerNext = (Array.isArray(peerParsed) ? peerParsed : []).filter((item) => item.id !== `${currentUserId}:${scope}`)
+      localStorage.setItem(peerPreviewsKey, JSON.stringify(peerNext))
+      window.dispatchEvent(new CustomEvent('chat-previews-updated'))
+    } catch {
     }
   }
 
@@ -619,7 +706,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   useEffect(() => {
     const handleCloseStoreProfile = () => {
       closeAllWindows()
-      setTab('store')
+      setTab('profile')
+      setStoreCatalogOpen(true)
       setViewStoreId(null)
       setViewProfileMode('own')
       setViewProfileUserId(null)
@@ -640,6 +728,94 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       window.removeEventListener('open-favorites', handleOpenFavorites)
     }
   }, [])
+  useEffect(() => {
+    const loadChatPreviews = async () => {
+      if (!currentUserId) {
+        setChatPreviews([])
+        return
+      }
+      try {
+        const raw = localStorage.getItem(`hw-chat-previews:${currentUserId}`)
+        const parsed = raw ? (JSON.parse(raw) as ChatPreview[]) : []
+        const safe = (Array.isArray(parsed) ? parsed : []).map((item) => ({
+          ...item,
+          lastMessageSenderId: typeof item.lastMessageSenderId === 'string' ? item.lastMessageSenderId : null,
+          lastMessageReadAt: typeof item.lastMessageReadAt === 'string' ? item.lastMessageReadAt : null,
+        }))
+        const missingAvatarIds = safe
+          .filter((item) => !item.receiverAvatar || item.receiverAvatar.trim().length === 0)
+          .map((item) => item.receiverId)
+          .filter((id, index, arr) => arr.indexOf(id) === index)
+        if (missingAvatarIds.length > 0) {
+          const client = getSupabase()
+          if (client) {
+            const { data } = await client
+              .from('profiles')
+              .select('id, avatar_url, tag')
+              .in('id', missingAvatarIds)
+            const map = new Map(
+              (data || []).map((row) => [
+                row.id,
+                {
+                  avatarUrl:
+                    typeof row.avatar_url === 'string' && row.avatar_url.startsWith('http')
+                      ? row.avatar_url
+                      : null,
+                  tag:
+                    typeof row.tag === 'string' && row.tag.trim().length > 0
+                      ? row.tag.trim()
+                      : null,
+                },
+              ]),
+            )
+            const hydrated = safe.map((item) => {
+              const profile = map.get(item.receiverId)
+              if (!profile) return item
+              return {
+                ...item,
+                receiverAvatar: item.receiverAvatar || profile.avatarUrl,
+                receiverName: item.receiverName || profile.tag || item.receiverName,
+              }
+            })
+            localStorage.setItem(`hw-chat-previews:${currentUserId}`, JSON.stringify(hydrated))
+            const sortedHydrated = [...hydrated].sort((a, b) => {
+              const ta = new Date(a.updatedAt).getTime()
+              const tb = new Date(b.updatedAt).getTime()
+              return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0)
+            })
+            setChatPreviews(sortedHydrated)
+            return
+          }
+        }
+        const sorted = [...safe].sort((a, b) => {
+          const ta = new Date(a.updatedAt).getTime()
+          const tb = new Date(b.updatedAt).getTime()
+          return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0)
+        })
+        setChatPreviews(sorted)
+      } catch {
+        setChatPreviews([])
+      }
+    }
+    void loadChatPreviews()
+    const handleChatPreviewsUpdated = () => {
+      void loadChatPreviews()
+    }
+    const handleStorage = (event: StorageEvent) => {
+      if (!currentUserId) return
+      if (!event.key || event.key === `hw-chat-previews:${currentUserId}`) {
+        void loadChatPreviews()
+      }
+    }
+    window.addEventListener('chat-previews-updated', handleChatPreviewsUpdated)
+    window.addEventListener('local-auth-changed', handleChatPreviewsUpdated)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener('chat-previews-updated', handleChatPreviewsUpdated)
+      window.removeEventListener('local-auth-changed', handleChatPreviewsUpdated)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [currentUserId])
   useEffect(() => {
     const client = getSupabase()
     if (!client) return
@@ -845,7 +1021,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           />
         )}
 
-        {tab !== 'profile' ? (
+        {tab !== 'profile' || storeCatalogOpen ? (
           <div
             className="absolute left-0 w-full z-[100]"
             style={{ 
@@ -863,7 +1039,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               className="flex items-center gap-2.5 pl-1"
             >
               <div className="text-[22px] font-sf-ui-medium leading-[1em] text-[var(--text-primary)]">
-                {tab === 'ads' ? 'Обьявления для вас' : tab === 'store' || viewStoreId ? 'Витрины' : 'Профиль'}
+                {tab === 'ads' ? 'Обьявления для вас' : storeCatalogOpen ? 'Витрины' : 'Сообщения'}
               </div>
             </button>
             <div className="absolute right-6 flex h-full items-center">
@@ -963,7 +1139,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           </div>
         )}
 
-        {tab === 'profile' && (
+        {tab === 'profile' && !storeCatalogOpen && (
           <>
             <div 
               className="absolute left-0 w-full z-[85] pointer-events-none bg-gradient-to-b from-[#0A0A0A] to-transparent"
@@ -1316,11 +1492,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                           type="button"
                           onClick={() => {
                             closeProfileMenu()
-                            if (userStores.length > 0) {
-                              openStoreProfile(userStores[0].id)
-                            } else {
-                              setShowCreateStore(true)
-                            }
+                            setProfileEdit(false)
+                            setViewProfileMode('own')
+                            setViewProfileUserId(null)
+                            setViewStoreId(null)
+                            setProfileReturnAd(null)
+                            setTab('profile')
+                            setStoreCatalogOpen(true)
                           }}
                           className="flex w-full items-center"
                           style={{
@@ -1342,7 +1520,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                                 whiteSpace: 'nowrap',
                               }}
                             >
-                              {userStores.length > 0 ? 'Мой магазин' : 'Создать магазин'}
+                              Витрины
                             </span>
                             <div
                               style={{
@@ -1353,23 +1531,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                                 justifyContent: 'flex-end',
                               }}
                             >
-                              {userStores.length > 0 ? (
-                                <ShoppingCart
-                                  size={20}
-                                  className="text-white/50"
-                                  style={{
-                                    filter: 'var(--profile-menu-item-icon-filter)',
-                                  }}
-                                />
-                              ) : (
-                                <Plus
-                                  size={20}
-                                  className="text-white/50"
-                                  style={{
-                                    filter: 'var(--profile-menu-item-icon-filter)',
-                                  }}
-                                />
-                              )}
+                              <ShoppingBag
+                                size={20}
+                                className="text-white/50"
+                                style={{
+                                  filter: 'var(--profile-menu-item-icon-filter)',
+                                }}
+                              />
                             </div>
                           </div>
                         </button>
@@ -1509,7 +1677,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           </>
         )}
 
-        {tab === 'store' && (
+        {storeCatalogOpen && (
           <motion.div
             key="store-catalog-screen"
             className="absolute left-0 w-full overflow-hidden"
@@ -1536,6 +1704,206 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               onOpenStore={(id) => openStoreProfile(id)}
               myStores={userStores}
             />
+          </motion.div>
+        )}
+
+        {tab === 'messages' && (
+          <motion.div
+            key="messages-screen"
+            className="absolute left-0 w-full overflow-hidden"
+            style={{
+              top: homeContentTop,
+              height: homeContentHeight,
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            <div className="h-full overflow-y-auto px-4 pb-28 pt-3">
+              <div className="sticky top-0 z-20 bg-[var(--bg-primary)] pb-3">
+                <div className="h-[54px] w-full rounded-[20px] bg-white/[0.028] border border-white/[0.04] backdrop-blur-xl px-4 flex items-center">
+                  <img src="/interface/search-02.svg" alt="" className="w-[22px] h-[22px] opacity-55 mr-2" />
+                  <input
+                    value={messagesQuery}
+                    onChange={(e) => {
+                      const next = e.target.value
+                      setMessagesQuery(next)
+                      void searchUsersForMessages(next)
+                    }}
+                    placeholder="Поиск по тегу"
+                    className="font-sf-ui-light flex-1 bg-transparent outline-none border-none text-[16px] leading-[18px] text-white/80 placeholder:text-white/35"
+                  />
+                </div>
+              </div>
+
+              {messagesQuery.trim().length >= 2 && (
+                <div className="mb-4 space-y-2">
+                  {messagesSearchLoading ? (
+                    <div className="rounded-[24px] border border-white/10 bg-white/[0.02] px-4 py-3 text-[13px] text-white/50">
+                      Поиск...
+                    </div>
+                  ) : messagesSearchResults.length === 0 ? (
+                    <div className="rounded-[24px] border border-white/10 bg-white/[0.02] px-4 py-3 text-[13px] text-white/50">
+                      Никого не нашли
+                    </div>
+                  ) : (
+                    messagesSearchResults.map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => {
+                          setChatReceiver({
+                            id: user.id,
+                            name: user.tag,
+                            avatar: user.avatarUrl,
+                          })
+                          setActiveChatAd(null)
+                          setChatInitialMessage('')
+                          setChatOpen(true)
+                          setMessagesQuery('')
+                          setMessagesSearchResults([])
+                        }}
+                        className="flex w-full items-center gap-3 rounded-[24px] border border-white/10 bg-white/[0.02] px-3 py-3 text-left active:scale-[0.99] transition-all"
+                      >
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white/70 text-[14px] font-sf-ui-medium">
+                            @{user.tag[0]?.toUpperCase() || 'U'}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[15px] text-white font-sf-ui-medium">@{user.tag}</div>
+                          <div className="truncate text-[12px] text-white/35">Открыть чат</div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {chatPreviews.length === 0 ? (
+                  <div className="rounded-[24px] border border-white/10 bg-white/[0.02] px-4 py-5 text-center">
+                    <div className="text-[15px] text-white/70 font-sf-ui-medium">Чатов пока нет</div>
+                    <div className="mt-1 text-[13px] text-white/35">Найдите пользователя по тегу и начните диалог</div>
+                  </div>
+                ) : (
+                  chatPreviews.map((chat) => (
+                    <div key={chat.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => deleteChatThread(chat)}
+                        className={`absolute left-0 top-1/2 -translate-y-1/2 h-[56px] w-[72px] rounded-[20px] border border-red-400/30 bg-red-500/20 flex flex-col items-center justify-center transition-all ${
+                          (chatSwipeOffset[chat.id] ?? 0) <= -45 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                        }`}
+                      >
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 text-red-200" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                        </svg>
+                        <span className="mt-1 text-[11px] text-red-100/90 font-sf-ui-medium">Удалить</span>
+                      </button>
+                      <button
+                        type="button"
+                        onTouchStart={(e) => {
+                          setChatSwipeTracking({ id: chat.id, startX: e.touches[0]?.clientX ?? 0 })
+                        }}
+                        onTouchMove={(e) => {
+                          if (!chatSwipeTracking || chatSwipeTracking.id !== chat.id) return
+                          const currentX = e.touches[0]?.clientX ?? chatSwipeTracking.startX
+                          const delta = currentX - chatSwipeTracking.startX
+                          const nextOffset = Math.max(-86, Math.min(0, delta))
+                          setChatSwipeOffset((prev) => ({ ...prev, [chat.id]: nextOffset }))
+                        }}
+                        onTouchEnd={() => {
+                          const current = chatSwipeOffset[chat.id] ?? 0
+                          const latched = current <= -36 ? -86 : 0
+                          setChatSwipeOffset((prev) => ({ ...prev, [chat.id]: latched }))
+                          setChatSwipeTracking(null)
+                        }}
+                        onClick={() => {
+                          setChatReceiver({
+                            id: chat.receiverId,
+                            name: chat.receiverName,
+                            avatar: chat.receiverAvatar,
+                          })
+                          if (chat.isDirect || !chat.adId) {
+                            setActiveChatAd(null)
+                          } else {
+                            setActiveChatAd({
+                              id: chat.adId,
+                              userId: chat.receiverId,
+                              userTag: chat.receiverName,
+                              title: chat.adTitle || 'Объявление',
+                              description: null,
+                              price: '',
+                              imageUrl: '/logo.svg',
+                              condition: null,
+                              location: null,
+                              category: null,
+                              createdAt: Date.now(),
+                            })
+                          }
+                          setChatInitialMessage('')
+                          setChatOpen(true)
+                        }}
+                        className="relative z-10 flex w-full items-center gap-3 rounded-[24px] border border-white/10 bg-white/[0.02] px-3 py-3 text-left active:scale-[0.99] transition-all"
+                        style={{ transform: `translateX(${chatSwipeOffset[chat.id] ?? 0}px)` }}
+                      >
+                        {chat.receiverAvatar ? (
+                          <img src={chat.receiverAvatar} alt="" className="h-11 w-11 rounded-full object-cover" />
+                        ) : (
+                          <div className="h-11 w-11 rounded-full bg-white/10 flex items-center justify-center text-white/70 text-[14px] font-sf-ui-medium">
+                            {(chat.receiverName || 'U').replace(/^@/, '').slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[15px] text-white font-sf-ui-medium">
+                            @{(chat.receiverName || 'user').replace(/^@/, '')}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {chat.isDirect && chat.lastMessageSenderId && currentUserId && chat.lastMessageSenderId === currentUserId && (
+                              <div className="relative h-3 w-4 shrink-0">
+                                <svg
+                                  viewBox="0 0 16 12"
+                                  className={`absolute left-0 top-0 h-3 w-3 ${chat.lastMessageReadAt ? 'text-[#6FB2FF]' : 'text-white/35'}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M1.5 6.5L4.5 9.5L8.5 2.5" />
+                                </svg>
+                                {chat.lastMessageReadAt && (
+                                  <svg
+                                    viewBox="0 0 16 12"
+                                    className="absolute left-[4px] top-0 h-3 w-3 text-[#6FB2FF]"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M1.5 6.5L4.5 9.5L8.5 2.5" />
+                                  </svg>
+                                )}
+                              </div>
+                            )}
+                            <div className="truncate text-[13px] text-white/40">
+                              {chat.lastMessage || (chat.isDirect ? 'Открыть чат' : chat.adTitle || 'Открыть чат')}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </motion.div>
         )}
 
@@ -1578,7 +1946,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset, 0px))',
               }}
             >
-              <div className="absolute inset-x-0 bottom-3 px-6">
+              <div className="absolute inset-x-0 bottom-0 px-6">
                 <div className="relative">
                   <div className="absolute inset-0 rounded-[28px] bg-[#1F1F1F]/95 border border-white/[0.06] shadow-[0_8px_28px_rgba(0,0,0,0.42)]" />
                   
@@ -1619,17 +1987,17 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                           </div>
                         </button>
 
-                        {/* Store */}
+                        {/* Messages */}
                         <button
                           type="button"
                           onClick={() => {
                             closeAllWindows()
-                            setTab('store')
+                            setTab('messages')
                           }}
                           className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
                         >
-                          <div className={tab === 'store' || (tab === 'profile' && !!viewStoreId) ? 'text-white' : 'text-white opacity-40'}>
-                            <NavIcon type="store" active={tab === 'store' || (tab === 'profile' && !!viewStoreId)} />
+                          <div className={tab === 'messages' ? 'text-white' : 'text-white opacity-40'}>
+                            <NavIcon type="messages" active={tab === 'messages'} />
                           </div>
                         </button>
 
@@ -1661,8 +2029,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                           }}
                           className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
                         >
-                          <div className={tab === 'profile' && !viewStoreId && viewProfileMode === 'own' ? 'text-white' : 'text-white opacity-40'}>
-                            <NavIcon type="profile" active={tab === 'profile' && !viewStoreId && viewProfileMode === 'own'} />
+                          <div className={tab === 'profile' && !viewStoreId && viewProfileMode === 'own' && !storeCatalogOpen ? 'text-white' : 'text-white opacity-40'}>
+                            <NavIcon type="profile" active={tab === 'profile' && !viewStoreId && viewProfileMode === 'own' && !storeCatalogOpen} />
                           </div>
                         </button>
                       </div>
@@ -1824,6 +2192,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             receiverName={chatReceiver.name}
             receiverAvatar={chatReceiver.avatar}
             adContext={activeChatAd}
+            forceReceiverTitle={!activeChatAd}
             initialMessage={chatInitialMessage}
             contacts={(() => {
               if (!activeChatAd?.userId) return []
@@ -2281,4 +2650,3 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     </div>
   )
 }
-

@@ -1,16 +1,16 @@
 {
   "name": "hw-project",
   "short_name": "hw-project",
-  "description": "Удобно. Быстро. Безопасно.",
+  "description": "Выкладывай, покупай, продавай.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0d0d0d",
-  "theme_color": "#0d0d0d",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
   "icons": [
     {
-      "src": "/logo.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any"
     }
   ]

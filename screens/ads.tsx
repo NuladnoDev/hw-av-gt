@@ -1,8 +1,8 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart, Check, X } from 'lucide-react'
+import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart, X } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import AdsCreate, { CONDITION_OPTIONS } from './Ads_Create'
 import AdsEdit from './Ads_Edit'
@@ -725,7 +725,6 @@ export default function Ads({
   const [contactWarningLocked, setContactWarningLocked] = useState(false)
   const [authWarningOpen, setAuthWarningOpen] = useState(false)
   const [authWarningLocked, setAuthWarningLocked] = useState(false)
-  const [authIsAdult, setAuthIsAdult] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeFilters, setActiveFilters] = useState<FilterState | null>(null)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
@@ -1547,37 +1546,19 @@ export default function Ads({
                  <AuthIllustration />
                  
                  <div className="space-y-2">
-                   <h3 className="text-[22px] font-ttc-bold text-white leading-tight">
-                     Вам есть 18 лет?
-                   </h3>
-                   <p className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px]">
-                     Чтобы публиковать объявления и общаться - подтвердите свой возраст
-                   </p>
-                 </div>
-
-                 <div 
-                   className="flex items-center gap-3 cursor-pointer group select-none"
-                   onClick={() => setAuthIsAdult(!authIsAdult)}
-                 >
-                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${authIsAdult ? 'bg-white border-white' : 'bg-transparent border-white/20 group-hover:border-white/40'}`}>
-                     {authIsAdult && <Check size={16} className="text-black" strokeWidth={3} />}
-                   </div>
-                   <span className={`text-[15px] transition-colors duration-300 ${authIsAdult ? 'text-white/80' : 'text-white/40'}`}>
-                     Мне есть 18 лет
-                   </span>
+                  <h3 className="text-[22px] font-ttc-bold text-white leading-tight">
+                    Требуется авторизация
+                  </h3>
+                  <p className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px]">
+                    Чтобы публиковать объявления и общаться, войдите или создайте аккаунт
+                  </p>
                  </div>
                  
                  <div className="w-full flex flex-col gap-3 pt-4">
                    <button
                      type="button"
-                     disabled={!authIsAdult}
-                     className={`h-14 w-full rounded-[22px] font-sf-ui-bold text-[16px] transition-all ${
-                       authIsAdult 
-                         ? 'bg-white text-black active:scale-[0.97]' 
-                         : 'bg-white/10 text-white/20 cursor-not-allowed'
-                     }`}
+                    className="h-14 w-full rounded-[22px] bg-white text-black font-sf-ui-bold text-[16px] active:scale-[0.97] transition-all"
                      onClick={() => {
-                       if (!authIsAdult) return
                        setAuthWarningOpen(false)
                        window.dispatchEvent(new Event('trigger-auth'))
                      }}

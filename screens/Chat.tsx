@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
@@ -14,6 +14,7 @@ type Message = {
   image_url: string | null
   ad_context?: StoredAd | null
   created_at: string
+  read_at?: string | null
 }
 
 type ChatSession = {
@@ -30,6 +31,20 @@ type ChatSession = {
   }
 }
 
+type ChatPreview = {
+  id: string
+  receiverId: string
+  receiverName: string
+  receiverAvatar: string | null
+  adId: string | null
+  adTitle: string | null
+  isDirect: boolean
+  updatedAt: string
+  lastMessage: string
+  lastMessageSenderId: string | null
+  lastMessageReadAt: string | null
+}
+
 export default function Chat({ 
   onClose, 
   receiverId, 
@@ -37,7 +52,8 @@ export default function Chat({
   receiverAvatar,
   adContext,
   initialMessage = '',
-  contacts: initialContacts = []
+  contacts: initialContacts = [],
+  forceReceiverTitle = false
 }: { 
   onClose: () => void 
   receiverId: string
@@ -46,6 +62,7 @@ export default function Chat({
   adContext?: StoredAd | null
   initialMessage?: string
   contacts?: Array<{ type: 'vk' | 'telegram', url: string }>
+  forceReceiverTitle?: boolean
 }) {
   const [userId, setUserId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -60,6 +77,7 @@ export default function Chat({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const localMessageCounterRef = useRef(0)
   const [keyboardInset, setKeyboardInset] = useState(0)
 
   const AuthIllustration = () => (
@@ -178,6 +196,46 @@ export default function Chat({
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
   const keyboardGapCompensation = isIOS ? 34 : 0
   const keyboardTranslate = keyboardInset > 0 ? Math.max(0, keyboardInset - keyboardGapCompensation) : 0
+  const chatScope = adContext?.id ? `ad:${adContext.id}` : 'direct'
+  const resolvedReceiverName = receiverName && receiverName.trim().length > 0 ? receiverName.trim() : 'Пользователь'
+  const resolvedTitle = forceReceiverTitle ? resolvedReceiverName : (adContext?.title || resolvedReceiverName)
+
+  const persistChatState = (ownerId: string, nextMessages: Message[]) => {
+    const threadStorageKey = `hw-chat-thread:${ownerId}:${receiverId}:${chatScope}`
+    const previewsStorageKey = `hw-chat-previews:${ownerId}`
+    try {
+      localStorage.setItem(threadStorageKey, JSON.stringify(nextMessages))
+      const last = nextMessages[nextMessages.length - 1]
+      const lastMessage = last
+        ? (last.message.trim().length > 0
+            ? last.message.trim()
+            : last.image_url
+              ? 'Фото'
+              : last.ad_context?.title || 'Сообщение')
+        : ''
+      const raw = localStorage.getItem(previewsStorageKey)
+      const prev = raw ? (JSON.parse(raw) as ChatPreview[]) : []
+      const safePrev = Array.isArray(prev) ? prev : []
+      const id = `${receiverId}:${chatScope}`
+      const nextItem: ChatPreview = {
+        id,
+        receiverId,
+        receiverName: resolvedReceiverName,
+        receiverAvatar: receiverAvatar ?? null,
+        adId: adContext?.id ?? null,
+        adTitle: adContext?.title ?? null,
+        isDirect: !adContext?.id,
+        updatedAt: last?.created_at ?? new Date().toISOString(),
+        lastMessage,
+        lastMessageSenderId: last?.sender_id ?? null,
+        lastMessageReadAt: last?.read_at ?? null,
+      }
+      const merged = [nextItem, ...safePrev.filter((item) => item?.id !== id)].slice(0, 100)
+      localStorage.setItem(previewsStorageKey, JSON.stringify(merged))
+      window.dispatchEvent(new CustomEvent('chat-previews-updated'))
+    } catch {
+    }
+  }
 
   useEffect(() => {
     // Р‘Р»РѕРєРёСЂРѕРІРєР° СЃРєСЂРѕР»Р»Р° body РїСЂРё РѕС‚РєСЂС‹С‚РѕРј С‡Р°С‚Рµ (Safari PWA)
@@ -230,14 +288,44 @@ export default function Chat({
 
   useEffect(() => {
     const initChat = async () => {
+      let myId: string | null = null
       const authRaw = localStorage.getItem('hw-auth')
       if (authRaw) {
         const auth = JSON.parse(authRaw)
-        const myId = auth.uuid || auth.uid
+        myId = auth.uuid || auth.uid
         setUserId(myId)
       }
+      const nextChatId = `${receiverId}:${chatScope}`
+      setChatId(nextChatId)
+      if (myId) {
+        try {
+          const threadStorageKey = `hw-chat-thread:${myId}:${receiverId}:${chatScope}`
+          const raw = localStorage.getItem(threadStorageKey)
+          const stored = raw ? (JSON.parse(raw) as Message[]) : []
+          if (Array.isArray(stored) && stored.length > 0) {
+            const normalized = stored.map((msg) => ({
+              ...msg,
+              read_at: typeof msg.read_at === 'string' ? msg.read_at : null,
+            }))
+            const nowIso = new Date().toISOString()
+            const withReadState = normalized.map((msg) => {
+              if (msg.sender_id !== myId && !msg.read_at) {
+                return { ...msg, read_at: nowIso }
+              }
+              return msg
+            })
+            setMessages(withReadState)
+            persistChatState(myId, withReadState)
+          } else {
+            setMessages([])
+          }
+        } catch {
+          setMessages([])
+        }
+      } else {
+        setMessages([])
+      }
 
-      // Р”Р°Р¶Рµ РµСЃР»Рё РіРѕСЃС‚СЊ, РїСЂРѕР±СѓРµРј Р·Р°РіСЂСѓР·РёС‚СЊ РєРѕРЅС‚Р°РєС‚С‹ РїСЂРѕРґР°РІС†Р°
       if (contacts.length === 0 && receiverId) {
         const client = getSupabase()
         if (client) {
@@ -269,7 +357,7 @@ export default function Chat({
     }
 
     initChat()
-  }, [receiverId])
+  }, [receiverId, chatScope])
 
   useEffect(() => {
     if (!initialMessage || initialMessage.trim().length === 0) return
@@ -282,17 +370,24 @@ export default function Chat({
 
     setSending(true)
     
+    localMessageCounterRef.current += 1
     const msg: Message = {
-      id: Math.random().toString(),
+      id: `m-${receiverId}-${localMessageCounterRef.current}`,
       chat_id: chatId || 'new',
       sender_id: userId,
       message: text,
       image_url: null,
       ad_context: context,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      read_at: null,
     }
 
-    setMessages(prev => [...prev, msg])
+    setMessages((prev) => {
+      const next = [...prev, msg]
+      persistChatState(userId, next)
+      return next
+    })
+    const sentMessageId = msg.id
     setNewMessage('')
     if (inputRef.current) {
       inputRef.current.style.height = '58px'
@@ -302,6 +397,19 @@ export default function Chat({
     setSending(false)
     window.scrollTo(0, 0)
     scrollToBottom()
+    if (!adContext?.id) {
+      setTimeout(() => {
+        setMessages((prev) => {
+          const next = prev.map((item) => {
+            if (item.id !== sentMessageId) return item
+            if (item.read_at) return item
+            return { ...item, read_at: new Date().toISOString() }
+          })
+          persistChatState(userId, next)
+          return next
+        })
+      }, 900)
+    }
     
     // Р—РґРµСЃСЊ РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РѕС‚РїСЂР°РІРєР° РІ Supabase
   }
@@ -313,16 +421,22 @@ export default function Chat({
       reader.onload = () => {
         const src = typeof reader.result === 'string' ? reader.result : ''
         if (!src) return
+        localMessageCounterRef.current += 1
         const msg: Message = {
-          id: Math.random().toString(),
+          id: `m-${receiverId}-${localMessageCounterRef.current}`,
           chat_id: chatId || 'new',
           sender_id: userId,
           message: '',
           image_url: src,
           ad_context: null,
           created_at: new Date().toISOString(),
+          read_at: null,
         }
-        setMessages((prev) => [...prev, msg])
+        setMessages((prev) => {
+          const next = [...prev, msg]
+          persistChatState(userId, next)
+          return next
+        })
         window.scrollTo(0, 0)
         scrollToBottom()
       }
@@ -480,9 +594,39 @@ export default function Chat({
                     )}
                     
                     {showTimestamp && (
-                      <span className="text-[10px] text-white/20 mt-1 font-sf-ui-medium uppercase tracking-wider">
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="text-[10px] text-white/20 font-sf-ui-medium uppercase tracking-wider">
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {isMe && (
+                          <div className="relative h-3 w-4">
+                            <svg
+                              viewBox="0 0 16 12"
+                              className={`absolute left-0 top-0 h-3 w-3 ${msg.read_at ? 'text-[#6FB2FF]' : 'text-white/35'}`}
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M1.5 6.5L4.5 9.5L8.5 2.5" />
+                            </svg>
+                            {msg.read_at && (
+                              <svg
+                                viewBox="0 0 16 12"
+                                className="absolute left-[4px] top-0 h-3 w-3 text-[#6FB2FF]"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M1.5 6.5L4.5 9.5L8.5 2.5" />
+                              </svg>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </motion.div>,
@@ -508,7 +652,7 @@ export default function Chat({
             
             <div className="flex items-center ml-4 flex-1 overflow-hidden">
               <span className="text-[16px] font-ttc-bold text-white truncate pr-4 drop-shadow-md">
-                {adContext?.title || receiverName || '\u041f\u0440\u043e\u0434\u0430\u0432\u0435\u0446'}
+                {resolvedTitle}
               </span>
             </div>
           </div>
@@ -635,4 +779,3 @@ export default function Chat({
     </div>
   )
 }
-
