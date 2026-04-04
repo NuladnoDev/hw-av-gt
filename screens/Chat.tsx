@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Send, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, ShoppingBag, X, ArrowUp } from 'lucide-react'
+import { ChevronLeft, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, ShoppingBag, ArrowUp } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
-import type { StoredAd } from './ads'
+import { AdCard, type StoredAd } from './ads'
 
 type Message = {
   id: string
@@ -47,10 +47,10 @@ export default function Chat({
   initialMessage?: string
   contacts?: Array<{ type: 'vk' | 'telegram', url: string }>
 }) {
-  const [scale, setScale] = useState(1)
   const [userId, setUserId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [chatId, setChatId] = useState<string | null>(null)
@@ -59,29 +59,8 @@ export default function Chat({
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const modalInputRef = useRef<HTMLTextAreaElement>(null)
-  const [viewportHeight, setViewportHeight] = useState('100%')
-  const [viewportTop, setViewportTop] = useState(0)
-  const [modalViewportHeight, setModalViewportHeight] = useState(0)
-  const [modalViewportOffset, setModalViewportOffset] = useState(0)
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
-  const [keyboardOffset, setKeyboardOffset] = useState(1) // Дефолтный отступ 2px
-  const [isInputModalOpen, setIsInputModalOpen] = useState(false)
-
-  // TikTok-style focus logic
-  useEffect(() => {
-    if (isInputModalOpen) {
-      // На iOS фокус должен быть максимально быстрым
-      const timer = setTimeout(() => {
-        if (modalInputRef.current) {
-          modalInputRef.current.focus()
-          // Прокручиваем вьюпорт в 0, чтобы iOS не пытался сам "докрутить" до поля
-          window.scrollTo(0, 0)
-        }
-      }, 50)
-      return () => clearTimeout(timer)
-    }
-  }, [isInputModalOpen])
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const [keyboardInset, setKeyboardInset] = useState(0)
 
   const AuthIllustration = () => (
     <div className="mb-6 flex justify-center w-full">
@@ -162,12 +141,12 @@ export default function Chat({
   )
 
   const quickResponses = [
-    "Где удобно встретиться?",
-    "Хочу приобрести",
-    "Был в ремонте?",
-    "Актуально?",
-    "Торг уместен?",
-    "Можно дополнительные фото?"
+    '\u0413\u0434\u0435 \u0443\u0434\u043e\u0431\u043d\u043e \u0432\u0441\u0442\u0440\u0435\u0442\u0438\u0442\u044c\u0441\u044f?',
+    '\u0425\u043e\u0447\u0443 \u043f\u0440\u0438\u043e\u0431\u0440\u0435\u0441\u0442\u0438',
+    '\u0411\u044b\u043b \u0432 \u0440\u0435\u043c\u043e\u043d\u0442\u0435?',
+    '\u0410\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u043e?',
+    '\u0422\u043e\u0440\u0433 \u0443\u043c\u0435\u0441\u0442\u0435\u043d?',
+    '\u041c\u043e\u0436\u043d\u043e \u0434\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435 \u0444\u043e\u0442\u043e?',
   ]
 
   const scrollToBottom = () => {
@@ -176,8 +155,32 @@ export default function Chat({
     }, 100)
   }
 
+  const getDayKey = (value: string) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return 'invalid'
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+  }
+
+  const getDateDividerLabel = (value: string) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    const now = new Date()
+    const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`
+    const yesterday = new Date(now)
+    yesterday.setDate(now.getDate() - 1)
+    const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`
+    const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+    if (dateKey === todayKey) return '\u0421\u0435\u0433\u043e\u0434\u043d\u044f'
+    if (dateKey === yesterdayKey) return '\u0412\u0447\u0435\u0440\u0430'
+    return date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
+  }
+
+  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const keyboardGapCompensation = isIOS ? 34 : 0
+  const keyboardTranslate = keyboardInset > 0 ? Math.max(0, keyboardInset - keyboardGapCompensation) : 0
+
   useEffect(() => {
-    // Блокировка скролла body при открытом чате (Safari PWA)
+    // Р‘Р»РѕРєРёСЂРѕРІРєР° СЃРєСЂРѕР»Р»Р° body РїСЂРё РѕС‚РєСЂС‹С‚РѕРј С‡Р°С‚Рµ (Safari PWA)
     const originalStyle = window.getComputedStyle(document.body).overflow
     const originalHeight = document.body.style.height
     const originalPosition = document.body.style.position
@@ -190,65 +193,27 @@ export default function Chat({
     document.body.style.position = 'fixed'
     document.body.style.width = '100%'
 
-    // Автофокус при входе
-    setTimeout(() => {
-      inputRef.current?.focus()
-    }, 500)
-
-    // Обработка высоты вьюпорта для мобильных устройств (клавиатура)
     const handleVisualViewportResize = () => {
-      if (window.visualViewport) {
-        const height = window.visualViewport.height
-        const offsetTop = window.visualViewport.offsetTop
-        const scale = window.visualViewport.scale
-        
-        // Для ОСНОВНОГО контейнера чата мы больше не меняем высоту динамически при открытии клавы,
-        // чтобы избежать прыжков. Клавиатура будет работать только в модальном окне ввода.
-        if (!isInputModalOpen) {
-          setViewportHeight(`${height}px`)
-          setViewportTop(offsetTop)
-        } else {
-          // Если модалка открыта, обновляем её высоту и положение
-          setModalViewportHeight(height)
-          setModalViewportOffset(offsetTop)
-        }
-        
-        // Корректируем отступ клавиатуры
-        setKeyboardOffset(offsetTop > 0 ? Math.max(0, 2 - offsetTop) : 2)
-        
-        const isOpen = height < window.innerHeight * 0.85
-        setIsKeyboardOpen(isOpen)
-        
-        if (isOpen && !isInputModalOpen) {
-          scrollToBottom()
-          // Принудительно сбрасываем скролл документа, чтобы не было "прыжков"
-          window.scrollTo(0, 0)
-        }
-      }
-    }
-
-    // Слушатель на скролл окна, чтобы предотвратить "улетание"
-    const handleWindowScroll = () => {
-      if (isKeyboardOpen) {
-        window.scrollTo(0, 0)
+      if (!window.visualViewport) return
+      const viewport = window.visualViewport
+      const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - (viewport.height + viewport.offsetTop),
+      )
+      setKeyboardInset(Math.round(keyboardHeight))
+      if (keyboardHeight > 60) {
+        scrollToBottom()
       }
     }
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleVisualViewportResize)
       window.visualViewport.addEventListener('scroll', handleVisualViewportResize)
-      window.addEventListener('scroll', handleWindowScroll, { passive: false })
       handleVisualViewportResize()
     }
 
-    const update = () => {
-      setScale(1)
-    }
-    update()
-    window.addEventListener('resize', update)
-    
     return () => {
-      // Возвращаем стили body
+      // Р’РѕР·РІСЂР°С‰Р°РµРј СЃС‚РёР»Рё body
       document.documentElement.style.overflow = originalHtmlStyle
       document.documentElement.style.height = ''
       document.body.style.overflow = originalStyle
@@ -256,8 +221,6 @@ export default function Chat({
       document.body.style.position = originalPosition
       document.body.style.width = ''
 
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', handleWindowScroll)
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleVisualViewportResize)
         window.visualViewport.removeEventListener('scroll', handleVisualViewportResize)
@@ -274,7 +237,7 @@ export default function Chat({
         setUserId(myId)
       }
 
-      // Даже если гость, пробуем загрузить контакты продавца
+      // Р”Р°Р¶Рµ РµСЃР»Рё РіРѕСЃС‚СЊ, РїСЂРѕР±СѓРµРј Р·Р°РіСЂСѓР·РёС‚СЊ РєРѕРЅС‚Р°РєС‚С‹ РїСЂРѕРґР°РІС†Р°
       if (contacts.length === 0 && receiverId) {
         const client = getSupabase()
         if (client) {
@@ -331,46 +294,93 @@ export default function Chat({
 
     setMessages(prev => [...prev, msg])
     setNewMessage('')
+    if (inputRef.current) {
+      inputRef.current.style.height = '58px'
+    }
     if (context) setShowAdPreview(false)
     
     setSending(false)
+    window.scrollTo(0, 0)
     scrollToBottom()
     
-    // Здесь должна быть отправка в Supabase
+    // Р—РґРµСЃСЊ РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РѕС‚РїСЂР°РІРєР° РІ Supabase
+  }
+
+  const handleSendImage = async (file: File | null) => {
+    if (!file || !userId) return
+    try {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const src = typeof reader.result === 'string' ? reader.result : ''
+        if (!src) return
+        const msg: Message = {
+          id: Math.random().toString(),
+          chat_id: chatId || 'new',
+          sender_id: userId,
+          message: '',
+          image_url: src,
+          ad_context: null,
+          created_at: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, msg])
+        window.scrollTo(0, 0)
+        scrollToBottom()
+      }
+      reader.readAsDataURL(file)
+    } catch {
+    }
   }
 
   return (
     <div className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
-      <div 
-        className="relative w-full flex flex-col" 
-        style={{ 
-          height: viewportHeight, 
-          top: `${viewportTop}px`,
-          position: 'fixed',
-          left: 0,
-          // Убираем transform scale для чата, так как он ломает visualViewport на мобильных
-          // Добавляем переменную для ручной корректировки если понадобится
-          '--keyboard-offset': `${keyboardOffset}px` 
-        } as any}
-      >
+      <div className="relative w-full h-[100dvh] flex flex-col">
         
         {/* Messages Area - Base layer with background */}
-        <div className="absolute inset-0 bg-[#0A0A0A] overflow-y-auto scrollbar-hidden px-4 py-6 pt-32 pb-48 space-y-6">
+        <div
+          className="absolute inset-0 bg-[#0A0A0A] overflow-y-auto scrollbar-hidden px-4 py-6 pt-32"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 140px)' }}
+        >
           {/* Seller Profile Info at the top of messages */}
-          <div className="flex flex-col items-center text-center py-6 px-6 space-y-4 border-b border-white/5 mb-6">
+          <div className="flex flex-col items-center text-center py-6 px-6 space-y-4 mb-6">
             <div className="w-full flex flex-col items-center space-y-4">
-              <RegistrationIllustration />
+              {showAdPreview && adContext ? (
+                <div className="w-[188px]">
+                  <AdCard
+                    id={adContext.id}
+                    title={adContext.title}
+                    price={adContext.price}
+                    imageUrl={adContext.imageUrl || adContext.imageUrls?.[0] || '/logo.svg'}
+                    username={(receiverName || 'seller').replace(/^@/, '')}
+                    location={adContext.location || undefined}
+                    condition={adContext.condition || undefined}
+                    createdAt={adContext.createdAt}
+                  />
+                </div>
+              ) : messages.length === 0 ? (
+                <RegistrationIllustration />
+              ) : null}
               <div className="space-y-1">
-                <h3 className="text-[20px] font-ttc-bold text-white">{receiverName || 'Продавец'}</h3>
-                <p className="text-[13px] text-white/40 font-sf-ui-light max-w-[240px]">
-                  Вы можете приобрести товар не выходя с сайта
-                </p>
+                <h3 className="text-[20px] font-ttc-bold text-white">{receiverName || '\u041f\u0440\u043e\u0434\u0430\u0432\u0435\u0446'}</h3>
+                {messages.length === 0 ? (
+                  <p className="text-[13px] text-white/40 font-sf-ui-light max-w-[240px]">
+                    {'\u0412\u044b \u043c\u043e\u0436\u0435\u0442\u0435 \u043f\u0440\u0438\u043e\u0431\u0440\u0435\u0441\u0442\u0438 \u0442\u043e\u0432\u0430\u0440 \u043d\u0435 \u0432\u044b\u0445\u043e\u0434\u044f \u0441 \u0441\u0430\u0439\u0442\u0430'}
+                  </p>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-[12px] text-white/35 font-sf-ui-light">
+                      {'\u0415\u0441\u043b\u0438 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u0432\u0435\u0434\u0435\u0442 \u0441\u0435\u0431\u044f \u0433\u0440\u0443\u0431\u043e, \u0432\u044b \u043c\u043e\u0436\u0435\u0442\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0436\u0430\u043b\u043e\u0431\u0443'}
+                    </span>
+                    <span className="text-[13px] font-sf-ui-semibold text-red-300/90 border-b border-red-300/40 pb-[1px]">
+                      {'\u041f\u043e\u0436\u0430\u043b\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u043d\u0430 \u043f\u043e\u0432\u0435\u0434\u0435\u043d\u0438\u0435'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
             {contacts && contacts.length > 0 && (
               <div className="w-full max-w-[280px] space-y-4 pt-4 border-t border-white/5">
-                <div className="text-[11px] text-white/20 font-sf-ui-medium uppercase tracking-[0.15em]">Способы связи</div>
+                <div className="text-[11px] text-white/20 font-sf-ui-medium uppercase tracking-[0.15em]">{'\u0421\u043f\u043e\u0441\u043e\u0431\u044b \u0441\u0432\u044f\u0437\u0438'}</div>
                 <div className="grid gap-2">
                   {contacts.map((c, i) => (
                     <a
@@ -378,7 +388,7 @@ export default function Chat({
                       href={c.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 active:scale-[0.98] transition-all group"
+                    className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.035] border border-white/[0.035] hover:bg-white/[0.06] active:scale-[0.98] transition-all group"
                     >
                       <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:bg-white/10 transition-colors">
                         <img 
@@ -399,47 +409,84 @@ export default function Chat({
             )}
           </div>
 
-          {messages.map((msg) => {
+          {messages.map((msg, index) => {
             const isMe = msg.sender_id === userId
+            const prevMessage = index > 0 ? messages[index - 1] : null
+            const currentTs = new Date(msg.created_at).getTime()
+            const prevTs = prevMessage ? new Date(prevMessage.created_at).getTime() : NaN
+            const dayKey = getDayKey(msg.created_at)
+            const prevDayKey = prevMessage ? getDayKey(prevMessage.created_at) : ''
+            const isSameSender = !!prevMessage && prevMessage.sender_id === msg.sender_id
+            const isWithinTenMinutes =
+              Number.isFinite(currentTs) &&
+              Number.isFinite(prevTs) &&
+              currentTs - prevTs < 10 * 60 * 1000
+            const isGrouped = isSameSender && isWithinTenMinutes
+            const showTimestamp = !prevMessage || !isWithinTenMinutes
+            const showDateDivider = !prevMessage || dayKey !== prevDayKey
+            const dateDividerLabel = getDateDividerLabel(msg.created_at)
+
             return (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                key={msg.id}
-                className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[85%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                  {msg.ad_context && (
-                    <div className="mb-2 rounded-[28px] bg-white/5 border border-white/10 overflow-hidden w-[180px] shadow-2xl">
-                      <div className="flex flex-col">
-                        <div className="h-[240px] w-full bg-white/10 overflow-hidden">
-                          <img src={msg.ad_context.imageUrl || msg.ad_context.imageUrls?.[0]} alt="" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="p-4">
-                          <div className="text-[14px] font-ttc-bold text-white truncate">{msg.ad_context.title}</div>
-                          <div className="text-[13px] text-blue-400 font-sf-ui-medium mt-1">{msg.ad_context.price} ₽</div>
-                        </div>
+              [
+                showDateDivider ? (
+                  <div key={`date-${msg.id}`} className="flex justify-center mt-4 mb-2">
+                    <div className="px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/45 font-sf-ui-medium capitalize tracking-wide">
+                      {dateDividerLabel}
+                    </div>
+                  </div>
+                ) : null,
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  key={msg.id}
+                  className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} ${index === 0 ? 'mt-0' : isGrouped ? 'mt-1.5' : 'mt-3'}`}
+                >
+                  <div className={`max-w-[82%] min-w-0 flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                    {msg.image_url && (
+                      <div className="mb-2 w-[220px] rounded-[20px] overflow-hidden border border-white/10 bg-white/5">
+                        <img
+                          src={msg.image_url}
+                          alt=""
+                          className="w-full h-[220px] object-cover cursor-zoom-in"
+                          onClick={() => setPreviewImage(msg.image_url || null)}
+                        />
                       </div>
-                    </div>
-                  )}
-                  
-                  {msg.message && (
-                    <div 
-                      className={`px-4 py-3 rounded-[22px] text-[15px] font-sf-ui-light leading-relaxed shadow-lg ${
-                        isMe 
-                          ? 'bg-white text-black rounded-tr-none' 
-                          : 'bg-[#1C1C1E] text-white rounded-tl-none border border-white/5'
-                      }`}
-                    >
-                      {msg.message}
-                    </div>
-                  )}
-                  
-                  <span className="text-[10px] text-white/20 mt-1 font-sf-ui-medium uppercase tracking-wider">
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              </motion.div>
+                    )}
+                    {msg.ad_context && (
+                      <div className="mb-2 w-[220px]">
+                        <AdCard
+                          id={msg.ad_context.id}
+                          title={msg.ad_context.title}
+                          price={msg.ad_context.price}
+                          imageUrl={msg.ad_context.imageUrl || msg.ad_context.imageUrls?.[0] || '/logo.svg'}
+                          username={(receiverName || 'seller').replace(/^@/, '')}
+                          location={msg.ad_context.location || undefined}
+                          condition={msg.ad_context.condition || undefined}
+                          createdAt={msg.ad_context.createdAt}
+                        />
+                      </div>
+                    )}
+                    
+                    {msg.message && (
+                      <div 
+                        className={`max-w-full min-w-0 px-4 py-3 rounded-[26px] text-[15px] font-sf-ui-medium leading-relaxed shadow-lg ${
+                          isMe 
+                            ? 'bg-white text-black' 
+                            : 'bg-[#1C1C1E] text-white border border-white/5'
+                        } whitespace-pre-wrap break-all [overflow-wrap:anywhere]`}
+                      >
+                        {msg.message}
+                      </div>
+                    )}
+                    
+                    {showTimestamp && (
+                      <span className="text-[10px] text-white/20 mt-1 font-sf-ui-medium uppercase tracking-wider">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                </motion.div>,
+              ]
             )
           })}
           <div ref={messagesEndRef} />
@@ -447,7 +494,7 @@ export default function Chat({
         
         {/* Header - Fixed Overlay */}
         <div 
-          className="flex flex-col z-50 sticky top-0 bg-transparent"
+          className="flex flex-col z-50 sticky top-0 bg-[#0A0A0A]/92 backdrop-blur-xl border-b border-white/5 shadow-[0_10px_26px_rgba(0,0,0,0.35)]"
           style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
         >
           <div className="flex items-center px-6 h-16">
@@ -461,45 +508,22 @@ export default function Chat({
             
             <div className="flex items-center ml-4 flex-1 overflow-hidden">
               <span className="text-[16px] font-ttc-bold text-white truncate pr-4 drop-shadow-md">
-                {adContext?.title || receiverName || 'Продавец'}
+                {adContext?.title || receiverName || '\u041f\u0440\u043e\u0434\u0430\u0432\u0435\u0446'}
               </span>
             </div>
           </div>
         </div>
 
         {/* Input Area Wrapper - Fixed Bottom Overlay */}
-        <div className="mt-auto flex flex-col bg-black/20 backdrop-blur-2xl z-[60] border-t border-white/5">
-          {/* Ad Context Preview - Above quick replies and input */}
-          <AnimatePresence>
-            {showAdPreview && adContext && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="px-4 pt-4"
-              >
-                <div className="relative overflow-hidden rounded-[28px] bg-transparent border-none shadow-none max-w-[140px]">
-                  <div className="flex flex-col">
-                    <div className="h-24 w-full bg-white/10 overflow-hidden relative">
-                      <img src={adContext.imageUrl || adContext.imageUrls?.[0]} alt="" className="w-full h-full object-cover" />
-                      <button 
-                        onClick={() => setShowAdPreview(false)}
-                        className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white/80 hover:bg-black/60 transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                    <div className="p-3">
-                      <div className="text-[13px] font-ttc-bold text-white/90 truncate">{adContext.title}</div>
-                      <div className="text-[12px] text-blue-400 font-sf-ui-medium mt-0.5">{adContext.price} ₽</div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div
+          className="absolute left-0 right-0 bottom-0 flex flex-col z-[60]"
+          style={{ transform: `translateY(-${keyboardTranslate}px)` }}
+        >
 
-          <div className={`p-4 space-y-4 ${isKeyboardOpen ? 'pb-[var(--keyboard-offset,2px)]' : 'pb-[calc(env(safe-area-inset-bottom, 0px) + 8px)]'}`}>
+          <div
+            className="p-4 space-y-4"
+            style={{ paddingBottom: keyboardInset > 0 ? '0px' : 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}
+          >
             {/* Quick Responses */}
             {messages.length === 0 && !newMessage && (
               <div className="flex gap-2 overflow-x-auto scrollbar-hidden -mx-4 px-4">
@@ -507,7 +531,7 @@ export default function Chat({
                   <button
                     key={text}
                     onClick={() => handleSendMessage(text, showAdPreview ? adContext : null)}
-                    className="whitespace-nowrap px-4 py-2.5 rounded-full bg-white/5 border border-white/10 text-white/60 text-[13px] font-sf-ui-medium active:scale-95 transition-all hover:bg-white/10"
+                    className="whitespace-nowrap px-4 py-2.5 rounded-full bg-white/[0.035] border border-white/[0.045] text-white/60 text-[13px] font-sf-ui-medium active:scale-95 transition-all hover:bg-white/[0.06]"
                   >
                     {text}
                   </button>
@@ -515,160 +539,95 @@ export default function Chat({
               </div>
             )}
 
-            <div className="relative flex items-end gap-2">
-              <div 
-                className="relative flex-1 cursor-text"
-                onClick={() => setIsInputModalOpen(true)}
+            {!userId ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  window.dispatchEvent(new Event('trigger-auth'))
+                }}
+                className="w-full h-[52px] rounded-[26px] bg-white text-black text-[15px] font-sf-ui-medium active:scale-[0.98] transition-all"
               >
-                <div className="w-full min-h-[52px] bg-white/5 border border-white/10 rounded-[26px] px-5 py-3.5 text-[16px] text-white/40 flex items-center">
-                  Сообщение...
-                </div>
+                {'\u0412\u043e\u0439\u0442\u0438, \u0447\u0442\u043e\u0431\u044b \u043d\u0430\u043f\u0438\u0441\u0430\u0442\u044c'}
+              </button>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/74 hover:text-white/95 active:scale-95 transition-all z-10"
+                >
+                  <ImageIcon size={18} strokeWidth={2.7} className="fill-none" />
+                </button>
+                <textarea
+                  ref={inputRef}
+                  value={newMessage}
+                  autoCorrect="off"
+                  autoCapitalize="sentences"
+                  spellCheck={false}
+                  enterKeyHint="send"
+                  onFocus={() => {
+                    window.scrollTo(0, 0)
+                    scrollToBottom()
+                  }}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value)
+                    e.target.style.height = '58px'
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 180)}px`
+                  }}
+                  placeholder={'\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435...'}
+                  className="w-full max-h-[180px] min-h-[58px] bg-[#141414] border border-white/[0.06] rounded-[26px] pl-11 pr-14 py-[16px] text-[16px] text-white outline-none focus:border-white/[0.14] transition-all placeholder:text-white/25 resize-none font-sf-ui-light leading-normal scrollbar-hidden"
+                  rows={1}
+                  style={{ height: '58px' }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage(newMessage, showAdPreview ? adContext : null)
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => handleSendMessage(newMessage, showAdPreview ? adContext : null)}
+                  disabled={!newMessage.trim() || sending}
+                  className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-white transition-all ${
+                    newMessage.trim() ? 'text-white active:scale-90' : 'text-white/28'
+                  }`}
+                >
+                  <ArrowUp size={20} strokeWidth={3} className="text-current fill-none" />
+                </button>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null
+                    void handleSendImage(file)
+                    e.currentTarget.value = ''
+                  }}
+                />
               </div>
-            </div>
+            )}
           </div>
         </div>
-
-        {/* TikTok-style Input Modal */}
         <AnimatePresence>
-          {isInputModalOpen && (
+          {previewImage && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md"
-              style={{ 
-                // На iOS используем visualViewport для фиксации положения
-                height: modalViewportHeight > 0 ? `${modalViewportHeight}px` : '100dvh',
-                top: `${modalViewportOffset}px`,
-                position: 'fixed',
-                left: 0,
-                width: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'end'
-              } as any}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) setIsInputModalOpen(false)
-              }}
+              className="fixed inset-0 z-[220] bg-black/95 backdrop-blur-md"
+              onClick={() => setPreviewImage(null)}
             >
-              <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 30, stiffness: 350 }}
-                className="bg-[#121212] rounded-t-[32px] border-t border-white/10 p-4 pb-[calc(env(safe-area-inset-bottom, 0px) + 16px)]"
-              >
-                {!userId ? (
-                  <div className="flex flex-col items-center text-center p-4 space-y-6">
-                    <AuthIllustration />
-                    <div className="space-y-2">
-                      <h3 className="text-[22px] font-ttc-bold text-white leading-tight">
-                        Нужен аккаунт
-                      </h3>
-                      <p className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px]">
-                        Чтобы отправлять сообщения, покупать товары и сохранять избранное — создайте профиль
-                      </p>
-                    </div>
-                    <div className="w-full flex flex-col gap-3 pt-4">
-                      <button 
-                        onClick={() => {
-                          setIsInputModalOpen(false)
-                          onClose()
-                          window.dispatchEvent(new Event('trigger-auth'))
-                        }}
-                        className="w-full h-14 bg-white text-black rounded-[22px] font-sf-ui-bold text-[16px] active:scale-95 transition-all"
-                      >
-                        Зарегистрироваться
-                      </button>
-                      <button 
-                        onClick={() => setIsInputModalOpen(false)}
-                        className="w-full h-14 bg-white/5 text-white/60 rounded-[22px] font-sf-ui-medium text-[15px]"
-                      >
-                        Позже
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-3 mb-4">
-                      <button 
-                        onClick={() => setIsInputModalOpen(false)}
-                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-white/60"
-                      >
-                        <X size={20} />
-                      </button>
-                      <span className="text-white/40 font-sf-ui-medium text-[14px]">Новое сообщение</span>
-                    </div>
-
-                    {/* Ad Context Preview in Modal */}
-                    <AnimatePresence>
-                      {showAdPreview && adContext && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="mb-4"
-                        >
-                          <div className="relative overflow-hidden rounded-[24px] bg-transparent border-none shadow-none max-w-[120px]">
-                            <div className="flex flex-col">
-                              <div className="h-20 w-full bg-white/10 overflow-hidden relative rounded-[20px]">
-                                <img src={adContext.imageUrl || adContext.imageUrls?.[0]} alt="" className="w-full h-full object-cover" />
-                                <button 
-                                  onClick={() => setShowAdPreview(false)}
-                                  className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md text-white/80"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                              <div className="py-2 px-1">
-                                <div className="text-[12px] font-ttc-bold text-white/90 truncate">{adContext.title}</div>
-                                <div className="text-[11px] text-blue-400 font-sf-ui-medium mt-0.5">{adContext.price} ₽</div>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <div className="relative flex items-center gap-3">
-                      <div className="relative flex-1">
-                        <textarea
-                          ref={modalInputRef}
-                          value={newMessage}
-                          onChange={(e) => {
-                            setNewMessage(e.target.value)
-                            // Автоматическое изменение высоты
-                            e.target.style.height = '52px'
-                            e.target.style.height = `${e.target.scrollHeight}px`
-                          }}
-                          placeholder="Напишите сообщение..."
-                          className="w-full max-h-[160px] min-h-[52px] bg-white/5 border border-white/10 rounded-[24px] px-5 py-[14px] text-[16px] text-white outline-none focus:border-white/20 transition-all placeholder:text-white/20 resize-none font-sf-ui-light leading-normal scrollbar-hidden"
-                          rows={1}
-                          style={{ height: '52px' }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault()
-                              handleSendMessage(newMessage, showAdPreview ? adContext : null)
-                              setIsInputModalOpen(false)
-                            }
-                          }}
-                        />
-                      </div>
-                      <button
-                        onClick={() => {
-                          handleSendMessage(newMessage, showAdPreview ? adContext : null)
-                          setIsInputModalOpen(false)
-                        }}
-                        disabled={!newMessage.trim()}
-                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 self-end mb-[2px] ${
-                          newMessage.trim() ? 'bg-white text-black active:scale-90' : 'bg-white/5 text-white/20'
-                        }`}
-                      >
-                        <ArrowUp size={24} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </motion.div>
+              <div className="absolute inset-0 flex items-center justify-center p-5">
+                <img
+                  src={previewImage}
+                  alt=""
+                  className="max-h-full max-w-full object-contain rounded-[18px]"
+                />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -676,3 +635,4 @@ export default function Chat({
     </div>
   )
 }
+

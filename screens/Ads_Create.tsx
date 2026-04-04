@@ -296,6 +296,8 @@ export default function AdsCreate({
   const [publishing, setPublishing] = useState(false)
   const [publishPhase, setPublishPhase] = useState<'idle' | 'running' | 'full'>('idle')
   const [showPublishAnimation, setShowPublishAnimation] = useState(false)
+  const [moderatingImages, setModeratingImages] = useState(false)
+  const [imageModerationMessage, setImageModerationMessage] = useState<string | null>(null)
 
   const getConditionLabel = (c: AdsCondition | null) => {
     const found = CONDITION_OPTIONS.find((o) => o.id === c)
@@ -555,17 +557,46 @@ export default function AdsCreate({
 
   const handlePickedFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
+    setModeratingImages(true)
+    setImageModerationMessage(null)
     try {
       const urls = await readFilesAsDataUrls(Array.from(files))
+      const response = await fetch('/api/moderate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: urls }),
+      })
+      if (!response.ok) {
+        throw new Error('moderation_failed')
+      }
+      const payload = (await response.json()) as { results?: Array<{ safe: boolean }> }
+      const results = Array.isArray(payload.results) ? payload.results : []
+      const safeUrls = urls.filter((_, index) => results[index]?.safe !== false)
+      const blockedCount = urls.length - safeUrls.length
+      if (blockedCount > 0) {
+        setImageModerationMessage(
+          blockedCount === urls.length
+            ? '\u0424\u043e\u0442\u043e \u043d\u0435 \u043f\u0440\u043e\u0448\u043b\u0438 18+ \u043c\u043e\u0434\u0435\u0440\u0430\u0446\u0438\u044e. \u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u0438\u0435 \u043a\u0430\u0434\u0440\u044b.'
+            : `\u041e\u0442\u043a\u043b\u043e\u043d\u0435\u043d\u043e \u0444\u043e\u0442\u043e: ${blockedCount}. \u041e\u0441\u0442\u0430\u043b\u044c\u043d\u044b\u0435 \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u044b.`,
+        )
+      }
+      if (safeUrls.length === 0) {
+        return
+      }
       const maxPhotos = 6
       setImages((prev) => {
         const unique = [...prev]
-        for (const u of urls) {
+        for (const u of safeUrls) {
           if (!unique.includes(u)) unique.push(u)
         }
         return unique.slice(0, maxPhotos)
       })
     } catch {
+      setImageModerationMessage(
+        '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0444\u043e\u0442\u043e \u043d\u0430 18+. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0435 \u0440\u0430\u0437.',
+      )
+    } finally {
+      setModeratingImages(false)
     }
   }
 
@@ -673,7 +704,7 @@ export default function AdsCreate({
 
   const canGoNext =
     (step === 1 && category !== null) ||
-    (step === 2 && images.length > 0) ||
+    (step === 2 && images.length > 0 && !moderatingImages) ||
     (step === 3 && title.trim().length > 0) ||
     (step === 4 && condition !== null) ||
     step === 5 ||
@@ -1040,6 +1071,20 @@ export default function AdsCreate({
                     {images.length} / 6 фото
                   </span>
                 </div>
+                {moderatingImages && (
+                  <div className="mt-2 text-center">
+                    <span className="text-[12px] leading-[1.4em] text-white/45 font-sf-ui-light">
+                      {'\u041f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u043c \u0444\u043e\u0442\u043e \u043d\u0430 18+...'}
+                    </span>
+                  </div>
+                )}
+                {imageModerationMessage && (
+                  <div className="mt-2 rounded-[10px] border border-red-500/25 bg-red-500/10 px-3 py-2">
+                    <span className="text-[12px] leading-[1.35em] text-red-200/95 font-sf-ui-light">
+                      {imageModerationMessage}
+                    </span>
+                  </div>
+                )}
                 {images.length > 1 && (
                   <div className="mt-2 text-center">
                     <span className="text-[12px] leading-[1.4em] text-white/30 font-sf-ui-light">
@@ -1076,7 +1121,10 @@ export default function AdsCreate({
                   accept="image/*"
                   multiple
                   className="hidden"
-                  onChange={(e) => handlePickedFiles(e.target.files)}
+                  onChange={async (e) => {
+                    await handlePickedFiles(e.target.files)
+                    e.currentTarget.value = ''
+                  }}
                 />
               </div>
             )}
