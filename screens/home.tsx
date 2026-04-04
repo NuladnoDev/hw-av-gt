@@ -1946,7 +1946,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 bottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset, 0px))',
               }}
             >
-              <div className="absolute inset-x-0 bottom-0 px-6">
+              <div className="absolute inset-x-0 bottom-1 px-6">
                 <div className="relative">
                   <div className="absolute inset-0 rounded-[28px] bg-[#1F1F1F]/95 border border-white/[0.06] shadow-[0_8px_28px_rgba(0,0,0,0.42)]" />
                   
