@@ -708,7 +708,7 @@ export default function Chat({
       })
       scrollToBottom()
 
-      if (client && !imageUrl.startsWith('data:')) {
+      if (client) {
         const { data, error } = await client
           .from('chat_messages')
           .insert({
@@ -727,6 +727,11 @@ export default function Chat({
             persistChatState(userId, next)
             return next
           })
+          fetch('/api/push/new-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ senderId: userId, receiverId, message: 'Фото' }),
+          }).catch(() => {})
         }
       }
     } catch {}
@@ -960,11 +965,22 @@ export default function Chat({
               <ChevronLeft size={24} className="text-white" />
             </button>
             
-            <div className="flex flex-col ml-4 flex-1 overflow-hidden justify-center">
-              <span className="text-[16px] font-ttc-bold text-white truncate pr-4 leading-tight">
-                {resolvedTitle}
-              </span>
-              <div className="flex items-center gap-1.5 mt-0.5 h-4">
+            <div className="flex items-center ml-3 flex-1 overflow-hidden gap-3">
+              {/* Аватар */}
+              <div className="shrink-0">
+                {receiverAvatar ? (
+                  <img src={receiverAvatar} alt="" className="w-9 h-9 rounded-full object-cover" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white/70 text-[14px] font-sf-ui-medium">
+                    {(resolvedReceiverName || 'U').replace(/^@/, '').slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col flex-1 overflow-hidden justify-center">
+                <span className="text-[16px] font-ttc-bold text-white truncate pr-4 leading-tight">
+                  {resolvedTitle}
+                </span>
+                <div className="flex items-center gap-1.5 mt-0.5 h-4">
                 {isReceiverTyping ? (
                   <div className="flex items-center gap-1">
                     <span className="text-[12px] text-white/40 font-sf-ui-light">Печатает</span>
@@ -985,6 +1001,7 @@ export default function Chat({
                     </span>
                   </>
                 ) : null}
+              </div>
               </div>
             </div>
           </div>

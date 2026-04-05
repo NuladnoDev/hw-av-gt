@@ -788,7 +788,6 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           lastMessageReadAt: typeof item.lastMessageReadAt === 'string' ? item.lastMessageReadAt : null,
         }))
         const missingAvatarIds = safe
-          .filter((item) => !item.receiverAvatar || item.receiverAvatar.trim().length === 0)
           .map((item) => item.receiverId)
           .filter((id, index, arr) => arr.indexOf(id) === index)
         if (missingAvatarIds.length > 0) {
@@ -803,7 +802,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 row.id,
                 {
                   avatarUrl:
-                    typeof row.avatar_url === 'string' && row.avatar_url.startsWith('http')
+                    typeof row.avatar_url === 'string' && row.avatar_url.length > 0
                       ? row.avatar_url
                       : null,
                   tag:
@@ -818,8 +817,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               if (!profile) return item
               return {
                 ...item,
-                receiverAvatar: item.receiverAvatar || profile.avatarUrl,
-                receiverName: item.receiverName || profile.tag || item.receiverName,
+                receiverAvatar: profile.avatarUrl ?? item.receiverAvatar,
+                receiverName: profile.tag ? `@${profile.tag.replace(/^@/, '')}` : item.receiverName,
               }
             })
             localStorage.setItem(`hw-chat-previews:${currentUserId}`, JSON.stringify(hydrated))
@@ -860,6 +859,67 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
       window.removeEventListener('local-auth-changed', handleChatPreviewsUpdated)
       window.removeEventListener('storage', handleStorage)
     }
+  }, [currentUserId])
+
+  // Realtime: обновляем previews когда приходит новое сообщение (чат закрыт)
+  useEffect(() => {
+    if (!currentUserId) return
+    const client = getSupabase()
+    if (!client) return
+
+    const channel = client
+      .channel(`home-messages:${currentUserId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
+        async (payload: any) => {
+          const row = payload.new
+          if (!row?.sender_id) return
+
+          // Получаем профиль отправителя если нет в previews
+          const previewsKey = `hw-chat-previews:${currentUserId}`
+          const raw = localStorage.getItem(previewsKey)
+          const previews: any[] = raw ? JSON.parse(raw) : []
+          const existing = previews.find((p: any) => p.receiverId === row.sender_id)
+
+          let senderName = existing?.receiverName ?? `@${row.sender_id.slice(0, 8)}`
+          let senderAvatar = existing?.receiverAvatar ?? null
+
+          if (!existing) {
+            // Загружаем профиль отправителя
+            const { data: profile } = await client
+              .from('profiles')
+              .select('tag, avatar_url')
+              .eq('id', row.sender_id)
+              .maybeSingle()
+            if (profile) {
+              senderName = profile.tag ? `@${profile.tag.replace(/^@/, '')}` : senderName
+              senderAvatar = profile.avatar_url ?? null
+            }
+          }
+
+          const lastMessage = row.message?.trim() || (row.image_url ? 'Фото' : row.ad_title || 'Сообщение')
+          const newPreview = {
+            id: `${row.sender_id}:direct`,
+            receiverId: row.sender_id,
+            receiverName: senderName,
+            receiverAvatar: senderAvatar,
+            adId: null,
+            adTitle: null,
+            isDirect: true,
+            updatedAt: row.created_at,
+            lastMessage,
+            lastMessageSenderId: row.sender_id,
+            lastMessageReadAt: null,
+          }
+          const merged = [newPreview, ...previews.filter((p: any) => p.id !== newPreview.id)].slice(0, 100)
+          localStorage.setItem(previewsKey, JSON.stringify(merged))
+          window.dispatchEvent(new CustomEvent('chat-previews-updated'))
+        }
+      )
+      .subscribe()
+
+    return () => { client.removeChannel(channel) }
   }, [currentUserId])
 
   // Загружаем presence для всех собеседников из chatPreviews
@@ -1804,7 +1864,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
           >
-            <div className="h-full overflow-y-auto pb-28">
+            <div className="h-full overflow-y-auto pb-28 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
               <div className="sticky top-0 z-20">
                 <div className="relative">
                   <div
@@ -2002,8 +2062,35 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               )}
 
               {messagesQuery.trim().length < 2 && <div className="">
+                {/* Плашка "Здесь могло быть ваше объявление" */}
+                <div className="px-4 pt-3 pb-2">
+                  <motion.div
+                    className="w-full rounded-[20px] overflow-hidden"
+                    style={{ height: 88, boxShadow: '0 8px 20px rgba(0,0,0,0.25)' }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="relative h-full w-full p-4">
+                      <div className="absolute inset-0 opacity-90" style={{ background: 'radial-gradient(circle at 15% 20%, rgba(86,86,86,0.28) 0%, transparent 45%), radial-gradient(circle at 85% 70%, rgba(70,70,70,0.24) 0%, transparent 50%), linear-gradient(135deg, #161616 0%, #111111 100%)' }} />
+                      <div className="relative z-10 flex h-full items-center justify-between gap-4">
+                        <div className="max-w-[65%]">
+                          <div className="text-[11px] tracking-[0.04em] text-white/40">Рекламный слот</div>
+                          <div className="mt-0.5 text-[17px] leading-[1.15] font-ttc-bold text-white">Здесь могло быть ваше объявление</div>
+                        </div>
+                        <motion.svg width="72" height="52" viewBox="0 0 108 76" fill="none" className="shrink-0" animate={{ y: [0, -2, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}>
+                          <rect x="10" y="10" width="74" height="52" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.14)" />
+                          <rect x="22" y="22" width="42" height="6" rx="3" fill="rgba(255,255,255,0.25)" />
+                          <rect x="22" y="34" width="32" height="5" rx="2.5" fill="rgba(255,255,255,0.14)" />
+                          <rect x="22" y="43" width="24" height="5" rx="2.5" fill="rgba(255,255,255,0.1)" />
+                          <circle cx="88" cy="22" r="10" fill="rgba(255,255,255,0.12)" />
+                          <path d="M88 17V27M83 22H93" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" />
+                        </motion.svg>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+
                 {chatPreviews.length === 0 && messagesQuery.trim().length < 2 ? (
-                  <div className="flex flex-col items-center gap-4 px-4 text-center" style={{ marginTop: '30vh' }}>
+                  <div className="flex flex-col items-center gap-4 px-4 text-center" style={{ marginTop: '20vh' }}>
                     <motion.svg
                       width="120"
                       height="120"
@@ -2256,44 +2343,6 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 )}
               </div>}
 
-              {/* Плашка "Здесь могло быть ваше объявление" */}
-              {messagesQuery.trim().length < 2 && (
-                <div className="px-4 pb-4 mt-3">
-                  <motion.div
-                    className="w-full rounded-[20px] overflow-hidden"
-                    style={{ height: 88, boxShadow: '0 8px 20px rgba(0,0,0,0.25)' }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="relative h-full w-full p-4">
-                      <div
-                        className="absolute inset-0 opacity-90"
-                        style={{
-                          background: 'radial-gradient(circle at 15% 20%, rgba(86,86,86,0.28) 0%, transparent 45%), radial-gradient(circle at 85% 70%, rgba(70,70,70,0.24) 0%, transparent 50%), linear-gradient(135deg, #161616 0%, #111111 100%)',
-                        }}
-                      />
-                      <div className="relative z-10 flex h-full items-center justify-between gap-4">
-                        <div className="max-w-[65%]">
-                          <div className="text-[11px] tracking-[0.04em] text-white/40">Рекламный слот</div>
-                          <div className="mt-0.5 text-[17px] leading-[1.15] font-ttc-bold text-white">Здесь могло быть ваше объявление</div>
-                        </div>
-                        <motion.svg
-                          width="72" height="52" viewBox="0 0 108 76" fill="none"
-                          className="shrink-0"
-                          animate={{ y: [0, -2, 0] }}
-                          transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                          <rect x="10" y="10" width="74" height="52" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.14)" />
-                          <rect x="22" y="22" width="42" height="6" rx="3" fill="rgba(255,255,255,0.25)" />
-                          <rect x="22" y="34" width="32" height="5" rx="2.5" fill="rgba(255,255,255,0.14)" />
-                          <rect x="22" y="43" width="24" height="5" rx="2.5" fill="rgba(255,255,255,0.1)" />
-                          <circle cx="88" cy="22" r="10" fill="rgba(255,255,255,0.12)" />
-                          <path d="M88 17V27M83 22H93" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" />
-                        </motion.svg>
-                      </div>
-                    </div>
-                  </motion.div>
-                </div>
-              )}
             </div>
           </motion.div>
         )}
