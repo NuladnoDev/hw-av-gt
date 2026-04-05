@@ -190,7 +190,23 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const PATCH_NOTES_VERSION = '2026-04-02-2'
   const [patchNotesOpen, setPatchNotesOpen] = useState(false)
   const [storeCatalogOpen, setStoreCatalogOpen] = useState(false)
-  const [chatPreviews, setChatPreviews] = useState<ChatPreview[]>([])
+  const [chatPreviews, setChatPreviews] = useState<ChatPreview[]>(() => {
+    // Сразу грузим из localStorage чтобы не мигало
+    try {
+      if (typeof window === 'undefined') return []
+      const authRaw = window.localStorage.getItem('hw-auth')
+      if (!authRaw) return []
+      const auth = JSON.parse(authRaw)
+      const uid = auth?.uuid ?? auth?.uid
+      if (!uid) return []
+      const raw = window.localStorage.getItem(`hw-chat-previews:${uid}`)
+      if (!raw) return []
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  })
   const [messagesQuery, setMessagesQuery] = useState('')
   const [messagesSearchResults, setMessagesSearchResults] = useState<Array<{id: string, tag: string, avatarUrl: string | null}>>([])
   const [messagesSearchLoading, setMessagesSearchLoading] = useState(false)

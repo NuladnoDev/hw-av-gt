@@ -172,10 +172,10 @@ export default function Chat({
     '\u041c\u043e\u0436\u043d\u043e \u0434\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435 \u0444\u043e\u0442\u043e?',
   ]
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (instant = false) => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
+      messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' })
+    }, instant ? 0 : 100)
   }
 
   const formatLastSeen = (iso: string | null): string => {
@@ -331,6 +331,19 @@ export default function Chat({
       const nextChatId = `${receiverId}:direct`
       setChatId(nextChatId)
 
+      // Сразу показываем из localStorage — без мигания
+      if (myId) {
+        try {
+          const threadStorageKey = `hw-chat-thread:${myId}:${receiverId}:direct`
+          const raw = localStorage.getItem(threadStorageKey)
+          const stored = raw ? (JSON.parse(raw) as Message[]) : []
+          if (Array.isArray(stored) && stored.length > 0) {
+            setMessages(stored)
+            scrollToBottom(true)
+          }
+        } catch {}
+      }
+
       if (myId) {
         const client = getSupabase()
         if (client) {
@@ -428,7 +441,7 @@ export default function Chat({
       }
 
       setLoading(false)
-      scrollToBottom()
+      scrollToBottom(true)
     }
 
     initChat()
