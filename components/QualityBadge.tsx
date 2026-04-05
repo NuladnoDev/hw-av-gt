@@ -40,23 +40,18 @@ export default function QualityBadge({ className = '', size = 18 }: QualityBadge
           damping: 20,
         }}
       >
-        <motion.img
-          src="/interface/adv.svg"
-          alt="Quality Mark"
-          style={{ 
-            width: size, 
-            height: size,
-            filter: 'brightness(0) saturate(100%) invert(88%) sepia(21%) saturate(1478%) hue-rotate(182deg) brightness(101%) contrast(102%)'
-          }}
-          animate={{
-            y: [0, -4, 0],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
+        <div style={{ width: size, height: size }}>
+          <svg viewBox="0 0 24 24" width={size} height={size} fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Лента сверху левая */}
+            <path d="M7 7L9 2h2.5L10 7H7z" fill="white"/>
+            {/* Лента сверху правая */}
+            <path d="M17 7l-2-5h-2.5L14 7h3z" fill="white"/>
+            {/* Круг медали */}
+            <circle cx="12" cy="15" r="7" fill="white" fillOpacity="0.15" stroke="white" strokeWidth="1.5"/>
+            {/* Звезда */}
+            <path d="M12 10.5l1.03 2.1 2.32.34-1.68 1.63.4 2.3L12 15.77l-2.07 1.1.4-2.3-1.68-1.63 2.32-.34L12 10.5z" fill="white"/>
+          </svg>
+        </div>
       </motion.div>
 
       <AnimatePresence>

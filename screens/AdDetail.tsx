@@ -655,12 +655,46 @@ export default function AdDetail({
               </span>
 
               <div className="flex flex-wrap items-center gap-2.5">
-                {ad.condition === 'Новое' ? (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span className="text-[12px] font-ttc-demibold uppercase tracking-wider translate-y-[1px]">Новое</span>
-                  </div>
-                ) : categoryLabel && (
+                {ad.condition && (
+                  <button
+                    type="button"
+                    onClick={() => setShowConditionInfo(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] active:bg-white/[0.07] transition-colors"
+                  >
+                    <span className="shrink-0">
+                      {ad.condition === 'Новое' && (
+                        <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M8 1l1.5 3 3.5.5-2.5 2.5.5 3.5L8 9l-3 1.5.5-3.5L3 4.5 6.5 4z"/>
+                        </svg>
+                      )}
+                      {ad.condition === 'Отличное' && (
+                        <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M13 5H9V2a1 1 0 0 0-2 0v3H3a1 1 0 0 0 0 2h4v7h2V7h4a1 1 0 0 0 0-2z"/>
+                        </svg>
+                      )}
+                      {ad.condition === 'Хорошее' && (
+                        <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 10s1 2 3 2 3-2 3-2M6 6h.01M10 6h.01"/>
+                          <circle cx="8" cy="8" r="6"/>
+                        </svg>
+                      )}
+                      {ad.condition === 'Не очень' && (
+                        <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="8" cy="8" r="6"/>
+                          <path d="M8 5v3M8 11h.01"/>
+                        </svg>
+                      )}
+                    </span>
+                    <span className={`text-[12px] font-sf-ui-medium ${
+                      ad.condition === 'Новое' ? 'text-emerald-400' :
+                      ad.condition === 'Отличное' ? 'text-green-400' :
+                      ad.condition === 'Хорошее' ? 'text-yellow-400' :
+                      ad.condition === 'Не очень' ? 'text-orange-400' : 'text-white/60'
+                    }`}>{ad.condition}</span>
+                  </button>
+                )}
+
+                {categoryLabel && (
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
                     <span className="text-[12px] font-ttc-demibold uppercase tracking-wider translate-y-[1px]">{categoryLabel}</span>
                   </div>
@@ -676,58 +710,6 @@ export default function AdDetail({
                   )}
                 </div>
               </div>
-
-              {ad.condition && ad.condition !== 'Новое' && (
-                <div className="mt-2 flex flex-col overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.05]">
-                  <button 
-                    type="button"
-                    onClick={() => setShowConditionInfo(!showConditionInfo)}
-                    className="p-4 flex items-center justify-between active:bg-white/[0.05] transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl ${
-                        ad.condition === 'Новое' ? 'bg-emerald-500/10 text-emerald-400' : 
-                        ad.condition === 'Отличное' ? 'bg-green-500/10 text-green-400' :
-                        ad.condition === 'Хорошее' ? 'bg-yellow-500/10 text-yellow-400' :
-                        ad.condition === 'Не очень' ? 'bg-orange-500/10 text-orange-400' : 'bg-white/5 text-white/60'
-                      }`}>
-                        {CONDITION_ICONS[ad.condition] || <Sparkles className="w-5 h-5" />}
-                      </div>
-                      <div className="flex flex-col gap-0.5 items-start">
-                        <div className="text-[15px] font-ttc-bold text-white/90 translate-y-[1px]">{ad.condition}</div>
-                        <div className="text-[11px] text-indigo-400 font-sf-ui-medium uppercase tracking-wider">Нажми, чтобы узнать больше</div>
-                      </div>
-                    </div>
-                    <motion.div
-                      animate={{ rotate: showConditionInfo ? 180 : 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <ChevronDown className="w-5 h-5 text-white/20" />
-                    </motion.div>
-                  </button>
-                  
-                  <AnimatePresence>
-                    {showConditionInfo && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-4 pb-4 pt-0">
-                          <div className="h-px w-full bg-white/[0.05] mb-4" />
-                          {CONDITION_DESCRIPTIONS[ad.condition] && (
-                            <div className="text-[13px] text-white/60 font-sf-ui-light leading-relaxed">
-                              {CONDITION_DESCRIPTIONS[ad.condition]}
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
               <div className="mt-3">
                 <motion.button
                   whileTap={{ scale: 0.98 }}
@@ -1003,6 +985,90 @@ export default function AdDetail({
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {showConditionInfo && ad.condition && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowConditionInfo(false)}
+            />
+            <div className="fixed inset-0 z-[220] flex items-end justify-center pointer-events-none">
+              <motion.div
+                initial={{ translateY: '100%' }}
+                animate={{ translateY: 0 }}
+                exit={{ translateY: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+                className="relative w-full bg-[#121212] border-t border-white/10 rounded-t-[32px] px-6 pt-7 pb-[calc(env(safe-area-inset-bottom,0px)+24px)] pointer-events-auto"
+              >
+                <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-white/15" />
+                <h3 className="text-[20px] font-sf-ui-medium text-white mb-5">Состояние товара</h3>
+                <div className="space-y-2.5 mb-6">
+                  {[
+                    {
+                      label: 'Новое',
+                      desc: 'Есть чек, сохранена оригинальная упаковка',
+                      color: 'text-emerald-400',
+                      svg: <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4L4.2 6.2l4-.6z"/></svg>,
+                    },
+                    {
+                      label: 'Отличное',
+                      desc: 'Целостность товара сохранена, нет дефектов',
+                      color: 'text-green-400',
+                      svg: <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10l4 4 8-8"/></svg>,
+                    },
+                    {
+                      label: 'Хорошее',
+                      desc: 'Есть небольшие дефекты, потёртости и т.п',
+                      color: 'text-yellow-400',
+                      svg: <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M7 12s1 2 3 2 3-2 3-2M7.5 8h.01M12.5 8h.01"/></svg>,
+                    },
+                    {
+                      label: 'Не очень',
+                      desc: 'Есть видимые дефекты, неисправности',
+                      color: 'text-orange-400',
+                      svg: <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 7v4M10 14h.01"/></svg>,
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className={`flex items-start gap-3 rounded-2xl px-4 py-3 border transition-all ${
+                        ad.condition === item.label
+                          ? 'bg-white/[0.06] border-white/[0.12]'
+                          : 'bg-white/[0.02] border-white/[0.04]'
+                      }`}
+                    >
+                      <div className={`shrink-0 mt-0.5 ${item.color}`}>{item.svg}</div>
+                      <div>
+                        <div className={`text-[14px] font-sf-ui-medium ${ad.condition === item.label ? item.color : 'text-white/50'}`}>{item.label}</div>
+                        <div className="text-[12px] text-white/35 font-sf-ui-light mt-0.5">{item.desc}</div>
+                      </div>
+                      {ad.condition === item.label && (
+                        <div className="ml-auto shrink-0">
+                          <svg viewBox="0 0 16 16" className={`w-4 h-4 ${item.color}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 8l3.5 3.5 6.5-7"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowConditionInfo(false)}
+                  className="h-14 w-full rounded-[22px] bg-white text-black font-sf-ui-bold text-[16px] active:scale-[0.97] transition-all"
+                >
+                  Понятно
+                </button>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {mediaViewerOpen && (
           <MediaViewer
@@ -1401,4 +1467,4 @@ function MediaViewer({
 
 
 
-
+

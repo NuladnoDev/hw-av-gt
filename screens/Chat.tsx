@@ -73,11 +73,16 @@ export default function Chat({
   const [chatId, setChatId] = useState<string | null>(null)
   const [showAdPreview, setShowAdPreview] = useState(!!adContext)
   const [contacts, setContacts] = useState(initialContacts)
-  
+  const [receiverLastSeen, setReceiverLastSeen] = useState<string | null>(null)
+  const [isReceiverTyping, setIsReceiverTyping] = useState(false)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const localMessageCounterRef = useRef(0)
+  const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const typingChannelRef = useRef<any>(null)
   const [keyboardInset, setKeyboardInset] = useState(0)
 
   const AuthIllustration = () => (
@@ -173,6 +178,31 @@ export default function Chat({
     }, 100)
   }
 
+  const formatLastSeen = (iso: string | null): string => {
+    if (!iso) return ''
+    const date = new Date(iso)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    if (diffMin < 2) return 'в сети'
+    const diffHours = Math.floor(diffMin / 60)
+    const isToday = date.toDateString() === now.toDateString()
+    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
+    const isYesterday = date.toDateString() === yesterday.toDateString()
+    const timeStr = date.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })
+    if (isToday) return `был(а) в ${timeStr}`
+    if (isYesterday) return `был(а) вчера в ${timeStr}`
+    const weekdays = ['воскресенье','понедельник','вторник','среду','четверг','пятницу','субботу']
+    const diffDays = Math.floor(diffMs / 86400000)
+    if (diffDays < 7) return `был(а) в ${weekdays[date.getDay()]} в ${timeStr}`
+    return `был(а) ${date.toLocaleDateString('ru', { day: 'numeric', month: 'long' })} в ${timeStr}`
+  }
+
+  const isOnline = (iso: string | null): boolean => {
+    if (!iso) return false
+    return (new Date().getTime() - new Date(iso).getTime()) < 120000 // 2 минуты
+  }
+
   const getDayKey = (value: string) => {
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return 'invalid'
@@ -196,7 +226,7 @@ export default function Chat({
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
   const keyboardGapCompensation = isIOS ? 34 : 0
   const keyboardTranslate = keyboardInset > 0 ? Math.max(0, keyboardInset - keyboardGapCompensation) : 0
-  const chatScope = adContext?.id ? `ad:${adContext.id}` : 'direct'
+  const chatScope = 'direct'
   const resolvedReceiverName = receiverName && receiverName.trim().length > 0 ? receiverName.trim() : 'Пользователь'
   const resolvedTitle = forceReceiverTitle ? resolvedReceiverName : (adContext?.title || resolvedReceiverName)
 
@@ -291,36 +321,84 @@ export default function Chat({
       let myId: string | null = null
       const authRaw = localStorage.getItem('hw-auth')
       if (authRaw) {
-        const auth = JSON.parse(authRaw)
-        myId = auth.uuid || auth.uid
-        setUserId(myId)
-      }
-      const nextChatId = `${receiverId}:${chatScope}`
-      setChatId(nextChatId)
-      if (myId) {
         try {
-          const threadStorageKey = `hw-chat-thread:${myId}:${receiverId}:${chatScope}`
-          const raw = localStorage.getItem(threadStorageKey)
-          const stored = raw ? (JSON.parse(raw) as Message[]) : []
-          if (Array.isArray(stored) && stored.length > 0) {
-            const normalized = stored.map((msg) => ({
-              ...msg,
-              read_at: typeof msg.read_at === 'string' ? msg.read_at : null,
+          const auth = JSON.parse(authRaw)
+          myId = auth.uuid || auth.uid
+          setUserId(myId)
+        } catch {}
+      }
+
+      const nextChatId = `${receiverId}:direct`
+      setChatId(nextChatId)
+
+      if (myId) {
+        const client = getSupabase()
+        if (client) {
+          // Загружаем историю из Supabase
+          const { data, error } = await client
+            .from('chat_messages')
+            .select('*')
+            .or(`and(sender_id.eq.${myId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${myId})`)
+            .order('created_at', { ascending: true })
+            .limit(200)
+
+          if (!error && data) {
+            const mapped: Message[] = data.map((row: any) => ({
+              id: row.id,
+              chat_id: `${receiverId}:direct`,
+              sender_id: row.sender_id,
+              message: row.message || '',
+              image_url: row.image_url || null,
+              ad_context: row.ad_id ? {
+                id: row.ad_id,
+                title: row.ad_title || '',
+                price: row.ad_price || '',
+                imageUrl: row.ad_image_url || '/logo.svg',
+                userId: row.receiver_id,
+                userTag: '',
+                description: null,
+                condition: null,
+                location: null,
+                category: null,
+                createdAt: new Date(row.created_at).getTime(),
+              } : null,
+              created_at: row.created_at,
+              read_at: row.read_at || null,
             }))
-            const nowIso = new Date().toISOString()
-            const withReadState = normalized.map((msg) => {
-              if (msg.sender_id !== myId && !msg.read_at) {
-                return { ...msg, read_at: nowIso }
-              }
-              return msg
-            })
-            setMessages(withReadState)
-            persistChatState(myId, withReadState)
+            setMessages(mapped)
+            persistChatState(myId, mapped)
+
+            // Отмечаем входящие как прочитанные
+            const unreadIds = data
+              .filter((row: any) => row.receiver_id === myId && !row.read_at)
+              .map((row: any) => row.id)
+            if (unreadIds.length > 0) {
+              await client
+                .from('chat_messages')
+                .update({ read_at: new Date().toISOString() })
+                .in('id', unreadIds)
+            }
           } else {
+            // Fallback: localStorage
+            try {
+              const threadStorageKey = `hw-chat-thread:${myId}:${receiverId}:direct`
+              const raw = localStorage.getItem(threadStorageKey)
+              const stored = raw ? (JSON.parse(raw) as Message[]) : []
+              setMessages(Array.isArray(stored) ? stored : [])
+            } catch {
+              setMessages([])
+            }
+          }
+        } else {
+          // Нет Supabase — localStorage
+          try {
+            const threadStorageKey = `hw-chat-thread:${myId}:${receiverId}:direct`
+            const raw = localStorage.getItem(threadStorageKey)
+            const stored = raw ? (JSON.parse(raw) as Message[]) : []
+            setMessages(Array.isArray(stored) ? stored : [])
+          } catch {
             setMessages([])
           }
-        } catch {
-          setMessages([])
         }
       } else {
         setMessages([])
@@ -334,7 +412,6 @@ export default function Chat({
             .select('contacts')
             .eq('id', receiverId)
             .maybeSingle()
-          
           if (!error && data?.contacts && Array.isArray(data.contacts)) {
             const normalized = data.contacts
               .map((item: any) => {
@@ -345,9 +422,7 @@ export default function Chat({
                 return { type, url }
               })
               .filter((x: any) => !!x)
-            if (normalized.length > 0) {
-              setContacts(normalized as any)
-            }
+            if (normalized.length > 0) setContacts(normalized as any)
           }
         }
       }
@@ -357,7 +432,158 @@ export default function Chat({
     }
 
     initChat()
-  }, [receiverId, chatScope])
+  }, [receiverId])
+
+  // Realtime подписка на новые сообщения
+  useEffect(() => {
+    if (!userId) return
+    const client = getSupabase()
+    if (!client) return
+
+    const channel = client
+      .channel(`chat:${[userId, receiverId].sort().join(':')}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `receiver_id=eq.${userId}`,
+        },
+        async (payload: any) => {
+          const row = payload.new
+          // Только сообщения от нашего собеседника
+          if (row.sender_id !== receiverId) return
+          const newMsg: Message = {
+            id: row.id,
+            chat_id: `${receiverId}:direct`,
+            sender_id: row.sender_id,
+            message: row.message || '',
+            image_url: row.image_url || null,
+            ad_context: row.ad_id ? {
+              id: row.ad_id,
+              title: row.ad_title || '',
+              price: row.ad_price || '',
+              imageUrl: row.ad_image_url || '/logo.svg',
+              userId: row.sender_id,
+              userTag: '',
+              description: null,
+              condition: null,
+              location: null,
+              category: null,
+              createdAt: new Date(row.created_at).getTime(),
+            } : null,
+            created_at: row.created_at,
+            read_at: null,
+          }
+          setMessages((prev) => {
+            const next = [...prev, newMsg]
+            persistChatState(userId, next)
+            return next
+          })
+          scrollToBottom()
+          // Отмечаем прочитанным
+          await client
+            .from('chat_messages')
+            .update({ read_at: new Date().toISOString() })
+            .eq('id', row.id)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `sender_id=eq.${userId}`,
+        },
+        (payload: any) => {
+          const row = payload.new
+          if (!row.read_at) return
+          setMessages((prev) =>
+            prev.map((m) => (m.id === row.id ? { ...m, read_at: row.read_at } : m))
+          )
+        }
+      )
+      .subscribe()
+
+    return () => {
+      client.removeChannel(channel)
+    }
+  }, [userId, receiverId])
+
+  // Presence: обновляем своё присутствие + подписываемся на собеседника
+  useEffect(() => {
+    if (!userId) return
+    const client = getSupabase()
+    if (!client) return
+
+    const updateMyPresence = async () => {
+      await client.from('user_presence').upsert(
+        { user_id: userId, last_seen: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    }
+
+    // Загружаем last_seen собеседника
+    const loadReceiverPresence = async () => {
+      const { data } = await client
+        .from('user_presence')
+        .select('last_seen')
+        .eq('user_id', receiverId)
+        .maybeSingle()
+      if (data?.last_seen) setReceiverLastSeen(data.last_seen)
+    }
+
+    updateMyPresence()
+    loadReceiverPresence()
+
+    // Обновляем своё присутствие каждые 30 сек
+    presenceIntervalRef.current = setInterval(updateMyPresence, 30000)
+
+    // Realtime подписка на присутствие собеседника
+    const presenceChannel = client
+      .channel(`presence:${receiverId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_presence', filter: `user_id=eq.${receiverId}` },
+        (payload: any) => {
+          if (payload.new?.last_seen) setReceiverLastSeen(payload.new.last_seen)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      if (presenceIntervalRef.current) clearInterval(presenceIntervalRef.current)
+      client.removeChannel(presenceChannel)
+    }
+  }, [userId, receiverId])
+
+  // Typing indicator через Realtime broadcast
+  useEffect(() => {
+    if (!userId) return
+    const client = getSupabase()
+    if (!client) return
+
+    const channelName = `typing:${[userId, receiverId].sort().join(':')}`
+    const channel = client.channel(channelName)
+
+    channel
+      .on('broadcast', { event: 'typing' }, (payload: any) => {
+        if (payload.payload?.userId !== receiverId) return
+        setIsReceiverTyping(true)
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = setTimeout(() => setIsReceiverTyping(false), 3000)
+      })
+      .subscribe()
+
+    typingChannelRef.current = channel
+
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      client.removeChannel(channel)
+    }
+  }, [userId, receiverId])
 
   useEffect(() => {
     if (!initialMessage || initialMessage.trim().length === 0) return
@@ -369,11 +595,13 @@ export default function Chat({
     if (!userId) return
 
     setSending(true)
-    
+
+    // Оптимистично добавляем в UI
     localMessageCounterRef.current += 1
+    const tempId = `temp-${receiverId}-${localMessageCounterRef.current}`
     const msg: Message = {
-      id: `m-${receiverId}-${localMessageCounterRef.current}`,
-      chat_id: chatId || 'new',
+      id: tempId,
+      chat_id: `${receiverId}:direct`,
       sender_id: userId,
       message: text,
       image_url: null,
@@ -381,68 +609,127 @@ export default function Chat({
       created_at: new Date().toISOString(),
       read_at: null,
     }
-
     setMessages((prev) => {
       const next = [...prev, msg]
       persistChatState(userId, next)
       return next
     })
-    const sentMessageId = msg.id
     setNewMessage('')
-    if (inputRef.current) {
-      inputRef.current.style.height = '58px'
-    }
+    if (inputRef.current) inputRef.current.style.height = '58px'
     if (context) setShowAdPreview(false)
-    
-    setSending(false)
-    window.scrollTo(0, 0)
     scrollToBottom()
-    if (!adContext?.id) {
-      setTimeout(() => {
+
+    // Отправляем в Supabase
+    const client = getSupabase()
+    if (client) {
+      const { data, error } = await client
+        .from('chat_messages')
+        .insert({
+          sender_id: userId,
+          receiver_id: receiverId,
+          message: text.trim() || null,
+          image_url: null,
+          ad_id: context?.id ?? null,
+          ad_title: context?.title ?? null,
+          ad_price: context?.price ?? null,
+          ad_image_url: context?.imageUrl ?? null,
+        })
+        .select('id, created_at')
+        .single()
+
+      if (!error && data) {
+        // Заменяем temp id на реальный
         setMessages((prev) => {
-          const next = prev.map((item) => {
-            if (item.id !== sentMessageId) return item
-            if (item.read_at) return item
-            return { ...item, read_at: new Date().toISOString() }
-          })
+          const next = prev.map((m) =>
+            m.id === tempId ? { ...m, id: data.id, created_at: data.created_at } : m
+          )
           persistChatState(userId, next)
           return next
         })
-      }, 900)
+        // Push-уведомление получателю (fire & forget)
+        fetch('/api/push/new-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ senderId: userId, receiverId, message: text.trim() }),
+        }).catch(() => {})
+      }
     }
-    
-    // Р—РґРµСЃСЊ РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РѕС‚РїСЂР°РІРєР° РІ Supabase
+
+    setSending(false)
+    window.scrollTo(0, 0)
   }
 
   const handleSendImage = async (file: File | null) => {
     if (!file || !userId) return
     try {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const src = typeof reader.result === 'string' ? reader.result : ''
-        if (!src) return
-        localMessageCounterRef.current += 1
-        const msg: Message = {
-          id: `m-${receiverId}-${localMessageCounterRef.current}`,
-          chat_id: chatId || 'new',
-          sender_id: userId,
-          message: '',
-          image_url: src,
-          ad_context: null,
-          created_at: new Date().toISOString(),
-          read_at: null,
+      const client = getSupabase()
+      let imageUrl: string | null = null
+
+      if (client) {
+        // Загружаем в Supabase Storage
+        const ext = file.name.split('.').pop() || 'jpg'
+        const path = `chat/${userId}/${Date.now()}.${ext}`
+        const { data: uploadData, error: uploadError } = await client.storage
+          .from('chat-images')
+          .upload(path, file, { upsert: false })
+        if (!uploadError && uploadData) {
+          const { data: urlData } = client.storage.from('chat-images').getPublicUrl(path)
+          imageUrl = urlData?.publicUrl ?? null
         }
-        setMessages((prev) => {
-          const next = [...prev, msg]
-          persistChatState(userId, next)
-          return next
-        })
-        window.scrollTo(0, 0)
-        scrollToBottom()
       }
-      reader.readAsDataURL(file)
-    } catch {
-    }
+
+      // Fallback: base64 если storage недоступен
+      if (!imageUrl) {
+        imageUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+          reader.readAsDataURL(file)
+        })
+      }
+
+      if (!imageUrl) return
+
+      localMessageCounterRef.current += 1
+      const tempId = `temp-img-${receiverId}-${localMessageCounterRef.current}`
+      const msg: Message = {
+        id: tempId,
+        chat_id: `${receiverId}:direct`,
+        sender_id: userId,
+        message: '',
+        image_url: imageUrl,
+        ad_context: null,
+        created_at: new Date().toISOString(),
+        read_at: null,
+      }
+      setMessages((prev) => {
+        const next = [...prev, msg]
+        persistChatState(userId, next)
+        return next
+      })
+      scrollToBottom()
+
+      if (client && !imageUrl.startsWith('data:')) {
+        const { data, error } = await client
+          .from('chat_messages')
+          .insert({
+            sender_id: userId,
+            receiver_id: receiverId,
+            message: null,
+            image_url: imageUrl,
+          })
+          .select('id, created_at')
+          .single()
+        if (!error && data) {
+          setMessages((prev) => {
+            const next = prev.map((m) =>
+              m.id === tempId ? { ...m, id: data.id, created_at: data.created_at } : m
+            )
+            persistChatState(userId, next)
+            return next
+          })
+        }
+      }
+    } catch {}
   }
 
   return (
@@ -634,6 +921,29 @@ export default function Chat({
             )
           })}
           <div ref={messagesEndRef} />
+          {/* Typing indicator */}
+          <AnimatePresence>
+            {isReceiverTyping && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                transition={{ duration: 0.18 }}
+                className="flex justify-start mt-3 px-4"
+              >
+                <div className="flex items-center gap-1.5 bg-[#1C1C1E] border border-white/5 rounded-[20px] px-4 py-3">
+                  {[0, 0.18, 0.36].map((delay) => (
+                    <motion.div
+                      key={delay}
+                      className="w-2 h-2 rounded-full bg-white/50"
+                      animate={{ y: [0, -5, 0], opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 0.7, repeat: Infinity, delay, ease: 'easeInOut' }}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         
         {/* Header - Fixed Overlay */}
@@ -650,10 +960,32 @@ export default function Chat({
               <ChevronLeft size={24} className="text-white" />
             </button>
             
-            <div className="flex items-center ml-4 flex-1 overflow-hidden">
-              <span className="text-[16px] font-ttc-bold text-white truncate pr-4 drop-shadow-md">
+            <div className="flex flex-col ml-4 flex-1 overflow-hidden justify-center">
+              <span className="text-[16px] font-ttc-bold text-white truncate pr-4 leading-tight">
                 {resolvedTitle}
               </span>
+              <div className="flex items-center gap-1.5 mt-0.5 h-4">
+                {isReceiverTyping ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[12px] text-white/40 font-sf-ui-light">Печатает</span>
+                    {[0, 0.2, 0.4].map((delay) => (
+                      <motion.span
+                        key={delay}
+                        className="text-[12px] text-white/40 font-sf-ui-light"
+                        animate={{ opacity: [0.2, 1, 0.2] }}
+                        transition={{ duration: 0.8, repeat: Infinity, delay, ease: 'easeInOut' }}
+                      >.</motion.span>
+                    ))}
+                  </div>
+                ) : receiverLastSeen ? (
+                  <>
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline(receiverLastSeen) ? 'bg-[#64CF86]' : 'bg-white/25'}`} />
+                    <span className="text-[12px] text-white/40 font-sf-ui-light truncate">
+                      {formatLastSeen(receiverLastSeen)}
+                    </span>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
@@ -718,6 +1050,14 @@ export default function Chat({
                     setNewMessage(e.target.value)
                     e.target.style.height = '58px'
                     e.target.style.height = `${Math.min(e.target.scrollHeight, 180)}px`
+                    // Broadcast typing
+                    if (typingChannelRef.current && userId) {
+                      typingChannelRef.current.send({
+                        type: 'broadcast',
+                        event: 'typing',
+                        payload: { userId },
+                      })
+                    }
                   }}
                   placeholder={'\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435...'}
                   className="w-full max-h-[180px] min-h-[58px] bg-[#141414] border border-white/[0.06] rounded-[26px] pl-11 pr-14 py-[16px] text-[16px] text-white outline-none focus:border-white/[0.14] transition-all placeholder:text-white/25 resize-none font-sf-ui-light leading-normal scrollbar-hidden"

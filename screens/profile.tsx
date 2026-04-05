@@ -234,6 +234,7 @@ export default function Profile({
   const [pullDistance, setPullDistance] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [profileLastSeen, setProfileLastSeen] = useState<string | null>(null)
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const startYRef = useRef(0)
@@ -621,6 +622,33 @@ export default function Profile({
       }
     })()
   }, [userTag, viewUserId, refreshKey])
+
+  // Загружаем presence для чужого профиля
+  useEffect(() => {
+    if (isOwnProfile || !viewUserId) return
+    const client = getSupabase()
+    if (!client) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await client
+        .from('user_presence')
+        .select('last_seen')
+        .eq('user_id', viewUserId)
+        .maybeSingle()
+      if (!cancelled && data?.last_seen) setProfileLastSeen(data.last_seen)
+    })()
+    // Realtime
+    const channel = client
+      .channel(`profile-presence:${viewUserId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_presence', filter: `user_id=eq.${viewUserId}` }, (payload: any) => {
+        if (payload.new?.last_seen) setProfileLastSeen(payload.new.last_seen)
+      })
+      .subscribe()
+    return () => {
+      cancelled = true
+      client.removeChannel(channel)
+    }
+  }, [isOwnProfile, viewUserId])
   useEffect(() => {
     let cancelled = false
     const loadFollow = async () => {
@@ -1302,6 +1330,33 @@ export default function Profile({
               <div className="leading-[2.3em] text-[var(--text-primary)] font-ttc-bold" style={{ fontSize: 'var(--profile-name-size)' }}>
                 {tagText && tagText.trim().length > 0 ? tagText : 'user'}
               </div>
+
+              {/* Last seen — только для чужого профиля */}
+              {!isOwnProfile && profileLastSeen && (() => {
+                const diffMs = Date.now() - new Date(profileLastSeen).getTime()
+                const isOnline = diffMs < 120000
+                const diffMin = Math.floor(diffMs / 60000)
+                const date = new Date(profileLastSeen)
+                const now = new Date()
+                const isToday = date.toDateString() === now.toDateString()
+                const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
+                const isYesterday = date.toDateString() === yesterday.toDateString()
+                const timeStr = date.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })
+                const weekdays = ['воскресенье','понедельник','вторник','среду','четверг','пятницу','субботу']
+                const diffDays = Math.floor(diffMs / 86400000)
+                let label = ''
+                if (isOnline) label = 'в сети'
+                else if (isToday) label = `был(а) в ${timeStr}`
+                else if (isYesterday) label = `был(а) вчера в ${timeStr}`
+                else if (diffDays < 7) label = `был(а) в ${weekdays[date.getDay()]} в ${timeStr}`
+                else label = `был(а) ${date.toLocaleDateString('ru', { day: 'numeric', month: 'long' })} в ${timeStr}`
+                return (
+                  <div className="flex items-center justify-center gap-1.5 mt-0.5 mb-1">
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-[#64CF86]' : 'bg-white/25'}`} />
+                    <span className="text-[12px] text-white/40 font-sf-ui-light">{label}</span>
+                  </div>
+                )
+              })()}
 
               <div className="flex-1 flex items-center gap-2 ml-4">
                 {isVerified && <VerifiedBadge size={22} />}
