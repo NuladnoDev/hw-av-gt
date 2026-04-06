@@ -630,6 +630,19 @@ export default function Profile({
     if (!client) return
     let cancelled = false
     ;(async () => {
+      // Проверяем настройку видимости профиля
+      const { data: profileData } = await client
+        .from('profiles')
+        .select('last_seen_visibility')
+        .eq('id', viewUserId)
+        .maybeSingle()
+
+      if (profileData?.last_seen_visibility === 'nobody') {
+        // Показываем "Был(а) недавно" — ставим время 3 дня назад как заглушку
+        if (!cancelled) setProfileLastSeen('nobody')
+        return
+      }
+
       const { data } = await client
         .from('user_presence')
         .select('last_seen')
@@ -1320,7 +1333,7 @@ export default function Profile({
             />
           </div>
           {/* Онлайн-кружок */}
-          {!isOwnProfile && profileLastSeen && (new Date().getTime() - new Date(profileLastSeen).getTime()) < 120000 && (
+          {!isOwnProfile && profileLastSeen && profileLastSeen !== 'nobody' && (new Date().getTime() - new Date(profileLastSeen).getTime()) < 120000 && (
             <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#64CF86] border-2 border-[var(--bg-primary)]" />
           )}
           </div>

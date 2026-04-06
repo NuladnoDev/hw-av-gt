@@ -1102,14 +1102,15 @@ export default function AdDetail({
                   type="button"
                   onClick={() => {
                     closeMenu()
+                    const shareUrl = `${window.location.origin}/?adId=${ad.id}`
                     if (navigator.share) {
                       navigator.share({
                         title: ad.title,
-                        text: ad.description || '',
-                        url: window.location.href
+                        text: `${ad.title} — ${ad.price} ₽`,
+                        url: shareUrl
                       }).catch(() => {})
                     } else {
-                      navigator.clipboard.writeText(window.location.href).catch(() => {})
+                      navigator.clipboard.writeText(shareUrl).catch(() => {})
                     }
                   }}
                   className="flex w-full items-center justify-between px-5 py-4 active:bg-white/5 transition-colors"

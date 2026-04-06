@@ -52,6 +52,13 @@ export default function Setting({
   const [followedUsers, setFollowedUsers] = useState<{ id: string; tag: string; enabled: boolean }[]>([])
   const [hapticEnabled, setHapticEnabled] = useState(true)
   const [soundsEnabled, setSoundsEnabled] = useState(true)
+  const [lastSeenVisibility, setLastSeenVisibility] = useState<'everyone' | 'nobody'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hw-last-seen-visibility')
+      return (saved as 'everyone' | 'nobody') || 'everyone'
+    }
+    return 'everyone'
+  })
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('hw-theme')
@@ -78,6 +85,15 @@ export default function Setting({
     localStorage.setItem('hw-show-categories', showCategories.toString())
     window.dispatchEvent(new CustomEvent('settings-categories-updated', { detail: { show: showCategories } }))
   }, [showCategories])
+
+  useEffect(() => {
+    localStorage.setItem('hw-last-seen-visibility', lastSeenVisibility)
+    // Сохраняем в profiles
+    const client = getSupabase()
+    if (client && userId) {
+      client.from('profiles').upsert({ id: userId, last_seen_visibility: lastSeenVisibility }).then(() => {})
+    }
+  }, [lastSeenVisibility, userId])
 
   const cardStyle = "bg-[var(--bg-secondary)] border border-[var(--border-light)] rounded-[32px] overflow-hidden"
   const itemStyle = "flex w-full items-center justify-between px-4 py-[18px] text-left bg-transparent active:bg-[var(--border-light)] transition-colors"
@@ -397,7 +413,7 @@ export default function Setting({
                   <div className={iconBgStyle}>
                     <Monitor className="w-[18px] h-[18px] text-[var(--text-primary)] opacity-80" strokeWidth={1.5} />
                   </div>
-                  <span className={labelStyle}>Настройки сайта</span>
+                  <span className={labelStyle}>Дополнительные настройки</span>
                 </div>
                 <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
@@ -414,7 +430,7 @@ export default function Setting({
                       style={{ filter: 'brightness(0) saturate(100%) invert(43%) sepia(98%) saturate(2338%) hue-rotate(185deg) brightness(101%) contrast(101%)' }}
                     />
                   </div>
-                  <span className={labelStyle}>Подтверждение аккаунта</span>
+                  <span className={labelStyle}>Верификация аккаунта</span>
                 </div>
                 <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
@@ -862,6 +878,44 @@ export default function Setting({
                             showCategories ? 'bg-white' : 'bg-[var(--text-tertiary)]'
                           }`}
                         />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Видимость последнего визита */}
+                <div className={cardStyle}>
+                  <div className="px-5 py-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Кто видит когда я был(а) в сети?</span>
+                        <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light mt-0.5">
+                          {lastSeenVisibility === 'everyone' ? 'Все пользователи видят время визита' : 'Все видят «Был(а) недавно»'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-4">
+                      <button
+                        type="button"
+                        onClick={() => setLastSeenVisibility('everyone')}
+                        className={`flex-1 h-10 rounded-[14px] text-[14px] font-sf-ui-medium transition-all ${
+                          lastSeenVisibility === 'everyone'
+                            ? 'bg-white text-black'
+                            : 'bg-white/[0.06] text-white/40 border border-white/[0.08]'
+                        }`}
+                      >
+                        Все
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLastSeenVisibility('nobody')}
+                        className={`flex-1 h-10 rounded-[14px] text-[14px] font-sf-ui-medium transition-all ${
+                          lastSeenVisibility === 'nobody'
+                            ? 'bg-white text-black'
+                            : 'bg-white/[0.06] text-white/40 border border-white/[0.08]'
+                        }`}
+                      >
+                        Никто
                       </button>
                     </div>
                   </div>

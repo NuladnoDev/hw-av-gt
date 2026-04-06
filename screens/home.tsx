@@ -713,12 +713,46 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   }, [currentUserId])
 
   useEffect(() => {
-    const sellerId = searchParams.get('seller')
+    const sellerId = searchParams.get('sellerId') || searchParams.get('seller')
     const profileTabParam = searchParams.get('profileTab')
-    if (sellerId) {
+    const adId = searchParams.get('adId')
+
+    if (adId) {
+      // Открываем объявление по ссылке
+      import('@/screens/ads').then(({ loadAdsFromStorage }) => {
+        loadAdsFromStorage().then((ads) => {
+          const found = ads.find((a) => a.id === adId)
+          if (found) setSelectedAd(found)
+        })
+      })
+      // Также пробуем загрузить из Supabase
+      const client = getSupabase()
+      if (client) {
+        client.from('ads').select('*').eq('id', adId).maybeSingle().then(({ data }) => {
+          if (data) {
+            setSelectedAd({
+              id: data.id,
+              userId: data.user_id,
+              userTag: data.user_tag,
+              title: data.title,
+              description: data.description,
+              price: data.price,
+              imageUrl: (() => { try { const p = JSON.parse(data.image_url); return Array.isArray(p) ? p[0] : data.image_url } catch { return data.image_url } })(),
+              imageUrls: (() => { try { return JSON.parse(data.image_url) } catch { return [data.image_url] } })(),
+              condition: data.condition,
+              location: data.location,
+              category: data.category,
+              specs: data.specs ? JSON.parse(data.specs) : undefined,
+              createdAt: new Date(data.created_at).getTime(),
+            })
+          }
+        })
+      }
+    } else if (sellerId) {
       setViewProfileMode('foreign')
       setViewProfileUserId(sellerId)
       setViewStoreId(null)
+      setTab('profile')
       if (profileTabParam === 'ads' || profileTabParam === 'about' || profileTabParam === 'friends') {
         setProfileTab(profileTabParam)
       } else {
@@ -1801,16 +1835,22 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                       type="button"
                       onClick={() => {
                         closeProfileMenu()
-                        const shareUrl = currentUserId 
-                          ? `${window.location.origin}/?sellerId=${currentUserId}`
+                        // Если смотрим чужой профиль — шарим его, иначе свой
+                        const targetId = viewProfileMode === 'foreign' && viewProfileUserId
+                          ? viewProfileUserId
+                          : currentUserId
+                        const shareUrl = targetId
+                          ? `${window.location.origin}/?sellerId=${targetId}`
                           : window.location.href
-                        
+                        const shareTitle = viewStoreId ? 'Магазин' : 'Профиль'
+                        const shareText = viewStoreId
+                          ? 'Посмотрите этот магазин!'
+                          : viewProfileMode === 'foreign'
+                            ? 'Посмотрите этот профиль!'
+                            : 'Посмотрите мой профиль!'
+
                         if (navigator.share) {
-                          navigator.share({
-                            title: 'Профиль',
-                            text: 'Посмотрите мой профиль в приложении!',
-                            url: shareUrl
-                          }).catch(() => {})
+                          navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(() => {})
                         } else {
                           navigator.clipboard.writeText(shareUrl).catch(() => {})
                         }
