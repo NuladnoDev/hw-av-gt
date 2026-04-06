@@ -30,7 +30,7 @@ export async function middleware(req: NextRequest) {
         const [ad] = await res.json()
         if (ad) {
           title = `${ad.title} — ${ad.price} ₽`
-          description = `Продаёт @${(ad.user_tag || '').replace(/^@/, '')} на Кадуй`
+          description = `Продаёт @${(ad.user_tag || '').replace(/^@/, '')}`
           if (ad.image_url) {
             try {
               const imgs = JSON.parse(ad.image_url)
@@ -51,8 +51,8 @@ export async function middleware(req: NextRequest) {
         const [profile] = await res.json()
         if (profile) {
           const tag = (profile.tag || '').replace(/^@/, '')
-          title = `@${tag} — Кадуй`
-          description = profile.city ? `Профиль пользователя из ${profile.city}` : 'Профиль пользователя на Кадуй'
+          title = `@${tag}`
+          description = profile.city ? `Профиль пользователя из ${profile.city}` : 'Профиль пользователя'
           if (profile.avatar_url) image = profile.avatar_url
         }
       }
@@ -70,7 +70,7 @@ export async function middleware(req: NextRequest) {
   <meta property="og:image" content="${escHtml(image)}"/>
   <meta property="og:type" content="website"/>
   <meta property="og:url" content="${escHtml(req.url)}"/>
-  <meta property="og:site_name" content="Кадуй"/>
+  <meta property="og:site_name" content="hw-project"/>
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="${escHtml(title)}"/>
   <meta name="twitter:description" content="${escHtml(description)}"/>
