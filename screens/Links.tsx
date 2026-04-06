@@ -19,7 +19,7 @@ type LinksProps = {
 const detectContactType = (value: string): ContactType | null => {
   const v = value.trim().toLowerCase()
   if (!v) return null
-  if (v.includes('vk.com') || v.includes('vkontakte')) return 'vk'
+  if (v.includes('vk.com') || v.includes('vk.ru') || v.includes('vkontakte')) return 'vk'
   if (v.includes('t.me') || v.includes('telegram.me') || v.includes('telegram.org')) return 'telegram'
   return null
 }

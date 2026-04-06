@@ -15,7 +15,7 @@ export default function AdsEdit({
   onClose: () => void
 }) {
   const [scale, setScale] = useState(1)
-  const [activeTab, setActiveTab] = useState<'info' | 'specs'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'condition' | 'specs'>('info')
 
   const initialImages = ad.imageUrls && ad.imageUrls.length > 0 ? ad.imageUrls : ad.imageUrl ? [ad.imageUrl] : []
 
@@ -33,6 +33,8 @@ export default function AdsEdit({
   const [category] = useState<AdsCategory | null>(() => normalizeCategory(ad.category))
   const [images, setImages] = useState<string[]>(initialImages)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const gridRef = useRef<HTMLDivElement | null>(null)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [title, setTitle] = useState(ad.title ?? '')
   const [condition, setCondition] = useState<AdsCondition | null>(() => mapConditionLabelToId(ad.condition))
   const [brand, setBrand] = useState('')
@@ -193,6 +195,14 @@ export default function AdsEdit({
 
   const removeImageAt = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const swapImages = (from: number, to: number) => {
+    setImages((prev) => {
+      const next = [...prev]
+      ;[next[from], next[to]] = [next[to], next[from]]
+      return next
+    })
   }
 
   const canSave =
@@ -426,163 +436,211 @@ export default function AdsEdit({
       <div className="relative h-full w-full max-w-[375px] bg-[#0A0A0A] flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="sticky top-0 z-[130] w-full bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/5 safe-area-top">
-          <div className="flex h-[56px] items-center justify-between px-6">
+        <div className="sticky top-0 z-[130] w-full bg-[#0d0d0d] rounded-b-[28px] shadow-[0_8px_20px_rgba(0,0,0,0.3)]" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+          <div className="flex h-[56px] items-center justify-between px-5">
             <button
               onClick={onClose}
-              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 active:scale-90 transition-all"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/[0.06] active:scale-90 transition-all"
             >
-              <X className="w-6 h-6 text-white/40" />
+              <X className="w-5 h-5 text-white/70" />
             </button>
-            <span className="text-[17px] font-sf-ui-medium text-white/90">Редактирование</span>
+            <span className="text-[17px] font-sf-ui-medium text-white">Редактирование</span>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="w-10 h-10 -mr-2 flex items-center justify-center rounded-full hover:bg-red-500/10 active:scale-90 transition-all group"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500/15 active:scale-90 transition-all"
             >
-              <Trash2 className="w-5 h-5 text-white/20 group-hover:text-red-500 transition-colors" />
+              <Trash2 className="w-5 h-5 text-red-400" />
             </button>
           </div>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar pb-32">
+        <div className="flex-1 overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
           <div className="px-6 py-6 space-y-8">
             
             {/* Photos Section */}
             <section>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[14px] font-sf-ui-medium text-white/30 uppercase tracking-wider">Фотографии</h3>
-                <span className="text-[12px] text-white/20">{images.length}/6</span>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[13px] font-sf-ui-medium text-white/30 tracking-wider">Добавленные изображения</h3>
+                <span className="text-[12px] text-white/20">{images.length} / 6</span>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                {images.map((src, index) => (
-                  <div key={src} className="relative aspect-square rounded-2xl overflow-hidden bg-white/5 group">
-                    <img src={src} alt="" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => removeImageAt(index)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center active:scale-90 transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <X className="w-3.5 h-3.5 text-white" />
-                    </button>
-                    {index === 0 && (
-                      <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-blue-600 rounded-lg backdrop-blur-sm">
-                        <span className="text-[9px] text-white font-sf-ui-bold uppercase">Главное</span>
-                      </div>
-                    )}
+              {(() => {
+                const hasAdd = images.length < 6
+                const total = images.length + (hasAdd ? 1 : 0)
+                const cols = total <= 2 ? 2 : total <= 4 ? 2 : 3
+                const gridClass = cols === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                const cells = [
+                  ...images.map((src, index) => ({ type: 'image' as const, src, index })),
+                  ...(hasAdd ? [{ type: 'add' as const }] : []),
+                ]
+                return (
+                  <div className={`grid ${gridClass} gap-1.5`} ref={gridRef}>
+                    {cells.map((cell) => {
+                      if (cell.type === 'add') {
+                        return (
+                          <button key="add" type="button" onClick={openFilePicker}
+                            className="aspect-square rounded-[16px] border-2 border-dashed border-white/15 bg-white/[0.03] active:bg-white/[0.06] transition-all flex flex-col items-center justify-center gap-2"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-white/[0.07] flex items-center justify-center">
+                              <Plus size={18} className="text-white/50" />
+                            </div>
+                            {images.length === 0 && <span className="text-[12px] text-white/35 font-sf-ui-light">Добавить</span>}
+                          </button>
+                        )
+                      }
+                      const { src, index } = cell
+                      return (
+                        <motion.div
+                          key={`${src}-${index}`}
+                          className="relative aspect-square rounded-[16px] overflow-hidden"
+                          layout
+                          drag
+                          dragConstraints={gridRef}
+                          dragElastic={0.2}
+                          dragMomentum={false}
+                          dragSnapToOrigin={true}
+                          onDragEnd={(_e, info) => {
+                            const absX = Math.abs(info.offset.x)
+                            const absY = Math.abs(info.offset.y)
+                            if (absX >= absY && absX > 50) {
+                              const t = index + (info.offset.x > 0 ? 1 : -1)
+                              if (t >= 0 && t < images.length) swapImages(index, t)
+                            } else if (absY > absX && absY > 50) {
+                              const t = index + (info.offset.y > 0 ? cols : -cols)
+                              if (t >= 0 && t < images.length) swapImages(index, t)
+                            }
+                          }}
+                          whileDrag={{ scale: 1.05, zIndex: 50 }}
+                          transition={{ layout: { type: 'spring', stiffness: 500, damping: 40 } }}
+                        >
+                          <div onClick={() => setPreviewImage(src)} className="w-full h-full cursor-pointer">
+                            <img src={src} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          {index === 0 && (
+                            <div className="absolute left-2 top-2 rounded-md bg-black/60 px-2 py-0.5 pointer-events-none">
+                              <span className="text-[10px] text-white font-sf-ui-medium">Обложка</span>
+                            </div>
+                          )}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); removeImageAt(index) }}
+                            className="absolute right-2 top-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center active:scale-75 transition-all z-10"
+                          >
+                            <X size={12} className="text-white" />
+                          </button>
+                        </motion.div>
+                      )
+                    })}
                   </div>
-                ))}
-                {images.length < 6 && (
-                  <button
-                    onClick={openFilePicker}
-                    className="aspect-square rounded-2xl border-2 border-dashed border-white/5 bg-white/[0.02] flex flex-col items-center justify-center gap-2 hover:bg-white/[0.04] active:scale-95 transition-all"
-                  >
-                    <Camera className="w-6 h-6 text-white/20" />
-                    <span className="text-[11px] text-white/20 font-sf-ui-medium">Добавить</span>
-                  </button>
-                )}
-              </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                multiple
-                onChange={(e) => handlePickedFiles(e.target.files)}
-              />
+                )
+              })()}
+              {images.length > 1 && (
+                <p className="mt-2 text-[11px] text-white/20 font-sf-ui-light text-center">Перетащите чтобы изменить порядок</p>
+              )}
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple
+                onChange={(e) => handlePickedFiles(e.target.files)} />
             </section>
 
-            {/* Main Info */}
-            <section className="space-y-5">
-              <h3 className="text-[14px] font-sf-ui-medium text-white/30 uppercase tracking-wider">Основное</h3>
-              
-              <div className="space-y-1.5">
-                <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Название</label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Что продаете?"
-                  className="w-full h-[52px] bg-white/5 border border-white/5 rounded-2xl px-5 text-[16px] text-white placeholder:text-white/20 focus:border-blue-500/30 focus:bg-white/[0.07] transition-all outline-none"
-                />
-              </div>
+            {/* Tabs навигация */}
+            <div className="flex gap-1 border-b border-white/[0.06] -mx-6 px-6">
+              {[
+                { id: 'info', label: 'Основное' },
+                { id: 'condition', label: 'Состояние' },
+                ...(category ? [{ id: 'specs', label: 'Характеристики' }] : []),
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTab(t.id as any)}
+                  className={`relative px-3 py-2.5 text-[14px] font-sf-ui-medium transition-all ${activeTab === t.id ? 'text-white' : 'text-white/30'}`}
+                >
+                  {t.label}
+                  {activeTab === t.id && (
+                    <motion.div layoutId="edit-tab-indicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                  )}
+                </button>
+              ))}
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Цена</label>
-                <div className="relative">
+            {/* Основное */}
+            {activeTab === 'info' && (
+              <section className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Название</label>
                   <input
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0"
-                    type="number"
-                    className="w-full h-[52px] bg-white/5 border border-white/5 rounded-2xl px-5 pr-12 text-[16px] text-white placeholder:text-white/20 focus:border-blue-500/30 focus:bg-white/[0.07] transition-all outline-none font-sf-ui-bold"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Что продаете?"
+                    className="w-full h-[52px] bg-white/[0.04] border border-white/[0.06] rounded-[16px] px-4 text-[16px] text-white placeholder:text-white/20 focus:border-white/20 transition-all outline-none"
                   />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 font-sf-ui-medium">₽</span>
                 </div>
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Цена</label>
+                  <div className="relative">
+                    <input
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="0"
+                      type="number"
+                      className="w-full h-[52px] bg-white/[0.04] border border-white/[0.06] rounded-[16px] px-4 pr-10 text-[16px] text-white placeholder:text-white/20 focus:border-white/20 transition-all outline-none"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 font-sf-ui-medium">₽</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Описание</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Опишите товар подробнее..."
+                    className="w-full min-h-[120px] bg-white/[0.04] border border-white/[0.06] rounded-[16px] p-4 text-[15px] text-white placeholder:text-white/20 focus:border-white/20 transition-all outline-none resize-none leading-relaxed"
+                  />
+                </div>
+              </section>
+            )}
 
-              <div className="space-y-1.5">
-                <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Описание</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Опишите товар подробнее..."
-                  className="w-full min-h-[120px] bg-white/5 border border-white/5 rounded-2xl p-5 text-[15px] text-white placeholder:text-white/20 focus:border-blue-500/30 focus:bg-white/[0.07] transition-all outline-none resize-none leading-relaxed"
-                />
-              </div>
-            </section>
-
-            {/* Condition Selection */}
-            <section className="space-y-4">
-              <h3 className="text-[14px] font-sf-ui-medium text-white/30 uppercase tracking-wider">Состояние</h3>
-              <div className="grid grid-cols-1 gap-2">
+            {/* Состояние */}
+            {activeTab === 'condition' && (
+              <section className="space-y-2">
                 {CONDITION_OPTIONS.map((opt) => {
                   const isSelected = condition === opt.id
                   return (
                     <button
                       key={opt.id}
                       onClick={() => setCondition(opt.id)}
-                      className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                        isSelected 
-                          ? 'bg-white/10 border-white/20 scale-[1.02]' 
-                          : 'bg-white/5 border-transparent opacity-60 grayscale hover:opacity-100 hover:grayscale-0'
+                      className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[18px] border transition-all ${
+                        isSelected ? 'bg-white/[0.07] border-white/20' : 'bg-white/[0.03] border-white/[0.05]'
                       }`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div 
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-[18px]"
-                          style={{ backgroundColor: `${opt.color}20`, color: opt.color }}
-                        >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-[16px]"
+                          style={{ backgroundColor: `${opt.color}20`, color: opt.color }}>
                           {opt.icon}
                         </div>
                         <div className="text-left">
                           <p className="text-[15px] font-sf-ui-medium text-white">{opt.label}</p>
-                          <p className="text-[12px] text-white/40 leading-tight">{opt.description}</p>
+                          <p className="text-[12px] text-white/35 font-sf-ui-light">{opt.description}</p>
                         </div>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-white/10'
-                      }`}>
-                        {isSelected && <Check className="w-3 h-3 text-white stroke-[4]" />}
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-white bg-white' : 'border-white/15'}`}>
+                        {isSelected && <Check className="w-3 h-3 text-black stroke-[3]" />}
                       </div>
                     </button>
                   )
                 })}
-              </div>
-            </section>
+              </section>
+            )}
 
-            {/* Dynamic Specs */}
-            <section className="space-y-5">
-              <h3 className="text-[14px] font-sf-ui-medium text-white/30 uppercase tracking-wider">Характеристики</h3>
-              
-              <div className="grid grid-cols-1 gap-5">
+            {/* Характеристики */}
+            {activeTab === 'specs' && (
+              <section className="space-y-4">
                 {category === 'nicotine' && (
                   <>
                     <SpecInput label="Бренд" value={brand} onChange={setBrand} placeholder="HQD, Elf Bar..." />
                     <SpecInput label="Тип устройства" value={nicotineFormat} onChange={setNicotineFormat} placeholder="POD-система..." />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <SpecInput label="Объем" value={nicotineTankVolume} onChange={setNicotineTankVolume} placeholder="2 мл" />
                       <SpecInput label="Аккумулятор" value={nicotineBatteryCapacity} onChange={setNicotineBatteryCapacity} placeholder="500 мАч" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <SpecInput label="Крепость" value={nicotineStrength} onChange={setNicotineStrength} placeholder="20 мг" />
                       <SpecInput label="Затяжки" value={nicotinePuffs} onChange={setNicotinePuffs} placeholder="1500" />
                     </div>
@@ -590,16 +648,15 @@ export default function AdsEdit({
                     <SpecInput label="Цвет" value={color} onChange={setColor} placeholder="Черный..." />
                   </>
                 )}
-
                 {category === 'things' && (
                   <>
                     <SpecInput label="Бренд" value={brand} onChange={setBrand} placeholder="Apple, Samsung..." />
                     <SpecInput label="Модель" value={thingsModel} onChange={setThingsModel} placeholder="iPhone 13..." />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <SpecInput label="Память" value={thingsMemory} onChange={setThingsMemory} placeholder="128 ГБ" />
                       <SpecInput label="Экран" value={thingsDiagonal} onChange={setThingsDiagonal} placeholder='6.1"' />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <SpecInput label="Год" value={thingsYear} onChange={setThingsYear} placeholder="2022" />
                       <SpecInput label="Гарантия" value={thingsWarranty} onChange={setThingsWarranty} placeholder="6 мес." />
                     </div>
@@ -607,7 +664,6 @@ export default function AdsEdit({
                     <SpecInput label="Цвет" value={color} onChange={setColor} placeholder="Space Gray..." />
                   </>
                 )}
-
                 {category === 'service' && (
                   <>
                     <SpecInput label="Вид услуги" value={serviceType} onChange={setServiceType} placeholder="Ремонт..." />
@@ -616,7 +672,6 @@ export default function AdsEdit({
                     <SpecInput label="Регион" value={serviceRegion} onChange={setServiceRegion} placeholder="Кадуй..." />
                   </>
                 )}
-
                 {category === 'job' && (
                   <>
                     <SpecInput label="Должность" value={jobPosition} onChange={setJobPosition} placeholder="Продавец..." />
@@ -626,7 +681,6 @@ export default function AdsEdit({
                     <SpecInput label="Формат" value={jobFormat} onChange={setJobFormat} placeholder="Офис..." />
                   </>
                 )}
-
                 {category === 'other' && (
                   <>
                     <SpecInput label="Тип" value={otherType} onChange={setOtherType} placeholder="Настольная игра..." />
@@ -634,8 +688,8 @@ export default function AdsEdit({
                     <SpecInput label="Цвет" value={color} onChange={setColor} placeholder="Разноцветный..." />
                   </>
                 )}
-              </div>
-            </section>
+              </section>
+            )}
           </div>
         </div>
 
@@ -661,43 +715,47 @@ export default function AdsEdit({
         {/* Delete Confirmation Modal */}
         <AnimatePresence>
           {showDeleteConfirm && (
-            <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4">
+            <>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
               />
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                className="relative w-full max-w-[340px] bg-[#141414] rounded-[32px] p-8 border border-white/5 shadow-2xl"
-              >
-                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <AlertCircle className="w-8 h-8 text-red-500" />
-                </div>
-                <h4 className="text-[20px] font-sf-ui-bold text-white text-center mb-2">Удалить объявление?</h4>
-                <p className="text-[14px] text-white/40 text-center mb-8 leading-relaxed">
-                  Это действие нельзя будет отменить. Объявление исчезнет из ленты и вашего профиля.
-                </p>
-                <div className="space-y-3">
+              <div className="fixed inset-0 z-[210] flex items-end justify-center pointer-events-none">
+                <motion.div
+                  initial={{ translateY: '100%' }}
+                  animate={{ translateY: 0 }}
+                  exit={{ translateY: '100%' }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+                  className="w-full bg-[#121212] border-t border-white/10 rounded-t-[32px] px-6 pt-7 pb-[calc(env(safe-area-inset-bottom,0px)+24px)] pointer-events-auto"
+                >
+                  <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-white/15" />
+                  <div className="flex flex-col items-center text-center mb-6">
+                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                      <Trash2 className="w-7 h-7 text-red-400" />
+                    </div>
+                    <h4 className="text-[20px] font-sf-ui-medium text-white mb-2">Удалить объявление?</h4>
+                    <p className="text-[14px] text-white/40 font-sf-ui-light leading-relaxed max-w-[280px]">
+                      Это действие нельзя отменить. Объявление исчезнет из ленты и вашего профиля/магазина.
+                    </p>
+                  </div>
                   <button
                     onClick={handleDeleteClick}
-                    className="w-full h-[52px] bg-red-500 text-white rounded-2xl font-sf-ui-bold active:scale-95 transition-all"
+                    className="w-full h-14 bg-red-500 text-white rounded-[22px] font-sf-ui-medium text-[16px] active:scale-[0.97] transition-all mb-3"
                   >
-                    Да, удалить
+                    Удалить
                   </button>
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="w-full h-[52px] bg-white/5 text-white/60 rounded-2xl font-sf-ui-medium active:scale-95 transition-all"
+                    className="w-full h-12 text-white/40 font-sf-ui-light text-[15px] active:opacity-60 transition-all"
                   >
                     Отмена
                   </button>
-                </div>
-              </motion.div>
-            </div>
+                </motion.div>
+              </div>
+            </>
           )}
         </AnimatePresence>
 

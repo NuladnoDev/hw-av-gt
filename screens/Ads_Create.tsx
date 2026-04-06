@@ -72,29 +72,47 @@ export const CONDITION_OPTIONS: {
     id: 'new',
     label: 'Новое',
     description: 'Есть чек, сохранена оригинальная упаковка',
-    icon: <Sparkles size={24} />,
-    color: '#FFFFFF',
+    icon: (
+      <svg viewBox="0 0 20 20" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 2l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4L4.2 6.2l4-.6z"/>
+      </svg>
+    ),
+    color: '#34d399',
   },
   {
     id: 'excellent',
     label: 'Отличное',
     description: 'Целостность товара сохранена, нет дефектов',
-    icon: <Star size={24} />,
-    color: '#FFFFFF',
+    icon: (
+      <svg viewBox="0 0 20 20" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 10l4 4 8-8"/>
+      </svg>
+    ),
+    color: '#4ade80',
   },
   {
     id: 'good',
     label: 'Хорошее',
     description: 'Есть небольшие дефекты, потёртости и т.п',
-    icon: <ThumbsUp size={24} />,
-    color: '#FFFFFF',
+    icon: (
+      <svg viewBox="0 0 20 20" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="10" cy="10" r="7"/>
+        <path d="M7 12s1 2 3 2 3-2 3-2M7.5 8h.01M12.5 8h.01"/>
+      </svg>
+    ),
+    color: '#facc15',
   },
   {
     id: 'bad',
     label: 'Не очень',
     description: 'Есть видимые дефекты, неисправности',
-    icon: <CircleAlert size={24} />,
-    color: '#FFFFFF',
+    icon: (
+      <svg viewBox="0 0 20 20" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="10" cy="10" r="7"/>
+        <path d="M10 7v4M10 14h.01"/>
+      </svg>
+    ),
+    color: '#fb923c',
   },
 ]
 

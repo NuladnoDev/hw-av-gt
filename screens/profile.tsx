@@ -1430,7 +1430,7 @@ export default function Profile({
                   className="h-11 flex items-center justify-center font-vk-demi"
                   style={{
                     flex: isSubscribed ? 3 : 4,
-                    backgroundColor: isSubscribed ? '#007AFF' : '#FFFFFF',
+                    backgroundColor: isSubscribed ? '#7bcf9bff' : '#FFFFFF',
                     color: isSubscribed ? '#FFFFFF' : '#000000',
                     fontSize: 14,
                     borderRadius: 'var(--profile-button-radius)',

@@ -22,10 +22,10 @@ const CONDITION_DESCRIPTIONS: Record<string, string> = {
 }
 
 const CONDITION_ICONS: Record<string, React.ReactNode> = {
-  'Новое': <Sparkles className="w-5 h-5" />,
-  'Отличное': <Star className="w-5 h-5" />,
-  'Хорошее': <ThumbsUp className="w-5 h-5" />,
-  'Не очень': <CircleAlert className="w-5 h-5" />,
+  'Новое': <svg viewBox="0 0 20 20" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4L4.2 6.2l4-.6z"/></svg>,
+  'Отличное': <svg viewBox="0 0 20 20" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10l4 4 8-8"/></svg>,
+  'Хорошее': <svg viewBox="0 0 20 20" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M7 12s1 2 3 2 3-2 3-2M7.5 8h.01M12.5 8h.01"/></svg>,
+  'Не очень': <svg viewBox="0 0 20 20" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 7v4M10 14h.01"/></svg>,
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -669,7 +669,7 @@ export default function AdDetail({
                       )}
                       {ad.condition === 'Отличное' && (
                         <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M13 5H9V2a1 1 0 0 0-2 0v3H3a1 1 0 0 0 0 2h4v7h2V7h4a1 1 0 0 0 0-2z"/>
+                          <path d="M3 8l3.5 3.5 6.5-7"/>
                         </svg>
                       )}
                       {ad.condition === 'Хорошее' && (
@@ -856,7 +856,7 @@ export default function AdDetail({
             </motion.button>
 
             <div className="mt-3 space-y-3 px-1">
-              <h2 className="text-[21px] font-ttc-bold text-white/72">Найти больше вариантов</h2>
+              <h2 className="text-[19px] font-ttc-bold text-white/110">Найти больше вариантов</h2>
               <div className="space-y-2.5">
                 {findMoreQueries.map((query) => (
                   <button

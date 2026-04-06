@@ -287,6 +287,14 @@ const CategoryIcon = ({ name, isSelected }: { name: string; isSelected?: boolean
           <path d="M16 10L12 6L8 10M8 14L12 18L16 14" stroke={isSelected ? 'black' : 'white'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       )
+    case 'Мои объявления':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="7" r="3.5" fill={color} fillOpacity={opacity} stroke={color} strokeWidth="1.8"/>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+          <path d="M16 3h5M18.5 1v4" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      )
     case 'Аукцион':
       return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1030,6 +1038,8 @@ export default function Ads({
       if (selectedCategory === 'Новые') {
         const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
         filtered = filtered.filter((ad) => ad.createdAt > oneDayAgo)
+      } else if (selectedCategory === 'Мои объявления') {
+        filtered = filtered.filter((ad) => ad.userId && (ad.userId === currentUserId || ad.userId === currentUserAltId))
       } else if (selectedCategory === 'Подтверждённые') {
         // Here we could check if user is verified, for now let's say all ads with location are "confirmed" or similar logic
         // Or if we have a list of verified tags. Let's assume for now ads with specific tags or just placeholder
@@ -1261,6 +1271,7 @@ export default function Ads({
               whileTap={{ scale: 0.95 }}
               onClick={() => setFiltersOpen(true)}
               className="h-[54px] w-[54px] flex items-center justify-center rounded-2xl bg-white/[0.02] border border-white/[0.04] backdrop-blur-xl"
+              style={{ touchAction: 'manipulation' }}
             >
               <img src="/interface/filter.svg" alt="" className="w-6 h-6 opacity-40" />
             </motion.button>
@@ -1280,14 +1291,15 @@ export default function Ads({
                   className="flex overflow-x-auto scrollbar-hidden category-carousel w-full overflow-y-hidden" 
                 >
                   <div className="flex gap-2 py-1 pl-1 pr-3">
-                    {[
+                    {([
                       { name: 'Новые' },
                       { name: 'Популярные' },
                       { name: 'Подтверждённые' },
+                      { name: 'Мои объявления' },
                       { name: 'Бесплатно' },
                       { name: 'Обмен' },
                       { name: 'Аукцион', disabled: true }
-                    ].map((category, index) => (
+                    ] as { name: string; disabled?: boolean }[]).map((category, index) => (
                       <motion.button
                         key={category.name}
                         type="button"
