@@ -220,7 +220,7 @@ export default function StoreCatalog({
               className="w-full px-6 py-4 flex items-center gap-3 border-b border-white/[0.04] active:bg-white/[0.03] transition-colors group"
             >
               <div className="relative shrink-0">
-                <div className="w-12 h-12 rounded-[14px] overflow-hidden bg-zinc-900 border border-white/[0.08] group-hover:border-white/[0.14] transition-colors">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-900 border border-white/[0.08] group-hover:border-white/[0.14] transition-colors">
                   {store.avatarUrl ? (
                     <img src={store.avatarUrl} alt={store.name} className="w-full h-full object-cover" />
                   ) : (

@@ -134,6 +134,15 @@ export default function StoreProfile({
     loadStoreData()
   }, [storeId])
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.storeId === storeId) setShowSettings(true)
+    }
+    window.addEventListener('open-store-settings', handler)
+    return () => window.removeEventListener('open-store-settings', handler)
+  }, [storeId])
+
   const loadStoreData = async () => {
     if (!isRefreshing) setLoading(true)
     const client = getSupabase()
@@ -335,143 +344,136 @@ export default function StoreProfile({
           </div>
         </div>
 
-        <div className="flex flex-col items-center">
-          {/* Avatar */}
-          <div className="relative group">
-            <div className="w-24 h-24 rounded-[32px] overflow-hidden bg-white/10 border-4 border-[#0A0A0A] shadow-[0_0_30px_rgba(0,0,0,0.6),0_4px_20px_rgba(0,0,0,0.8)]">
-              {store.avatar_url ? (
-                <img src={store.avatar_url} alt={store.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white text-3xl font-ttc-bold bg-gradient-to-br from-white/10 to-white/5">
-                  {store.name[0].toUpperCase()}
+        <div className="flex flex-col">
+          {/* Header: аватар слева, инфо справа */}
+          <div className="flex items-start gap-4 pt-2 pb-5">
+            {/* Avatar */}
+            <div className="relative group shrink-0">
+              <div className="w-[80px] h-[80px] rounded-full overflow-hidden bg-white/10 border border-white/10">
+                {store.avatar_url ? (
+                  <img src={store.avatar_url} alt={store.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white text-[28px] font-ttc-bold">
+                    {store.name[0].toUpperCase()}
+                  </div>
+                )}
+              </div>
+              {isOwner && (
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                >
+                  <Camera size={20} className="text-white" />
+                </button>
+              )}
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleAvatarUpload(e.target.files)}
+              />
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0 pt-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-[20px] font-sf-ui-medium text-white leading-tight">{store.name}</h1>
+                {store.is_moderator && <ModeratorBadge size={18} />}
+                {store.is_quality && <QualityBadge size={18} />}
+                {(store.is_verified || store.verified) && <VerifiedBadge size={18} />}
+              </div>
+              {store.city && (
+                <div className="flex items-center gap-1 text-white/40 text-[13px] mt-0.5">
+                  <MapPin size={12} />
+                  {store.city}
                 </div>
               )}
+              {store.description && (
+                <p className="mt-1.5 text-[13px] text-white/50 font-sf-ui-light leading-relaxed line-clamp-2">
+                  {store.description}
+                </p>
+              )}
             </div>
-            {isOwner && (
-              <button 
-                onClick={() => avatarInputRef.current?.click()}
-                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-[32px]"
-              >
-                <Camera size={24} className="text-white" />
-              </button>
-            )}
-            <input 
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleAvatarUpload(e.target.files)}
-            />
-          </div>
-
-          {/* Name & City */}
-          <div className="mt-4 w-full flex items-center justify-center">
-            {/* Left side badges for symmetry */}
-            <div className="flex-1 flex justify-end items-center gap-2 mr-4">
-              {store.is_moderator && <ModeratorBadge size={22} />}
-              {store.is_quality && <QualityBadge size={22} />}
-            </div>
-
-            <h1 className="text-[28px] font-ttc-bold text-white leading-tight flex items-center justify-center gap-2">
-              {store.name}
-            </h1>
-
-            {/* Right side badges */}
-            <div className="flex-1 flex items-center gap-2 ml-4">
-              {(store.is_verified || store.verified) && <VerifiedBadge size={22} />}
-            </div>
-          </div>
-
-          {store.city && (
-            <div className="mt-1 flex items-center justify-center gap-1 text-white/40 text-[14px]">
-              <MapPin size={14} />
-              {store.city}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="mt-6 flex gap-3 w-full max-w-[320px]">
-            {isOwner ? (
-              <button 
-                onClick={() => setShowSettings(true)}
-                className="flex-1 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center gap-2 text-white font-sf-ui-medium active:scale-95 transition-all"
-              >
-                <Settings size={18} />
-                Настройки
-              </button>
-            ) : (
-              <>
-                <button 
-                  onClick={toggleFollow}
-                  className={`flex-1 h-12 rounded-2xl flex items-center justify-center gap-2 font-vk-demi active:scale-95 transition-all ${
-                    isFollowing 
-                      ? 'bg-white/5 border border-white/10 text-white' 
-                      : 'bg-white text-black'
-                  }`}
-                >
-                  {isFollowing ? 'Вы подписаны' : 'Подписаться'}
-                </button>
-                {isFollowing && (
-                  <button 
-                    onClick={async () => {
-                      const client = getSupabase()
-                      if (!client || !currentUserId) return
-                      const newVal = !notificationsEnabled
-                      await client
-                        .from('store_follows')
-                        .update({ notifications_enabled: newVal })
-                        .eq('store_id', store.id)
-                        .eq('user_id', currentUserId)
-                      setNotificationsEnabled(newVal)
-                    }}
-                    className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all"
-                  >
-                    {notificationsEnabled ? <Bell size={20} /> : <BellOff size={20} className="text-white/40" />}
-                  </button>
-                )}
-              </>
-            )}
           </div>
 
           {/* Stats */}
-          <div className="mt-8 flex w-full max-w-[320px] justify-between px-4">
+          <div className="flex gap-4 mb-5">
             <div className="text-center">
-              <div className="text-[18px] font-ttc-bold text-white">{ads.length}</div>
-              <div className="text-[12px] text-white/40 uppercase tracking-wider">Товары</div>
+              <div className="text-[17px] font-ttc-bold text-white">{ads.length}</div>
+              <div className="text-[11px] text-white/35 font-sf-ui-light">Товары</div>
             </div>
             <div className="text-center">
-              <div className="text-[18px] font-ttc-bold text-white">{members.length}</div>
-              <div className="text-[12px] text-white/40 uppercase tracking-wider">Команда</div>
+              <div className="text-[17px] font-ttc-bold text-white">{members.length}</div>
+              <div className="text-[11px] text-white/35 font-sf-ui-light">Команда</div>
             </div>
-            <div className="text-center">
-              <div className="text-[18px] font-ttc-bold text-white">{store.rating}</div>
-              <div className="text-[12px] text-white/40 uppercase tracking-wider">Рейтинг</div>
-            </div>
+            {store.rating != null && (
+              <div className="text-center">
+                <div className="text-[17px] font-ttc-bold text-white">{store.rating}</div>
+                <div className="text-[11px] text-white/35 font-sf-ui-light">Рейтинг</div>
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Tabs */}
-        <div className="mt-8 flex gap-2 p-1 rounded-2xl bg-white/5 border border-white/10">
-          {[
-            { id: 'ads', label: 'Товары', icon: Package },
-            { id: 'staff', label: 'Команда', icon: Users },
-            { id: 'about', label: 'Описание', icon: Info },
-          ].map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id as any)}
-              className={`flex-1 h-10 rounded-xl flex items-center justify-center gap-2 text-[14px] font-sf-ui-medium transition-all ${
-                tab === t.id ? 'bg-white text-black' : 'text-white/40 hover:text-white'
-              }`}
-            >
-              <t.icon size={16} />
-              {t.label}
-            </button>
-          ))}
-        </div>
+          {/* Подписка + уведомления перед навигацией */}
+          {!isOwner && (
+            <div className="flex gap-2 mb-5">
+              <button
+                onClick={toggleFollow}
+                className={`flex-1 h-10 rounded-[14px] flex items-center justify-center gap-1.5 text-[14px] font-sf-ui-medium active:scale-95 transition-all ${
+                  isFollowing
+                    ? 'bg-white/[0.06] border border-white/[0.08] text-white/70'
+                    : 'bg-white text-black'
+                }`}
+              >
+                {isFollowing ? 'Подписан' : 'Подписаться'}
+              </button>
+              {isFollowing && (
+                <button
+                  onClick={async () => {
+                    const client = getSupabase()
+                    if (!client || !currentUserId) return
+                    const newVal = !notificationsEnabled
+                    await client
+                      .from('store_follows')
+                      .update({ notifications_enabled: newVal })
+                      .eq('store_id', store.id)
+                      .eq('user_id', currentUserId)
+                    setNotificationsEnabled(newVal)
+                  }}
+                  className="w-10 h-10 rounded-[14px] bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-white active:scale-95 transition-all"
+                >
+                  {notificationsEnabled ? <Bell size={16} /> : <BellOff size={16} className="text-white/40" />}
+                </button>
+              )}
+            </div>
+          )}
 
-        {/* Tab Content */}
-        <div className="mt-6">
+          {/* Tabs */}
+          <div className="flex gap-1 mb-5 border-b border-white/[0.06]">
+            {[
+              { id: 'ads', label: 'Товары', icon: Package },
+              { id: 'staff', label: 'Команда', icon: Users },
+              { id: 'about', label: 'О себе', icon: Info },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id as any)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-[14px] font-sf-ui-medium transition-all relative ${
+                  tab === t.id ? 'text-white' : 'text-white/35'
+                }`}
+              >
+                <t.icon size={14} />
+                {t.label}
+                {tab === t.id && (
+                  <motion.div layoutId="store-tab-indicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          <div className="">
           <AnimatePresence mode="wait">
             {tab === 'ads' && (
               <motion.div
@@ -534,28 +536,39 @@ export default function StoreProfile({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="space-y-3"
+                className="space-y-2.5"
               >
+                {/* Кнопка заявки */}
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-center gap-2 h-11 rounded-[18px] bg-white/[0.04] border border-white/[0.07] text-white/60 text-[14px] font-sf-ui-medium active:scale-[0.98] transition-all mb-1"
+                >
+                  <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 4v12M4 10h12"/>
+                  </svg>
+                  Подать заявку в команду
+                </button>
+
                 {members.map((m) => (
                   <button
                     key={m.id}
                     onClick={() => onOpenProfileById?.(m.user_id)}
-                    className="w-full flex items-center gap-4 p-4 rounded-3xl bg-white/5 border border-white/10 active:scale-[0.98] transition-all"
+                    className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-[22px] bg-white/[0.04] border border-white/[0.06] active:scale-[0.98] transition-all"
                   >
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10">
+                    <div className="w-11 h-11 rounded-full overflow-hidden bg-white/10 shrink-0">
                       {m.profiles.avatar_url ? (
                         <img src={m.profiles.avatar_url} alt={m.profiles.tag || ''} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white font-vk-demi bg-gradient-to-br from-blue-500 to-purple-500">
+                        <div className="w-full h-full flex items-center justify-center text-white/70 text-[15px] font-sf-ui-medium">
                           {m.profiles.tag?.[0].toUpperCase() || 'U'}
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-white font-sf-ui-medium text-[16px]">@{m.profiles.tag}</div>
-                      <div className="text-white/40 text-[13px] capitalize">{m.role === 'owner' ? 'Владелец' : m.role === 'admin' ? 'Админ' : 'Сотрудник'}</div>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="text-white font-sf-ui-medium text-[15px] truncate">@{m.profiles.tag}</div>
+                      <div className="text-white/35 text-[12px] font-sf-ui-light">{m.role === 'owner' ? 'Владелец' : m.role === 'admin' ? 'Админ' : 'Сотрудник'}</div>
                     </div>
-                    <ChevronRight size={18} className="text-white/20" />
+                    <ChevronRight size={16} className="text-white/20 shrink-0" />
                   </button>
                 ))}
               </motion.div>
@@ -584,6 +597,7 @@ export default function StoreProfile({
               </motion.div>
             )}
           </AnimatePresence>
+          </div>
         </div>
       </div>
 

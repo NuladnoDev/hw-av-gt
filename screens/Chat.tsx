@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronLeft, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, ShoppingBag, ArrowUp } from 'lucide-react'
+import { ChevronLeft, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, ShoppingBag, ArrowUp, X } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 import { AdCard, type StoredAd } from './ads'
 
@@ -75,6 +75,12 @@ export default function Chat({
   const [contacts, setContacts] = useState(initialContacts)
   const [receiverLastSeen, setReceiverLastSeen] = useState<string | null>(null)
   const [isReceiverTyping, setIsReceiverTyping] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingDuration, setRecordingDuration] = useState(0)
+  const [micPermissionDenied, setMicPermissionDenied] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordingChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -750,6 +756,148 @@ export default function Chat({
     } catch {}
   }
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      const recorder = new MediaRecorder(stream, { mimeType })
+      recordingChunksRef.current = []
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) recordingChunksRef.current.push(e.data) }
+      recorder.start(100)
+      mediaRecorderRef.current = recorder
+      setIsRecording(true)
+      setRecordingDuration(0)
+      recordingTimerRef.current = setInterval(() => setRecordingDuration((d) => d + 1), 1000)
+    } catch {
+      setMicPermissionDenied(true)
+    }
+  }
+
+  const stopRecording = async () => {
+    if (!mediaRecorderRef.current || !isRecording) return
+    setIsRecording(false)
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+
+    await new Promise<void>((resolve) => {
+      if (!mediaRecorderRef.current) { resolve(); return }
+      mediaRecorderRef.current.onstop = () => resolve()
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop())
+    })
+
+    if (recordingDuration < 1) { recordingChunksRef.current = []; return }
+
+    const mimeType = recordingChunksRef.current[0]?.type || 'audio/webm'
+    const blob = new Blob(recordingChunksRef.current, { type: mimeType })
+    recordingChunksRef.current = []
+    await sendVoiceMessage(blob)
+  }
+
+  const cancelRecording = () => {
+    if (!mediaRecorderRef.current) return
+    setIsRecording(false)
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+    mediaRecorderRef.current.onstop = null
+    mediaRecorderRef.current.stop()
+    mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop())
+    recordingChunksRef.current = []
+    setRecordingDuration(0)
+  }
+
+  const sendVoiceMessage = async (blob: Blob) => {
+    if (!userId) return
+    const client = getSupabase()
+    let audioUrl: string | null = null
+
+    if (client) {
+      const ext = blob.type.includes('mp4') ? 'm4a' : 'webm'
+      const path = `chat-voice/${userId}/${Date.now()}.${ext}`
+      const { data, error } = await client.storage.from('chat-images').upload(path, blob, { contentType: blob.type })
+      if (!error && data) {
+        const { data: urlData } = client.storage.from('chat-images').getPublicUrl(path)
+        audioUrl = urlData?.publicUrl ?? null
+      }
+    }
+
+    if (!audioUrl) {
+      audioUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+        reader.readAsDataURL(blob)
+      })
+    }
+
+    if (!audioUrl) return
+
+    localMessageCounterRef.current += 1
+    const tempId = `temp-voice-${receiverId}-${localMessageCounterRef.current}`
+    const msg: Message = {
+      id: tempId,
+      chat_id: `${receiverId}:direct`,
+      sender_id: userId,
+      message: '',
+      image_url: `voice:${audioUrl}`,
+      ad_context: null,
+      created_at: new Date().toISOString(),
+      read_at: null,
+    }
+    setMessages((prev) => { const next = [...prev, msg]; persistChatState(userId, next); return next })
+    scrollToBottom()
+
+    if (client) {
+      const { data, error } = await client.from('chat_messages').insert({
+        sender_id: userId, receiver_id: receiverId, message: null, image_url: `voice:${audioUrl}`,
+      }).select('id, created_at').single()
+      if (!error && data) {
+        setMessages((prev) => {
+          const next = prev.map((m) => m.id === tempId ? { ...m, id: data.id, created_at: data.created_at } : m)
+          persistChatState(userId, next)
+          return next
+        })
+        fetch('/api/push/new-message', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ senderId: userId, receiverId, message: '🎤 Голосовое сообщение' }),
+        }).catch(() => {})
+      }
+    }
+  }
+
+  const VoiceMessage = ({ url, isMe }: { url: string; isMe: boolean }) => {
+    const [playing, setPlaying] = useState(false)
+    const [progress, setProgress] = useState(0)
+    const [duration, setDuration] = useState(0)
+    const audioRef = useRef<HTMLAudioElement>(null)
+    const toggle = () => {
+      const a = audioRef.current; if (!a) return
+      if (playing) { a.pause(); setPlaying(false) } else { a.play(); setPlaying(true) }
+    }
+    const bars = [3,5,8,6,10,7,12,9,6,11,8,5,9,12,7,10,6,8,11,5,9,7,10,6,8,12,5,7]
+    return (
+      <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-[20px] min-w-[180px] max-w-[240px] ${isMe ? 'bg-white text-black' : 'bg-[#1C1C1E] text-white border border-white/5'}`}>
+        <audio ref={audioRef} src={url}
+          onTimeUpdate={() => { const a = audioRef.current; if (a) setProgress(a.currentTime / (a.duration || 1)) }}
+          onLoadedMetadata={() => { const a = audioRef.current; if (a) setDuration(a.duration) }}
+          onEnded={() => { setPlaying(false); setProgress(0) }}
+        />
+        <button type="button" onClick={toggle} className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: isMe ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)' }}>
+          {playing
+            ? <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            : <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>}
+        </button>
+        <div className="flex-1 flex items-center gap-[2px] h-6">
+          {bars.map((h, i) => (
+            <div key={i} className="rounded-full flex-1" style={{
+              height: `${h * 2}px`,
+              background: i / bars.length <= progress ? (isMe ? 'rgba(0,0,0,0.6)' : '#64CF86') : (isMe ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)'),
+              transition: 'background 0.1s',
+            }}/>
+          ))}
+        </div>
+        <span className="text-[11px] shrink-0 opacity-50 font-sf-ui-light">{duration > 0 ? `${Math.floor(duration)}с` : ''}</span>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden">
       <div className="relative w-full h-[100dvh] flex flex-col">
@@ -862,14 +1010,20 @@ export default function Chat({
                 >
                   <div className={`max-w-[82%] min-w-0 flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                     {msg.image_url && (
-                      <div className="mb-2 w-[220px] rounded-[20px] overflow-hidden border border-white/10 bg-white/5">
-                        <img
-                          src={msg.image_url}
-                          alt=""
-                          className="w-full h-[220px] object-cover cursor-zoom-in"
-                          onClick={() => setPreviewImage(msg.image_url || null)}
-                        />
-                      </div>
+                      msg.image_url.startsWith('voice:') ? (
+                        <div className="mb-2">
+                          <VoiceMessage url={msg.image_url.slice(6)} isMe={isMe} />
+                        </div>
+                      ) : (
+                        <div className="mb-2 w-[220px] rounded-[20px] overflow-hidden border border-white/10 bg-white/5">
+                          <img
+                            src={msg.image_url}
+                            alt=""
+                            className="w-full h-[220px] object-cover cursor-zoom-in"
+                            onClick={() => setPreviewImage(msg.image_url || null)}
+                          />
+                        </div>
+                      )
                     )}
                     {msg.ad_context && (
                       <div className="mb-2 w-[220px]">
@@ -1058,10 +1212,44 @@ export default function Chat({
               </button>
             ) : (
               <div className="relative">
+                {/* UI записи голосового */}
+                <AnimatePresence>
+                  {isRecording && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      className="absolute bottom-full left-0 right-0 mb-2 flex items-center gap-3 px-4 py-3 rounded-[20px] bg-[#1C1C1E] border border-white/10"
+                    >
+                      <motion.div
+                        className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"
+                        animate={{ opacity: [1, 0.3, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      />
+                      <div className="flex-1 flex items-center gap-[3px] h-5">
+                        {Array.from({ length: 20 }).map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="flex-1 rounded-full bg-white/50"
+                            animate={{ height: [`${4 + Math.random() * 12}px`, `${4 + Math.random() * 16}px`, `${4 + Math.random() * 8}px`] }}
+                            transition={{ duration: 0.4 + Math.random() * 0.3, repeat: Infinity, ease: 'easeInOut' }}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[13px] text-white/60 font-sf-ui-light shrink-0">
+                        {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                      </span>
+                      <button type="button" onClick={cancelRecording} className="shrink-0 text-white/40 active:text-white/70">
+                        <X size={16} />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <button
                   type="button"
                   onClick={() => imageInputRef.current?.click()}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/74 hover:text-white/95 active:scale-95 transition-all z-10"
+                  className="absolute left-4 bottom-[20px] text-white/74 active:scale-95 transition-all z-10"
                 >
                   <ImageIcon size={18} strokeWidth={2.7} className="fill-none" />
                 </button>
@@ -1103,11 +1291,28 @@ export default function Chat({
                 <button
                   onClick={() => handleSendMessage(newMessage, showAdPreview ? adContext : null)}
                   disabled={!newMessage.trim() || sending}
-                  className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-white transition-all ${
+                  className={`absolute right-3.5 bottom-[19px] transition-all ${
                     newMessage.trim() ? 'text-white active:scale-90' : 'text-white/28'
                   }`}
                 >
-                  <ArrowUp size={20} strokeWidth={3} className="text-current fill-none" />
+                  {newMessage.trim() ? (
+                    <ArrowUp size={20} strokeWidth={3} className="text-current fill-none" />
+                  ) : (
+                    <button
+                      type="button"
+                      onPointerDown={(e) => { e.preventDefault(); startRecording() }}
+                      onPointerUp={() => stopRecording()}
+                      onPointerLeave={() => { if (isRecording) stopRecording() }}
+                      className={`w-8 h-8 flex items-center justify-center transition-all ${isRecording ? 'text-red-500 scale-110' : 'text-white/50 active:text-white/80'}`}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                      </svg>
+                    </button>
+                  )}
                 </button>
                 <input
                   ref={imageInputRef}
@@ -1132,17 +1337,128 @@ export default function Chat({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[220] bg-black/95 backdrop-blur-md"
+              className="fixed inset-0 z-[220] bg-black/95"
               onClick={() => setPreviewImage(null)}
             >
-              <div className="absolute inset-0 flex items-center justify-center p-5">
-                <img
+              {/* Шапка */}
+              <div
+                className="absolute top-0 left-0 right-0 flex items-center justify-end gap-2 px-5 z-10"
+                style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-all"
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    try {
+                      const res = await fetch(previewImage)
+                      const blob = await res.blob()
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `photo_${Date.now()}.jpg`
+                      document.body.appendChild(a)
+                      a.click()
+                      document.body.removeChild(a)
+                      URL.revokeObjectURL(url)
+                    } catch {
+                      window.open(previewImage, '_blank')
+                    }
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-all"
+                  onClick={() => setPreviewImage(null)}
+                >
+                  <X size={20} className="text-white" />
+                </button>
+              </div>
+              {/* Фото */}
+              <div className="absolute inset-0 flex items-center justify-center p-5 pt-20 pb-10">
+                <motion.img
                   src={previewImage}
                   alt=""
-                  className="max-h-full max-w-full object-contain rounded-[18px]"
+                  className="max-h-full max-w-full object-contain"
+                  initial={{ scale: 0.92, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Плашка: нет доступа к микрофону */}
+        <AnimatePresence>
+          {micPermissionDenied && (
+            <>
+              <motion.div
+                className="fixed inset-0 z-[230] bg-black/60 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMicPermissionDenied(false)}
+              />
+              <div className="fixed inset-0 z-[240] flex items-end justify-center pointer-events-none">
+                <motion.div
+                  initial={{ translateY: '100%' }}
+                  animate={{ translateY: 0 }}
+                  exit={{ translateY: '100%' }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+                  className="w-full bg-[#121212] border-t border-white/10 rounded-t-[32px] px-6 pt-7 pb-[calc(env(safe-area-inset-bottom,0px)+24px)] pointer-events-auto"
+                >
+                  <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-white/15" />
+
+                  {/* SVG микрофон */}
+                  <div className="flex justify-center mb-5">
+                    <div className="w-20 h-20 rounded-full bg-white/[0.05] border border-white/[0.08] flex items-center justify-center">
+                      <svg viewBox="0 0 48 48" className="w-10 h-10 text-white/40" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="18" y="4" width="12" height="22" rx="6"/>
+                        <path d="M8 22v2a16 16 0 0 0 32 0v-2"/>
+                        <line x1="24" y1="40" x2="24" y2="46"/>
+                        <line x1="16" y1="46" x2="32" y2="46"/>
+                        {/* Перечёркивающая линия */}
+                        <line x1="6" y1="6" x2="42" y2="42" strokeOpacity="0.5"/>
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="text-center mb-6">
+                    <h3 className="text-[20px] font-sf-ui-medium text-white mb-2">Нет доступа к микрофону</h3>
+                    <p className="text-[14px] text-white/40 font-sf-ui-light leading-relaxed">
+                      Чтобы отправлять голосовые сообщения, разрешите доступ к микрофону в настройках браузера
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMicPermissionDenied(false)
+                      try {
+                        await navigator.mediaDevices.getUserMedia({ audio: true })
+                      } catch {}
+                    }}
+                    className="h-14 w-full rounded-[22px] bg-white/10 border border-white/10 text-white font-sf-ui-medium text-[16px] active:scale-[0.97] transition-all mb-3"
+                  >
+                    Дать доступ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMicPermissionDenied(false)}
+                    className="h-12 w-full rounded-[22px] text-white/40 font-sf-ui-light text-[15px] active:opacity-60 transition-all"
+                  >
+                    Отмена
+                  </button>
+                </motion.div>
+              </div>
+            </>
           )}
         </AnimatePresence>
       </div>

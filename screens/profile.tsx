@@ -1274,6 +1274,7 @@ export default function Profile({
         </div>
         
         <div className="flex w-full flex-col items-center relative" style={{ marginTop: 'calc(calc(var(--profile-avatar-size) / -2) + var(--profile-avatar-top-offset, 0px))' }}>
+          <div className="relative">
           <div
             className="rounded-full overflow-hidden relative"
             style={{
@@ -1318,6 +1319,11 @@ export default function Profile({
               onChange={(e) => handleAvatarFile(e.target.files)}
             />
           </div>
+          {/* Онлайн-кружок */}
+          {!isOwnProfile && profileLastSeen && (new Date().getTime() - new Date(profileLastSeen).getTime()) < 120000 && (
+            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#64CF86] border-2 border-[var(--bg-primary)]" />
+          )}
+          </div>
 
           {!tagEditing ? (
             <div className="w-full flex items-center justify-center" style={{ marginTop: 'var(--profile-name-margin-top)' }}>
@@ -1330,33 +1336,6 @@ export default function Profile({
               <div className="leading-[2.3em] text-[var(--text-primary)] font-ttc-bold" style={{ fontSize: 'var(--profile-name-size)' }}>
                 {tagText && tagText.trim().length > 0 ? tagText : 'user'}
               </div>
-
-              {/* Last seen — только для чужого профиля */}
-              {!isOwnProfile && profileLastSeen && (() => {
-                const diffMs = Date.now() - new Date(profileLastSeen).getTime()
-                const isOnline = diffMs < 120000
-                const diffMin = Math.floor(diffMs / 60000)
-                const date = new Date(profileLastSeen)
-                const now = new Date()
-                const isToday = date.toDateString() === now.toDateString()
-                const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
-                const isYesterday = date.toDateString() === yesterday.toDateString()
-                const timeStr = date.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })
-                const weekdays = ['воскресенье','понедельник','вторник','среду','четверг','пятницу','субботу']
-                const diffDays = Math.floor(diffMs / 86400000)
-                let label = ''
-                if (isOnline) label = 'в сети'
-                else if (isToday) label = `был(а) в ${timeStr}`
-                else if (isYesterday) label = `был(а) вчера в ${timeStr}`
-                else if (diffDays < 7) label = `был(а) в ${weekdays[date.getDay()]} в ${timeStr}`
-                else label = `был(а) ${date.toLocaleDateString('ru', { day: 'numeric', month: 'long' })} в ${timeStr}`
-                return (
-                  <div className="flex items-center justify-center gap-1.5 mt-0.5 mb-1">
-                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-[#64CF86]' : 'bg-white/25'}`} />
-                    <span className="text-[12px] text-white/40 font-sf-ui-light">{label}</span>
-                  </div>
-                )
-              })()}
 
               <div className="flex-1 flex items-center gap-2 ml-4">
                 {isVerified && <VerifiedBadge size={22} />}
@@ -1439,6 +1418,9 @@ export default function Profile({
               />
             </div>
           )}
+
+          {/* Онлайн-кружок на аватарке добавлен ниже в блоке аватара */}
+
           {!isOwnProfile && (
             <div className="w-full mt-4 px-6">
               <div className="flex items-center gap-2">

@@ -921,139 +921,161 @@ export default function AdsCreate({
 
             {step === 2 && (
               <div className="pt-2">
-                <div className="mb-4">
+                <div className="mb-5">
                   <div className="text-[24px] leading-[1.2em] text-white font-ttc-bold">
                     Внешний вид
                   </div>
                   <div className="mt-1 text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
-                    Первое фото будет обложкой объявления. Выберите лучшее фото из всех.
+                    Первое фото — обложка. До 6 фото.
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4" ref={gridRef}>
-                  {images.map((src, index) => (
-                    <motion.div 
-                      key={`${src}-${index}`}
-                      data-image-index={index}
-                      className={`draggable-image relative w-full overflow-hidden rounded-2xl group ${
-                        draggedIndex === index ? 'opacity-50 scale-95' : ''
-                      } ${
-                        draggedIndex !== null && draggedIndex !== index ? 'hover:scale-105' : ''
-                      }`}
-                      style={{ aspectRatio: '1 / 1' }}
-                      layout
-                       drag
-                       dragConstraints={gridRef}
-                       dragElastic={0.2}
-                       dragMomentum={false}
-                       dragSnapToOrigin={true}
-                       onDragEnd={(event, info) => {
-                         const threshold = 50
-                         const dragIndex = index
-                         const absX = Math.abs(info.offset.x)
-                         const absY = Math.abs(info.offset.y)
-                         const axis = absX >= absY ? 'x' : 'y'
-                         
-                         if (axis === 'x' && absX > threshold) {
-                           const direction = info.offset.x > 0 ? 'right' : 'left'
-                           let targetIndex = dragIndex
-                           if (direction === 'left' && dragIndex % 2 === 1) {
-                             targetIndex = dragIndex - 1
-                           } else if (direction === 'right' && dragIndex % 2 === 0) {
-                             targetIndex = dragIndex + 1
-                           }
-                           if (targetIndex !== dragIndex && targetIndex >= 0 && targetIndex < images.length) {
-                             swapImages(dragIndex, targetIndex)
-                           }
-                         }
-                         
-                         if (axis === 'y' && absY > threshold) {
-                           const direction = info.offset.y > 0 ? 'down' : 'up'
-                           let targetIndex = dragIndex
-                           if (direction === 'up' && dragIndex - 2 >= 0) {
-                             targetIndex = dragIndex - 2
-                           } else if (direction === 'down' && dragIndex + 2 < images.length) {
-                             targetIndex = dragIndex + 2
-                           }
-                           if (targetIndex !== dragIndex && targetIndex >= 0 && targetIndex < images.length) {
-                             swapImages(dragIndex, targetIndex)
-                           }
-                         }
-                       }}
-                       whileDrag={{ scale: 1.05, zIndex: 1000 }}
-                       transition={{ layout: { type: 'spring', stiffness: 500, damping: 40 } }}
-                      onTouchStart={(e) => handleTouchStart(e, index)}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleTouchEnd}
-                    >
-                      <div className="relative h-full w-full">
-                        <div
-                          onClick={() => setPreviewImage(src)}
-                          className="block h-full w-full cursor-pointer active:opacity-80 transition-opacity"
-                        >
-                          <img src={src} alt="preview" className="h-full w-full object-cover" />
-                        </div>
-                        {index === 0 && (
-                          <div className="absolute left-3 top-3 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-sm pointer-events-none">
-                            <span className="text-xs text-white font-sf-ui-light">
-                              Обложка
-                            </span>
-                          </div>
-                        )}
-                        <div className="absolute left-3 bottom-3 rounded-lg bg-black/70 px-2 py-1 backdrop-blur-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                          <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-                          </svg>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeImageAt(index)
-                          }}
-                          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/20 backdrop-blur-md border border-white/10 shadow-lg active:scale-75 transition-all z-10 group/btn"
-                        >
-                          <X size={14} className="text-white/80 group-hover/btn:text-white transition-colors" />
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                  {images.length < 6 && (
-                    <button
-                      type="button"
-                      onClick={openFilePicker}
-                      className="group relative w-full aspect-square rounded-2xl border-2 border-dashed border-white/20 bg-white/5 active:scale-95 active:bg-white/10 transition-all duration-300"
-                    >
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 transition-all duration-300">
-                          <Plus size={24} className="text-white/60" />
-                        </div>
-                        <span className="text-sm text-white/60 font-sf-ui-light">
-                          Добавить фото
-                        </span>
-                      </div>
-                    </button>
-                  )}
+
+                {/* Сетка ВК-стиль */}
+                {(() => {
+                  const n = images.length
+                  const hasAdd = n < 6
+                  const total = n + (hasAdd ? 1 : 0)
+
+                  // Определяем layout
+                  const getGridClass = () => {
+                    if (total <= 1) return 'grid-cols-1'
+                    if (total === 2) return 'grid-cols-2'
+                    if (total <= 4) return 'grid-cols-2'
+                    return 'grid-cols-3'
+                  }
+                  const getAspect = () => {
+                    if (total <= 2) return 'aspect-square'
+                    if (total <= 4) return 'aspect-square'
+                    return 'aspect-square'
+                  }
+
+                  const cells = [
+                    ...images.map((src, index) => ({ type: 'image' as const, src, index })),
+                    ...(hasAdd ? [{ type: 'add' as const }] : []),
+                  ]
+
+                  return (
+                    <div className={`grid ${getGridClass()} gap-1.5`} ref={gridRef}>
+                      {cells.map((cell, cellIdx) => {
+                        if (cell.type === 'add') {
+                          return (
+                            <button
+                              key="add"
+                              type="button"
+                              onClick={openFilePicker}
+                              className={`${getAspect()} rounded-[16px] border-2 border-dashed border-white/15 bg-white/[0.03] active:bg-white/[0.06] transition-all flex flex-col items-center justify-center gap-2`}
+                            >
+                              <div className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center">
+                                <Plus size={20} className="text-white/50" />
+                              </div>
+                              {n === 0 && <span className="text-[13px] text-white/40 font-sf-ui-light">Добавить фото</span>}
+                            </button>
+                          )
+                        }
+                        const { src, index } = cell
+                        return (
+                          <motion.div
+                            key={`${src}-${index}`}
+                            data-image-index={index}
+                            className={`relative ${getAspect()} rounded-[16px] overflow-hidden`}
+                            layout
+                            drag
+                            dragConstraints={gridRef}
+                            dragElastic={0.2}
+                            dragMomentum={false}
+                            dragSnapToOrigin={true}
+                            onDragEnd={(event, info) => {
+                              const threshold = 50
+                              const dragIndex = index
+                              const absX = Math.abs(info.offset.x)
+                              const absY = Math.abs(info.offset.y)
+                              const axis = absX >= absY ? 'x' : 'y'
+                              const cols = total <= 2 ? 2 : total <= 4 ? 2 : 3
+                              if (axis === 'x' && absX > threshold) {
+                                const dir = info.offset.x > 0 ? 1 : -1
+                                const t = dragIndex + dir
+                                if (t >= 0 && t < images.length) swapImages(dragIndex, t)
+                              }
+                              if (axis === 'y' && absY > threshold) {
+                                const dir = info.offset.y > 0 ? cols : -cols
+                                const t = dragIndex + dir
+                                if (t >= 0 && t < images.length) swapImages(dragIndex, t)
+                              }
+                            }}
+                            whileDrag={{ scale: 1.05, zIndex: 1000 }}
+                            transition={{ layout: { type: 'spring', stiffness: 500, damping: 40 } }}
+                            onTouchStart={(e) => handleTouchStart(e, index)}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                          >
+                            <div onClick={() => setPreviewImage(src)} className="w-full h-full cursor-pointer">
+                              <img src={src} alt="preview" className="w-full h-full object-cover" />
+                            </div>
+                            {index === 0 && (
+                              <div className="absolute left-2 top-2 rounded-md bg-black/60 px-2 py-0.5 backdrop-blur-sm pointer-events-none">
+                                <span className="text-[11px] text-white font-sf-ui-medium">Обложка</span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); removeImageAt(index) }}
+                              className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 backdrop-blur-md active:scale-75 transition-all z-10"
+                            >
+                              <X size={12} className="text-white" />
+                            </button>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+
+                <div className="mt-3 flex items-center justify-between px-0.5">
+                  <span className="text-[12px] text-white/25 font-sf-ui-light">{images.length} / 6</span>
                 </div>
-                <div className="mt-6 text-center">
-                  <span className="text-[14px] leading-[1.4em] text-white/40 font-sf-ui-light">
-                    {images.length} / 6 фото
-                  </span>
-                </div>
+
+                {/* SVG инструкция про перетаскивание */}
                 {images.length > 1 && (
-                  <div className="mt-2 text-center">
-                    <span className="text-[12px] leading-[1.4em] text-white/30 font-sf-ui-light">
-                      Свайпните фото в сторону, чтобы изменить порядок
-                    </span>
+                  <div className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.03] p-4 flex items-center gap-4">
+                    {/* Анимированная иллюстрация */}
+                    <div className="shrink-0">
+                      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        {/* Фото 1 */}
+                        <rect x="4" y="4" width="22" height="22" rx="6" fill="white" fillOpacity="0.08" stroke="white" strokeOpacity="0.15" strokeWidth="1.2"/>
+                        {/* Фото 2 */}
+                        <rect x="30" y="4" width="22" height="22" rx="6" fill="white" fillOpacity="0.08" stroke="white" strokeOpacity="0.15" strokeWidth="1.2"/>
+                        {/* Фото 3 */}
+                        <rect x="4" y="30" width="22" height="22" rx="6" fill="white" fillOpacity="0.08" stroke="white" strokeOpacity="0.15" strokeWidth="1.2"/>
+                        {/* Фото 4 */}
+                        <rect x="30" y="30" width="22" height="22" rx="6" fill="white" fillOpacity="0.08" stroke="white" strokeOpacity="0.15" strokeWidth="1.2"/>
+                        {/* Рука с пальцем — анимированная */}
+                        <motion.g
+                          animate={{ x: [0, 26, 26, 0, 0], y: [0, 0, 0, 0, 0] }}
+                          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', times: [0, 0.35, 0.65, 1, 1] }}
+                        >
+                          <circle cx="15" cy="15" r="5" fill="white" fillOpacity="0.55"/>
+                          <motion.circle
+                            cx="15" cy="15" r="7"
+                            stroke="white" strokeOpacity="0.25" strokeWidth="1.5" fill="none"
+                            animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0, 0.25] }}
+                            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                          />
+                        </motion.g>
+                        {/* Стрелка */}
+                        <motion.path
+                          d="M22 15 L34 15"
+                          stroke="white" strokeOpacity="0.4" strokeWidth="1.5" strokeLinecap="round"
+                          strokeDasharray="4 3"
+                          animate={{ opacity: [0, 1, 1, 0] }}
+                          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', times: [0, 0.2, 0.6, 0.8] }}
+                        />
+                      </svg>
+                    </div>
+                    <div className="text-[13px] leading-[1.5em] text-white/45 font-sf-ui-light">
+                      Перетащите фото чтобы изменить порядок. Первое фото станет обложкой.
+                    </div>
                   </div>
                 )}
-                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
-                  <div className="flex-shrink-0">
-                    <StepIllustration step={2} />
-                  </div>
-                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
-                    Фото — первое, на что смотрит покупатель. Хорошие фото помогают быстрее продать товар
-                  </div>
-                </div>
 
                 <div className="mt-10 flex justify-center">
                   <button
@@ -1871,25 +1893,43 @@ export default function AdsCreate({
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
         {previewImage && (
-          <div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md px-6"
+          <motion.div
+            className="absolute inset-0 z-[200] flex items-center justify-center bg-black/95"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={() => setPreviewImage(null)}
           >
+            {/* Кнопка закрыть */}
             <button
               type="button"
-              className="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200"
-              onClick={() => setPreviewImage(null)}
+              className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-all z-10"
+              onClick={(e) => { e.stopPropagation(); setPreviewImage(null) }}
             >
-              <X size={24} className="text-white" />
+              <X size={20} className="text-white" />
             </button>
-            <div className="w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
-              <img
+
+            {/* Фото */}
+            <div
+              className="w-full px-4 flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <motion.img
                 src={previewImage}
                 alt="preview"
-                className="h-auto max-h-[80vh] w-full rounded-2xl object-contain"
+                className="w-full rounded-[20px] object-contain"
+                style={{ maxHeight: 'calc(100dvh - 120px)' }}
+                initial={{ scale: 0.92, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
               />
             </div>
-          </div>
+
+            {/* Подсказка */}
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none">
+              <span className="text-[13px] text-white/30 font-sf-ui-light">Нажмите вне фото чтобы закрыть</span>
+            </div>
+          </motion.div>
         )}
         {showPublishAnimation && (
           <motion.div

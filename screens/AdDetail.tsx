@@ -1388,12 +1388,40 @@ function MediaViewer({
             {title}
           </span>
         </div>
-        <button
-          onClick={onClose}
-          className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-white/5 border border-white/10 active:scale-90 transition-all pointer-events-auto"
-        >
-          <X className="w-5 h-5 text-white" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-white/5 border border-white/10 active:scale-90 transition-all pointer-events-auto"
+            onClick={async (e) => {
+              e.stopPropagation()
+              const url = images[index]
+              try {
+                const res = await fetch(url)
+                const blob = await res.blob()
+                const objectUrl = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = objectUrl
+                a.download = `photo_${Date.now()}.jpg`
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                URL.revokeObjectURL(objectUrl)
+              } catch {
+                window.open(url, '_blank')
+              }
+            }}
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button
+            onClick={onClose}
+            className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-white/5 border border-white/10 active:scale-90 transition-all pointer-events-auto"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+        </div>
       </div>
 
       {/* Media Container */}

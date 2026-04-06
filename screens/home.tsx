@@ -1419,6 +1419,34 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                       paddingRight: 'var(--profile-menu-padding-x)',
                       }}
                     >
+                      {viewStoreId && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeProfileMenu()
+                              window.dispatchEvent(new CustomEvent('open-store-settings', { detail: { storeId: viewStoreId } }))
+                            }}
+                            className="flex w-full items-center"
+                            style={{
+                              height: 'var(--profile-menu-item-height)',
+                              paddingLeft: 'var(--profile-menu-item-padding-x)',
+                              paddingRight: 'var(--profile-menu-item-padding-x)',
+                              background: 'var(--profile-menu-item-bg)',
+                            }}
+                          >
+                            <div className="flex w-full items-center" style={{ columnGap: 'var(--profile-menu-item-gap)' }}>
+                              <span className="font-sf-ui-light" style={{ fontSize: 'var(--profile-menu-item-font-size)', color: 'var(--profile-menu-item-text-color)', whiteSpace: 'nowrap' }}>
+                                Настройки магазина
+                              </span>
+                              <div style={{ marginLeft: 'auto', width: 'var(--profile-menu-item-icon-size)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                <img src="/setting/settings.svg" alt="" style={{ width: 'var(--profile-menu-item-icon-size)', height: 'var(--profile-menu-item-icon-size)', filter: 'var(--profile-menu-item-icon-filter)' }} />
+                              </div>
+                            </div>
+                          </button>
+                          <div style={{ height: 'var(--profile-menu-divider-thickness)', background: 'var(--profile-menu-divider-color)' }} />
+                        </>
+                      )}
                       {viewProfileMode === 'own' && (
                         <>
                           <button
@@ -1807,7 +1835,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          Поделиться профилем
+                          Поделиться {viewStoreId ? 'магазином' : 'профилем'}
                         </span>
                         <div
                           style={{
