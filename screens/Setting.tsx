@@ -957,24 +957,16 @@ export default function Setting({
             <div className="flex-1 px-5 pb-12 space-y-6 mt-2">
               {/* Hero плашка с анимированным фоном */}
               <div className="relative rounded-[28px] overflow-hidden" style={{ minHeight: 200 }}>
-                {/* Анимированный фон */}
-                <div className="absolute inset-0 bg-black">
-                  <motion.div
-                    animate={{ scale: [1, 1.3, 1], rotate: [0, 60, 0], opacity: [0.12, 0.22, 0.12] }}
-                    transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-                    className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-white blur-[80px] rounded-full"
-                  />
-                  <motion.div
-                    animate={{ scale: [1, 1.4, 1], rotate: [0, -50, 0], opacity: [0.08, 0.18, 0.08] }}
-                    transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
-                    className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-white blur-[80px] rounded-full"
-                  />
-                  <motion.div
-                    animate={{ x: ['-30%', '130%'], opacity: [0, 0.15, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: 'linear', repeatDelay: 3 }}
-                    className="absolute top-[30%] w-[40%] h-[1px] bg-gradient-to-r from-transparent via-white to-transparent blur-[2px]"
-                  />
-                </div>
+                {/* Фон */}
+                <div className="absolute inset-0 rounded-[28px]" style={{
+                  background: 'radial-gradient(ellipse at 85% 15%, rgba(80,80,80,0.45) 0%, transparent 55%), radial-gradient(ellipse at 15% 85%, rgba(50,50,50,0.3) 0%, transparent 50%), #111111',
+                }} />
+                {/* Световой луч */}
+                <motion.div
+                  animate={{ x: ['-100%', '350%'] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'linear', repeatDelay: 6 }}
+                  className="absolute top-[38%] left-0 w-[30%] h-[1px] bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                />
                 {/* Контент плашки */}
                 <div className="relative z-10 p-7 flex flex-col justify-between h-full" style={{ minHeight: 200 }}>
                   <div className="flex items-center gap-2 mb-4">

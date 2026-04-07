@@ -652,6 +652,154 @@ const FAKE_ADS: StoredAd[] = [
   }
 ]
 
+const LEAF_SHAPES = [
+  "M10 1C10 1 14 5 13 10C12 15 7 16 5 13C3 10 5 5 10 1Z",
+  "M8 0C8 0 15 4 14 10C13 16 6 17 4 13C2 9 4 3 8 0Z",
+  "M9 1C9 1 16 6 13 12C10 18 4 16 3 11C2 6 5 1 9 1Z",
+  "M7 0C7 0 13 3 12 9C11 15 5 15 3 11C1 7 3 2 7 0Z",
+]
+const LEAF_COLORS = ['#c2410c', '#b45309', '#a16207', '#92400e', '#854d0e', '#d97706']
+
+type Leaf = { id: number; x: number; size: number; duration: number; delay: number; shape: string; color: string; rotate: number; sway: number }
+
+function FallingLeaves({ containerHeight = 140 }: { containerHeight?: number }) {
+  const [leaves, setLeaves] = useState<Leaf[]>([])
+
+  useEffect(() => {
+    const gen = (): Leaf[] => Array.from({ length: 8 }, (_, i) => ({
+      id: i,
+      x: 5 + Math.random() * 88,
+      size: 7 + Math.random() * 7,
+      duration: 5 + Math.random() * 5,
+      delay: Math.random() * 12,
+      shape: LEAF_SHAPES[Math.floor(Math.random() * LEAF_SHAPES.length)],
+      color: LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)],
+      rotate: Math.random() * 360,
+      sway: 14 + Math.random() * 20,
+    }))
+    setLeaves(gen())
+  }, [])
+
+  return (
+    <>
+      {leaves.map(leaf => (
+        <motion.svg
+          key={leaf.id}
+          width={leaf.size}
+          height={leaf.size * 1.3}
+          viewBox="0 0 16 20"
+          fill={leaf.color}
+          style={{ position: 'absolute', left: `${leaf.x}%`, top: -16 }}
+          animate={{
+            y: [0, containerHeight + 20],
+            x: [0, leaf.sway, -leaf.sway * 0.6, leaf.sway * 0.4, 0],
+            rotate: [leaf.rotate, leaf.rotate + 200, leaf.rotate + 360],
+            opacity: [0, 0.4, 0.4, 0],
+          }}
+          transition={{
+            duration: leaf.duration,
+            delay: leaf.delay,
+            repeat: Infinity,
+            ease: 'linear',
+            times: [0, 0.08, 0.88, 1],
+          }}
+        >
+          <path d={leaf.shape} />
+          <path d="M8 18 Q9 12 8 3" stroke={leaf.color} strokeOpacity={0.5} strokeWidth="0.7" fill="none" />
+        </motion.svg>
+      ))}
+    </>
+  )
+}
+
+const BANNERS = [
+  {
+    label: 'Рекламный слот',
+    title: 'Здесь могла быть ваша реклама',
+    link: 'Подробнее о партнерских отношениях',
+    href: '/partner-agreement',
+  },
+  {
+    label: 'Продвижение',
+    title: 'Здесь могло быть ваше объявление',
+    link: 'Подробнее о продвижении',
+    href: '/partner-agreement',
+  },
+]
+
+function BannerCarousel() {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setIndex(i => (i + 1) % BANNERS.length), 10000)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+      className="relative mx-2 mt-1 mb-[15.5px] rounded-[24px] border border-white/[0.05] bg-[#121212] overflow-hidden"
+      style={{ minHeight: 165, boxShadow: 'none' }}
+    >
+      <div
+        className="flex h-full transition-transform duration-500 ease-in-out"
+        style={{ transform: `translateX(-${index * 100}%)` }}
+      >
+        {BANNERS.map((b, i) => (
+          <div key={i} className="relative flex-shrink-0 p-5" style={{ minHeight: 162, minWidth: '100%' }}>
+            <div className="absolute inset-0" style={{
+              background: 'radial-gradient(ellipse at 15% 50%, rgba(55,55,55,0.35) 0%, transparent 60%), linear-gradient(to right, #161616 0%, #0a0a0a 100%)',
+            }} />
+            <motion.div
+              animate={{ x: ['-100%', '350%'] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'linear', repeatDelay: 6 }}
+              className="absolute top-[40%] left-0 z-10 w-[28%] h-[1px] bg-gradient-to-r from-transparent via-white/25 to-transparent"
+            />
+            {/* Листья — за контентом */}
+            <div className="absolute inset-0 z-10 overflow-hidden pointer-events-none">
+              <FallingLeaves />
+            </div>
+            <img
+              src="/name.png" alt=""
+              className="absolute bottom-0 right-4 z-20 pointer-events-none"
+              style={{ width: 120, height: 'auto', objectFit: 'contain' }}
+            />
+            <div className="relative z-20 flex h-full items-center gap-4">
+              <div className="max-w-[62%]">
+                <div className="text-[12px] tracking-[0.04em] text-white/45">{b.label}</div>
+                <div className="mt-1 text-[20px] leading-[1.1] font-sf-ui-light text-white">{b.title}</div>
+                <div
+                  className="mt-2 text-[13px] text-white/45 underline underline-offset-2 cursor-pointer"
+                  onClick={() => window.open(b.href, '_blank')}
+                >{b.link}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Точки */}
+      <div className="absolute bottom-3 right-4 flex gap-1.5 z-30">
+        {BANNERS.map((_, i) => (
+          <button
+            key={i} type="button"
+            onClick={() => setIndex(i)}
+            className="transition-all duration-300"
+            style={{
+              width: index === i ? 16 : 5,
+              height: 5,
+              borderRadius: 3,
+              background: index === i ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)',
+            }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
 export default function Ads({
   onOpenAd,
   createOnMount,
@@ -747,6 +895,10 @@ export default function Ads({
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [sortType, setSortType] = useState<'new' | 'cheap' | 'rating'>('new')
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false)
+  const [showVerifBanner, setShowVerifBanner] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('hw-verif-banner-dismissed') !== '1'
+    return true
+  })
   const sortMenuRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -1126,9 +1278,11 @@ export default function Ads({
         style={{ transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
       >
         <div className="relative mb-2">
+          {/* Фон — покрывает safe area + шапку home.tsx + саму плашку */}
           <div
-            className="absolute inset-0 rounded-b-[34px] pointer-events-none"
+            className="absolute left-0 right-0 bottom-0 pointer-events-none rounded-b-[34px]"
             style={{
+              top: 'calc(-1 * (env(safe-area-inset-top, 0px) + 56px + var(--home-header-offset, 0px)))',
               background: theme === 'dark' ? '#0d0d0d' : '#d6d6d6',
               boxShadow: theme === 'dark' ? '0 10px 18px rgba(0,0,0,0.22)' : '0 8px 16px rgba(0,0,0,0.06)',
             }}
@@ -1136,6 +1290,7 @@ export default function Ads({
           <div
             className="relative flex w-full flex-col items-stretch rounded-b-[34px] pt-2 pb-2"
           >
+          {/* Поиск + кнопки */}
           <div className="flex items-center gap-2 mb-1 w-full px-1">
             <div
               className="flex items-stretch flex-1 min-w-0"
@@ -1151,14 +1306,13 @@ export default function Ads({
                   paddingRight: 0,
                 }}
               >
-                {/* Glass Shine Effect */}
                 <div className="absolute inset-0 pointer-events-none">
                   <div className={`absolute inset-0 opacity-10 ${theme === 'dark' ? 'bg-gradient-to-tr from-transparent via-white/5 to-white/10' : 'bg-gradient-to-tr from-transparent via-black/5 to-black/10'}`} />
-                  <motion.div 
+                  <motion.div
                     animate={{
                       opacity: isSearchActive ? 0.15 : 0.05,
-                      background: isSearchActive 
-                        ? theme === 'dark' 
+                      background: isSearchActive
+                        ? theme === 'dark'
                           ? 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)'
                           : 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.1) 0%, transparent 70%)'
                         : theme === 'dark'
@@ -1169,36 +1323,19 @@ export default function Ads({
                   />
                 </div>
 
-                <motion.div
-                  className="flex h-full items-center relative z-10 w-full"
-                  style={{
-                    paddingRight: 8,
-                  }}
-                >
+                <motion.div className="flex h-full items-center relative z-10 w-full" style={{ paddingRight: 8 }}>
                   <img
                     src="/interface/search-02.svg"
                     alt=""
-                    style={{ 
-                      width: 22, 
-                      height: 22, 
-                      marginRight: 8,
-                      filter: theme === 'dark' ? 'none' : 'invert(1) opacity(0.5)'
-                    }}
+                    style={{ width: 22, height: 22, marginRight: 8, filter: theme === 'dark' ? 'none' : 'invert(1) opacity(0.5)' }}
                   />
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={searchPlaceholder}
                     className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
-                    style={{
-                      fontSize: 16,
-                      lineHeight: '18px',
-                      color: theme === 'dark' ? '#A8A8A8' : '#3C3C43',
-                    }}
-                    onFocus={() => {
-                      setIsSearchActive(true)
-                      setIsSortMenuOpen(false)
-                    }}
+                    style={{ fontSize: 16, lineHeight: '18px', color: theme === 'dark' ? '#A8A8A8' : '#3C3C43' }}
+                    onFocus={() => { setIsSearchActive(true); setIsSortMenuOpen(false) }}
                     onBlur={() => setIsSearchActive(false)}
                   />
 
@@ -1206,31 +1343,20 @@ export default function Ads({
                     <AnimatePresence>
                       {searchQuery.trim().length > 0 && (
                         <motion.button
-                          initial={{ opacity: 0, scale: 0.9, x: 8 }}
-                          animate={{ opacity: 1, scale: 1, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, x: 8 }}
-                          transition={{ duration: 0.16 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setSearchQuery('')
-                            setIsSortMenuOpen(false)
-                          }}
-                          className="h-[36px] w-[36px] flex items-center justify-center"
-                          aria-label="Очистить поиск"
+                          initial={{ opacity: 0, scale: 0.9, x: 8 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.9, x: 8 }}
+                          transition={{ duration: 0.16 }} whileTap={{ scale: 0.95 }}
+                          onClick={() => { setSearchQuery(''); setIsSortMenuOpen(false) }}
+                          className="h-[36px] w-[36px] flex items-center justify-center" aria-label="Очистить поиск"
                         >
                           <X className="w-5 h-5 text-white/45" />
                         </motion.button>
                       )}
                     </AnimatePresence>
-
                     <AnimatePresence>
                       {!isSearchActive && (
                         <motion.button
-                          initial={{ opacity: 0, scale: 0.9, x: 8 }}
-                          animate={{ opacity: 1, scale: 1, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, x: 8 }}
-                          transition={{ duration: 0.16 }}
-                          whileTap={{ scale: 0.95 }}
+                          initial={{ opacity: 0, scale: 0.9, x: 8 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.9, x: 8 }}
+                          transition={{ duration: 0.16 }} whileTap={{ scale: 0.95 }}
                           onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
                           className="h-[36px] w-[36px] flex items-center justify-center"
                         >
@@ -1238,33 +1364,21 @@ export default function Ads({
                         </motion.button>
                       )}
                     </AnimatePresence>
-
                     <AnimatePresence>
                       {isSortMenuOpen && (
                         <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
-                          animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
+                          initial={{ opacity: 0, scale: 0.95, y: 10, x: -20 }} animate={{ opacity: 1, scale: 1, y: 0, x: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
                           className="absolute top-[52px] right-0 w-[200px] z-[100] rounded-2xl bg-[#1C1C1E] border border-white/10 shadow-2xl overflow-hidden"
                         >
-                          <button
-                            onClick={() => { setSortType('new'); setIsSortMenuOpen(false); }}
-                            className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'new' ? 'text-white' : 'text-white/40'}`}
-                          >
+                          <button onClick={() => { setSortType('new'); setIsSortMenuOpen(false) }} className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'new' ? 'text-white' : 'text-white/40'}`}>
                             <span className="text-[14px] font-sf-ui-medium">Новинки</span>
                             <Clock className={`w-4 h-4 ${sortType === 'new' ? 'text-blue-400' : 'opacity-0'}`} />
                           </button>
-                          <button
-                            onClick={() => { setSortType('cheap'); setIsSortMenuOpen(false); }}
-                            className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'cheap' ? 'text-white' : 'text-white/40'}`}
-                          >
+                          <button onClick={() => { setSortType('cheap'); setIsSortMenuOpen(false) }} className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'cheap' ? 'text-white' : 'text-white/40'}`}>
                             <span className="text-[14px] font-sf-ui-medium">Сначала дешевле</span>
                             <Tag className={`w-4 h-4 ${sortType === 'cheap' ? 'text-blue-400' : 'opacity-0'}`} />
                           </button>
-                          <button
-                            onClick={() => { setSortType('rating'); setIsSortMenuOpen(false); }}
-                            className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'rating' ? 'text-white' : 'text-white/40'}`}
-                          >
+                          <button onClick={() => { setSortType('rating'); setIsSortMenuOpen(false) }} className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'rating' ? 'text-white' : 'text-white/40'}`}>
                             <span className="text-[14px] font-sf-ui-medium">По рейтингу</span>
                             <UserCheck className={`w-4 h-4 ${sortType === 'rating' ? 'text-blue-400' : 'opacity-0'}`} />
                           </button>
@@ -1289,16 +1403,14 @@ export default function Ads({
           {/* Category Carousel */}
           <AnimatePresence>
             {showCategories && (
-              <motion.div 
+              <motion.div
                 initial={{ height: 0, opacity: 0, marginTop: 0 }}
                 animate={{ height: 'auto', opacity: 1, marginTop: 4 }}
                 exit={{ height: 0, opacity: 0, marginTop: 0 }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="w-full relative overflow-hidden px-2"
               >
-                <div 
-                  className="flex overflow-x-auto scrollbar-hidden category-carousel w-full overflow-y-hidden" 
-                >
+                <div className="flex overflow-x-auto scrollbar-hidden category-carousel w-full overflow-y-hidden">
                   <div className="flex gap-2 py-1 pl-1 pr-3">
                     {([
                       { name: 'Новые' },
@@ -1308,16 +1420,16 @@ export default function Ads({
                       { name: 'Бесплатно' },
                       { name: 'Обмен' },
                       { name: 'Аукцион', disabled: true }
-                    ] as { name: string; disabled?: boolean }[]).map((category, index) => (
+                    ] as { name: string; disabled?: boolean }[]).map((category) => (
                       <motion.button
                         key={category.name}
                         type="button"
                         disabled={category.disabled}
                         className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl font-sf-ui-medium text-[14px] transition-all duration-300 relative overflow-hidden ${
-                          category.disabled 
-                            ? 'opacity-30 grayscale cursor-not-allowed' 
-                            : selectedCategory === category.name 
-                              ? 'bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.1)]' 
+                          category.disabled
+                            ? 'opacity-30 grayscale cursor-not-allowed'
+                            : selectedCategory === category.name
+                              ? 'bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.1)]'
                               : 'bg-white/[0.02] text-white/60 border border-white/[0.035] hover:bg-white/[0.04]'
                         } active:scale-95`}
                         whileTap={category.disabled ? {} : { scale: 0.95 }}
@@ -1351,43 +1463,69 @@ export default function Ads({
           touchAction: 'pan-y',
         }}
       >
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="mx-2 mb-[15.5px] overflow-visible rounded-[24px] border border-white/[0.05] bg-[#121212]"
-          style={{
-            minHeight: 116,
-            boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
-          }}
-        >
-          <div className="relative h-full w-full p-4">
-            <div
-              className="absolute inset-0 opacity-90 rounded-[24px]"
-              style={{
-                background:
-                  'radial-gradient(circle at 15% 20%, rgba(86, 86, 86, 0.28) 0%, transparent 45%), radial-gradient(circle at 85% 70%, rgba(70, 70, 70, 0.24) 0%, transparent 50%), linear-gradient(135deg, #161616 0%, #111111 100%)',
-              }}
-            />
-            {/* Фото — абсолютно, снизу справа, торчит вверх за пределы плашки */}
-            <img
-              src="/name.png"
-              alt=""
-              className="absolute bottom-0 right-4 z-20 pointer-events-none"
-              style={{ width: 120, height: 'auto', objectFit: 'contain' }}
-            />
-            <div className="relative z-10 flex h-full items-center gap-4">
-              <div className="max-w-[62%]">
-                <div className="text-[12px] tracking-[0.04em] text-white/45">Рекламный слот</div>
-                <div className="mt-1 text-[20px] leading-[1.1] font-ttc-bold text-white">Здесь могла быть ваша реклама</div>
-                <div
-                  className="mt-2 text-[13px] text-white/45 underline underline-offset-2 cursor-pointer"
-                  onClick={() => window.open('/partner-agreement', '_blank')}
-                >Подробнее о партнерских отношениях</div>
+        <BannerCarousel />
+
+        {/* Плашка верификации */}
+        <AnimatePresence>
+          {showVerifBanner && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.25, delay: 0.05 }}
+              className="mx-2 mb-[15.5px] rounded-[20px] overflow-hidden relative"
+              style={{ minHeight: 90 }}
+            >
+              {/* Фон */}
+              <div className="absolute inset-0" style={{ background: '#161616' }} />
+              {/* Световой луч */}
+              <motion.div
+                animate={{ x: ['-100%', '350%'] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'linear', repeatDelay: 7 }}
+                className="absolute top-[45%] left-0 z-10 w-[25%] h-[1px] bg-gradient-to-r from-transparent via-white/25 to-transparent"
+              />
+
+              {/* Крестик и стрелка — вверху справа */}
+              <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-colors"
+                  onClick={() => window.dispatchEvent(new Event('open-settings'))}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowVerifBanner(false)
+                    localStorage.setItem('hw-verif-banner-dismissed', '1')
+                  }}
+                >
+                  <X className="w-3.5 h-3.5 text-white/50" />
+                </button>
               </div>
-            </div>
-          </div>
-        </motion.div>
+
+              {/* Контент */}
+              <div
+                className="relative z-20 flex items-center px-5 py-4 h-full cursor-pointer active:opacity-80 transition-opacity"
+                onClick={() => window.dispatchEvent(new Event('open-settings'))}
+              >
+                <div className="flex-1 min-w-0 pr-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <img src="/interface/verified.svg" alt="" className="w-4 h-4" style={{ filter: 'brightness(0) invert(1) opacity(0.9)' }} />
+                    <span className="text-[11px] font-sf-ui-medium text-white/40 uppercase tracking-[0.1em]">HelloWorld</span>
+                  </div>
+                  <div className="text-[18px] font-sf-ui-medium text-white leading-tight">Верификация аккаунта</div>
+                  <div className="text-[12px] text-white/45 font-sf-ui-light mt-0.5">Получи значок и доверие покупателей</div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {initialLoading ? (
           <div
