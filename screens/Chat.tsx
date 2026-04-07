@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { ChevronLeft, Image as ImageIcon, User, ShieldCheck, Clock, CheckCircle2, MessageCircle, ShoppingBag, ArrowUp, X } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 import { AdCard, type StoredAd } from './ads'
+import FormattedText from '@/components/FormattedText'
 
 type Message = {
   id: string
@@ -1048,7 +1049,7 @@ export default function Chat({
                             : 'bg-[#1C1C1E] text-white border border-white/5'
                         } whitespace-pre-wrap break-all [overflow-wrap:anywhere]`}
                       >
-                        {msg.message}
+                        <FormattedText text={msg.message} />
                       </div>
                     )}
                     

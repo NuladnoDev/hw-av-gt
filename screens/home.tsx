@@ -18,6 +18,7 @@ import { getSupabase } from '@/lib/supabaseClient'
 import StoreCatalog from './StoreCatalog'
 import Ads, { type StoredAd } from './ads'
 import AdDetail from './AdDetail'
+import FormattedText from '@/components/FormattedText'
 import Support from './Support'
 import Chat from './Chat'
 import Favorites from './Favorites'
@@ -185,6 +186,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [supportOpen, setSupportOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notificationsClosing, setNotificationsClosing] = useState(false)
+  const [expandedNotifs, setExpandedNotifs] = useState<Set<string>>(new Set())
   const [navVisible, setNavVisible] = useState(true)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   const PATCH_NOTES_VERSION = '2026-04-02-2'
@@ -277,13 +279,28 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [alphaStats, setAlphaStats] = useState<{ users: number; ads: number }>({ users: 0, ads: 0 })
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [favoriteToast, setFavoriteToast] = useState<{ visible: boolean; adId: string | null }>({ visible: false, adId: null })
-  const [notifications, setNotifications] = useState<Array<{ id: string, title: string, text: string, date: string, icon: string }>>([
+  type AppNotification = {
+    id: string
+    type: 'new_follower' | 'new_ad' | 'welcome'
+    title: string
+    text: string
+    createdAt: number
+    actorId?: string
+    actorTag?: string
+    actorAvatar?: string | null
+    adId?: string
+    adTitle?: string
+    isRead: boolean
+  }
+
+  const [notifications, setNotifications] = useState<AppNotification[]>([
     {
       id: 'welcome',
-      title: 'HelloWorld',
-      text: 'Добро пожаловать! Спасибо, что приняли участие в тестировании нашего сайта. Мы постоянно работаем над улучшением функционала.',
-      date: 'Недавно',
-      icon: '/logo.svg'
+      type: 'welcome',
+      title: 'hw-project',
+      text: 'Привет! Спасибо, что принял(а) участие в тестировании сайта в Beta версии. Возможны некоторые недоработки и ошибки в работе сайта. При ошибках пишите в наш Telegram канал: https://t.me/olcc_hw-project',
+      createdAt: Date.now(),
+      isRead: false,
     }
   ])
 
@@ -294,6 +311,48 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     }
     setPatchNotesOpen(false)
   }
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      const { getSupabase, loadLocalAuth } = await import('@/lib/supabaseClient')
+      const auth = await loadLocalAuth()
+      const uid = auth?.uuid ?? auth?.uid
+      if (!uid) return
+      const client = getSupabase()
+      if (!client) return
+      try {
+        const { data } = await client
+          .from('notifications')
+          .select('*')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+          .limit(50)
+        if (data && data.length > 0) {
+          const mapped: AppNotification[] = data.map((n: any) => ({
+            id: n.id,
+            type: n.type,
+            title: n.type === 'new_follower' ? 'Новый подписчик' : 'Новое объявление',
+            text: n.type === 'new_follower'
+              ? `@${n.actor_tag ?? 'пользователь'} подписался на вас`
+              : `@${n.actor_tag ?? 'пользователь'} опубликовал: ${n.ad_title ?? 'объявление'}`,
+            createdAt: new Date(n.created_at).getTime(),
+            actorId: n.actor_id,
+            actorTag: n.actor_tag,
+            actorAvatar: n.actor_avatar,
+            adId: n.ad_id,
+            adTitle: n.ad_title,
+            isRead: n.is_read,
+          }))
+          setNotifications(prev => {
+            const welcome = prev.find(n => n.id === 'welcome')
+            return welcome ? [...mapped, welcome] : mapped
+          })
+        }
+      } catch {
+      }
+    }
+    loadNotifications()
+  }, [])
 
   useEffect(() => {
     const handleFavoriteAdded = (e: Event) => {
@@ -2918,37 +2977,161 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               {/* Content */}
               <div className="flex-1 overflow-y-auto scrollbar-hidden">
                 {notifications.length > 0 ? (
-                  notifications.map((notif) => (
-                    <motion.div
-                      key={notif.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="w-full px-6 py-5 border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
-                    >
-                      <div className="flex gap-4 items-start text-left">
-                        <div className="relative flex-shrink-0">
-                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/[0.08] to-transparent flex items-center justify-center overflow-hidden border border-white/[0.08]">
-                            <img src={notif.icon} alt="" className="w-7 h-7 rounded-lg" />
+                  notifications.map((notif) => {
+                    const timeAgo = (() => {
+                      const diff = Date.now() - notif.createdAt
+                      const m = Math.floor(diff / 60000)
+                      const h = Math.floor(diff / 3600000)
+                      const d = Math.floor(diff / 86400000)
+                      if (m < 1) return 'только что'
+                      if (m < 60) return `${m} мин`
+                      if (h < 24) return `${h} ч`
+                      if (d < 7) return `${d} д`
+                      return new Date(notif.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+                    })()
+
+                    const isClickable = notif.type === 'new_follower' || notif.type === 'new_ad'
+                    const isExpanded = expandedNotifs.has(notif.id)
+
+                    const iconBg = notif.type === 'new_follower'
+                      ? 'from-blue-500/20 to-blue-600/10'
+                      : notif.type === 'new_ad'
+                      ? 'from-emerald-500/20 to-emerald-600/10'
+                      : 'from-white/8 to-transparent'
+
+                    const iconColor = notif.type === 'new_follower'
+                      ? 'text-blue-400'
+                      : notif.type === 'new_ad'
+                      ? 'text-emerald-400'
+                      : 'text-white/40'
+
+                    const toggleExpand = (e: React.MouseEvent) => {
+                      e.stopPropagation()
+                      setExpandedNotifs(prev => {
+                        const next = new Set(prev)
+                        if (next.has(notif.id)) next.delete(notif.id)
+                        else next.add(notif.id)
+                        return next
+                      })
+                    }
+
+                    return (
+                      <div key={notif.id} className="border-b border-white/[0.04]">
+                        <motion.button
+                          type="button"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="w-full px-4 pt-4 pb-3 active:bg-white/[0.03] transition-colors text-left"
+                          onClick={() => {
+                            if (notif.type === 'new_follower' && notif.actorId) {
+                              closeNotifications()
+                              setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent('open-profile-by-id', { detail: { id: notif.actorId } }))
+                              }, 250)
+                            } else if (notif.type === 'new_ad' && notif.actorId) {
+                              closeNotifications()
+                              setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent('open-profile-by-id', { detail: { id: notif.actorId } }))
+                              }, 250)
+                            }
+                          }}
+                          disabled={!isClickable}
+                        >
+                          <div className="flex gap-3 items-center">
+                            <div className="relative flex-shrink-0">
+                              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${iconBg} flex items-center justify-center overflow-hidden border border-white/[0.07]`}>
+                                {notif.actorAvatar ? (
+                                  <img src={notif.actorAvatar} alt="" className="w-full h-full object-cover" />
+                                ) : notif.type === 'new_follower' ? (
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={iconColor}>
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+                                  </svg>
+                                ) : notif.type === 'new_ad' ? (
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={iconColor}>
+                                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                                  </svg>
+                                ) : (
+                                  <img src="/logo.svg" alt="" className="w-6 h-6" />
+                                )}
+                              </div>
+                              {!notif.isRead && (
+                                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-[#0A0A0A]" />
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                                <span className="text-[14px] font-sf-ui-medium text-white/90 truncate">
+                                  {notif.title}
+                                </span>
+                                <span className="text-[11px] text-white/25 font-sf-ui-light whitespace-nowrap flex-shrink-0">
+                                  {timeAgo}
+                                </span>
+                              </div>
+                              <p className={`text-[13px] text-white/45 font-sf-ui-light leading-snug ${isExpanded ? '' : 'truncate'}`}>
+                                <FormattedText text={notif.text} />
+                              </p>
+                            </div>
+
+                            {isClickable && !isExpanded && (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/15 flex-shrink-0">
+                                <path d="M9 18l6-6-6-6"/>
+                              </svg>
+                            )}
                           </div>
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#0A0A0A]" />
-                        </div>
-                        
-                        <div className="flex flex-col gap-1 min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[16px] font-sf-ui-semibold text-white/90 truncate tracking-tight">
-                              {notif.title}
-                            </span>
-                            <span className="text-[11px] text-white/20 font-sf-ui-medium uppercase tracking-widest whitespace-nowrap">
-                              {notif.date}
-                            </span>
-                          </div>
-                          <p className="text-[14px] text-white/40 font-sf-ui-light leading-relaxed">
-                            {notif.text}
-                          </p>
-                        </div>
+                        </motion.button>
+
+                        {/* Кнопка развернуть */}
+                        <button
+                          type="button"
+                          onClick={toggleExpand}
+                          className="flex items-center gap-1 px-4 pb-3 text-[12px] text-white/25 font-sf-ui-light active:text-white/50 transition-colors"
+                        >
+                          <motion.svg
+                            width="12" height="12" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <path d="M6 9l6 6 6-6"/>
+                          </motion.svg>
+                          {isExpanded ? 'Свернуть' : 'Развернуть'}
+                        </button>
+
+                        {/* Развёрнутый контент */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.22, ease: 'easeInOut' }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-4 pb-4 ml-14">
+                                {isClickable && (
+                                  <button
+                                    type="button"
+                                    className="mt-1 text-[13px] text-blue-400 font-sf-ui-medium active:opacity-70"
+                                    onClick={() => {
+                                      if (notif.actorId) {
+                                        closeNotifications()
+                                        setTimeout(() => {
+                                          window.dispatchEvent(new CustomEvent('open-profile-by-id', { detail: { id: notif.actorId } }))
+                                        }, 250)
+                                      }
+                                    }}
+                                  >
+                                    {notif.type === 'new_follower' ? 'Открыть профиль →' : 'Перейти к автору →'}
+                                  </button>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
-                    </motion.div>
-                  ))
+                    )
+                  })
                 ) : (
                   <div className="w-full py-20 flex flex-col items-center justify-center text-center space-y-4">
                     <div className="w-20 h-20 rounded-full bg-white/[0.03] flex items-center justify-center relative">

@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePres
 import { ChevronDown, ChevronLeft, ChevronRight, X, Sparkles, Star, ThumbsUp, CircleAlert, ShieldCheck, Share2, Flag, Check, MoreVertical, Info, Heart } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 import { AdCard, loadAdsFromStorage, type StoredAd } from './ads'
+import FormattedText from '@/components/FormattedText'
 
 
 const CONDITION_COLORS: Record<string, string> = {
@@ -790,7 +791,7 @@ export default function AdDetail({
                           !showFullDescription && descriptionText.length > 200 ? 'line-clamp-4' : ''
                         }`}
                       >
-                        {descriptionText}
+                        <FormattedText text={descriptionText} />
                       </p>
                       {!showFullDescription && descriptionText.length > 200 && (
                         <button

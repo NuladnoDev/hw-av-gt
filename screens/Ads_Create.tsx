@@ -74,7 +74,7 @@ export const CONDITION_OPTIONS: {
     description: 'Есть чек, сохранена оригинальная упаковка',
     icon: (
       <svg viewBox="0 0 20 20" width={20} height={20} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10 2l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4L4.2 6.2l4-.6z"/>
+        <path d="M10 3.5l1.6 3.2 3.5.5-2.5 2.5.6 3.5-3.2-1.7-3.2 1.7.6-3.5-2.5-2.5 3.5-.5z"/>
       </svg>
     ),
     color: '#34d399',
@@ -485,6 +485,25 @@ export default function AdsCreate({
               },
               body: JSON.stringify({ adId: (data as any).id as string }),
             })
+          }
+        } catch {
+        }
+        // Уведомляем подписчиков
+        try {
+          const { data: followers } = await client
+            .from('follows')
+            .select('follower_id')
+            .eq('target_id', uid)
+          if (followers && followers.length > 0) {
+            const notifRows = followers.map((f: { follower_id: string }) => ({
+              user_id: f.follower_id,
+              type: 'new_ad',
+              actor_id: uid,
+              actor_tag: userTag || null,
+              ad_id: (data as any).id,
+              ad_title: titleTrim,
+            }))
+            await client.from('notifications').insert(notifRows)
           }
         } catch {
         }

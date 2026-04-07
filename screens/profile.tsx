@@ -33,6 +33,7 @@ import { AdCard, AdCardSkeleton, loadAdsFromStorage, deleteAdById, StoredAd } fr
 import AdsEdit from './Ads_Edit'
 import VerifiedBadge from '../components/VerifiedBadge'
 import QualityBadge from '../components/QualityBadge'
+import FormattedText from '../components/FormattedText'
 import ModeratorBadge from '../components/ModeratorBadge'
 
 function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
@@ -1495,6 +1496,18 @@ export default function Profile({
                             console.error('Failed to upsert follow in DB:', error)
                           } else {
                             console.log('Successfully upserted follow to DB')
+                            // Записываем уведомление для target
+                            try {
+                              await client.from('notifications').insert({
+                                user_id: target,
+                                type: 'new_follower',
+                                actor_id: follower,
+                                actor_tag: tagText || null,
+                                actor_avatar: avatarUrl || null,
+                              })
+                            } catch {
+                              // не критично
+                            }
                             // Only try push subscription if DB sync was successful
                             try {
                               await ensurePushSubscription()
@@ -1943,7 +1956,7 @@ export default function Profile({
                           className="bg-[#0D0D0D] px-3 py-2 leading-[1.6em] text-[#A1A1A1] whitespace-pre-wrap"
                           style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
                         >
-                          {description && description.trim().length > 0 ? renderTextWithLinks(description) : 'Описание не заполнено'}
+                          {description && description.trim().length > 0 ? <FormattedText text={description} /> : 'Описание не заполнено'}
                         </div>
                       )
                     )}

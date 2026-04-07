@@ -464,14 +464,23 @@ export function AdCard({
           {/* Condition Badge (WB style) */}
           {conditionConfig && (
             <div 
-              className="absolute bottom-2 left-2 z-20 px-2 py-0.5 rounded text-[9px] font-sf-ui-bold uppercase tracking-wider backdrop-blur-md border border-white/5"
+              className="absolute bottom-2 left-2 z-20 rounded-lg"
               style={{
-                backgroundColor: `${conditionConfig.color}20`,
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: `${conditionConfig.color}22`,
+                border: `1px solid rgba(180, 180, 180, 0.25)`,
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
                 color: conditionConfig.color,
-                borderColor: `${conditionConfig.color}30`
               }}
             >
-              {conditionConfig.label}
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0 }}>
+                {conditionConfig.icon}
+              </span>
             </div>
           )}
         </div>
@@ -1346,7 +1355,7 @@ export default function Ads({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="mx-2 mb-[15.5px] overflow-hidden rounded-[24px] border border-white/[0.05] bg-[#121212]"
+          className="mx-2 mb-[15.5px] overflow-visible rounded-[24px] border border-white/[0.05] bg-[#121212]"
           style={{
             minHeight: 116,
             boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
@@ -1354,35 +1363,28 @@ export default function Ads({
         >
           <div className="relative h-full w-full p-4">
             <div
-              className="absolute inset-0 opacity-90"
+              className="absolute inset-0 opacity-90 rounded-[24px]"
               style={{
                 background:
                   'radial-gradient(circle at 15% 20%, rgba(86, 86, 86, 0.28) 0%, transparent 45%), radial-gradient(circle at 85% 70%, rgba(70, 70, 70, 0.24) 0%, transparent 50%), linear-gradient(135deg, #161616 0%, #111111 100%)',
               }}
             />
-            <div className="relative z-10 flex h-full items-center justify-between gap-4">
+            {/* Фото — абсолютно, снизу справа, торчит вверх за пределы плашки */}
+            <img
+              src="/name.png"
+              alt=""
+              className="absolute bottom-0 right-4 z-20 pointer-events-none"
+              style={{ width: 120, height: 'auto', objectFit: 'contain' }}
+            />
+            <div className="relative z-10 flex h-full items-center gap-4">
               <div className="max-w-[62%]">
                 <div className="text-[12px] tracking-[0.04em] text-white/45">Рекламный слот</div>
                 <div className="mt-1 text-[20px] leading-[1.1] font-ttc-bold text-white">Здесь могла быть ваша реклама</div>
-                <div className="mt-2 text-[13px] text-white/45">Подробнее о партнерских отношениях</div>
+                <div
+                  className="mt-2 text-[13px] text-white/45 underline underline-offset-2 cursor-pointer"
+                  onClick={() => window.open('/partner-agreement', '_blank')}
+                >Подробнее о партнерских отношениях</div>
               </div>
-              <motion.svg
-                width="108"
-                height="76"
-                viewBox="0 0 108 76"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="shrink-0"
-                animate={{ y: [0, -2, 0] }}
-                transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <rect x="10" y="10" width="74" height="52" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.14)" />
-                <rect x="22" y="22" width="42" height="6" rx="3" fill="rgba(255,255,255,0.25)" />
-                <rect x="22" y="34" width="32" height="5" rx="2.5" fill="rgba(255,255,255,0.14)" />
-                <rect x="22" y="43" width="24" height="5" rx="2.5" fill="rgba(255,255,255,0.1)" />
-                <circle cx="88" cy="22" r="10" fill="rgba(255,255,255,0.12)" />
-                <path d="M88 17V27M83 22H93" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" />
-              </motion.svg>
             </div>
           </div>
         </motion.div>
