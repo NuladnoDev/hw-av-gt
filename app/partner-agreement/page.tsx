@@ -1,16 +1,12 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-
 export default function PartnerAgreementPage() {
-  const router = useRouter()
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white/80 overflow-y-auto">
       {/* Шапка с кнопкой назад */}
       <div className="sticky top-0 z-10 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/[0.05] px-4 h-14 flex items-center gap-3 flex-shrink-0">
         <button
-          onClick={() => router.back()}
+          onClick={() => window.close()}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white/5 active:bg-white/10 transition-colors"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
