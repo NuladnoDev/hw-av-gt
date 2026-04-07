@@ -934,78 +934,190 @@ export default function Setting({
       <AnimatePresence>
         {showVerification && (
           <motion.div
-            initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[10000] bg-black flex flex-col items-center justify-between px-8 pb-16 pt-24 overflow-hidden font-ttc-bold"
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-[60] bg-[#0a0a0a] flex flex-col overflow-y-auto scrollbar-hidden"
           >
-            {/* Background gradients for Liquid Glass effect */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-              <motion.div 
-                animate={{ 
-                  scale: [1, 1.2, 1],
-                  rotate: [0, 45, 0],
-                  opacity: [0.05, 0.1, 0.05]
-                }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-white blur-[120px] rounded-full" 
-              />
-              <motion.div 
-                animate={{ 
-                  scale: [1, 1.3, 1],
-                  rotate: [0, -45, 0],
-                  opacity: [0.03, 0.08, 0.03]
-                }}
-                transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-white blur-[120px] rounded-full" 
-              />
+            {/* Шапка */}
+            <div
+              className="flex items-center px-6 flex-shrink-0"
+              style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowVerification(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <ChevronLeft size={24} className="text-white" />
+              </button>
             </div>
 
-            <div className="relative z-10 flex flex-col items-start justify-start w-full max-w-sm flex-1">
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.6 }}
-                className="text-left space-y-8"
-              >
-                <h1 className="text-6xl font-bold tracking-tighter text-white">
-                  hw-project
-                </h1>
-                <div className="max-w-[300px] space-y-4">
-                  <p className="text-[17px] font-light leading-relaxed text-white/70" style={{ fontFamily: 'var(--font-inter)' }}>
-                    Верификация аккаунта позволяет получить специальный значок и повысить доверие пользователей.
-                  </p>
-                  <p className="text-[15px] font-light leading-relaxed text-white/40" style={{ fontFamily: 'var(--font-inter)' }}>
-                    Для подтверждения личности необходимо заполнить специальную форму в нашем Telegram канале.
-                  </p>
+            <div className="flex-1 px-5 pb-12 space-y-6 mt-2">
+              {/* Hero плашка с анимированным фоном */}
+              <div className="relative rounded-[28px] overflow-hidden" style={{ minHeight: 200 }}>
+                {/* Анимированный фон */}
+                <div className="absolute inset-0 bg-black">
+                  <motion.div
+                    animate={{ scale: [1, 1.3, 1], rotate: [0, 60, 0], opacity: [0.12, 0.22, 0.12] }}
+                    transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+                    className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-white blur-[80px] rounded-full"
+                  />
+                  <motion.div
+                    animate={{ scale: [1, 1.4, 1], rotate: [0, -50, 0], opacity: [0.08, 0.18, 0.08] }}
+                    transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
+                    className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-white blur-[80px] rounded-full"
+                  />
+                  <motion.div
+                    animate={{ x: ['-30%', '130%'], opacity: [0, 0.15, 0] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: 'linear', repeatDelay: 3 }}
+                    className="absolute top-[30%] w-[40%] h-[1px] bg-gradient-to-r from-transparent via-white to-transparent blur-[2px]"
+                  />
                 </div>
-              </motion.div>
+                {/* Контент плашки */}
+                <div className="relative z-10 p-7 flex flex-col justify-between h-full" style={{ minHeight: 200 }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <img src="/interface/verified.svg" alt="" className="w-6 h-6" style={{ filter: 'brightness(0) invert(1)' }} />
+                    <span className="text-[13px] text-white/50 font-sf-ui-medium uppercase tracking-widest">HelloWorld</span>
+                  </div>
+                  <div>
+                    <h1 className="text-[32px] font-ttc-bold text-white leading-tight">
+                      Верификация аккаунта
+                    </h1>
+                    <p className="mt-2 text-[15px] text-white/55 font-sf-ui-light leading-relaxed">
+                      Подтверди личность и получи особый статус на платформе
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                className="mt-20 w-full flex flex-col items-start gap-10"
-              >
+              {/* Преимущества */}
+              <div className="space-y-6 px-1">
+                {([
+                  {
+                    title: 'Доверие покупателей',
+                    text: 'Значок верификации показывает, что аккаунт проверен командой HelloWorld. Покупатели охотнее обращаются к верифицированным продавцам.',
+                    icon: (
+                      <motion.svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                        <motion.path d="M13 2L15.5 8L22 8.8L17.5 13.2L18.7 19.5L13 16.5L7.3 19.5L8.5 13.2L4 8.8L10.5 8L13 2Z"
+                          stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round" fill="#60a5fa" fillOpacity="0.1"
+                          animate={{ fillOpacity: [0.08, 0.22, 0.08] }}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                        <motion.path d="M9.5 13L12 15.5L16.5 10.5"
+                          stroke="#34d399" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                          initial={{ pathLength: 0 }} animate={{ pathLength: [0, 1, 1, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', times: [0, 0.4, 0.7, 1] }}
+                        />
+                      </motion.svg>
+                    ),
+                  },
+                  {
+                    title: 'Продвижение в топах',
+                    text: 'Объявления верифицированных пользователей получают приоритет в ленте и поиске.',
+                    icon: (
+                      <motion.svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                        <motion.rect x="3" y="15" width="4" height="9" rx="1.5" fill="#60a5fa"
+                          animate={{ scaleY: [0.5, 1, 0.5] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0 }}
+                          style={{ transformOrigin: '5px 24px' }}
+                        />
+                        <motion.rect x="11" y="10" width="4" height="14" rx="1.5" fill="#818cf8"
+                          animate={{ scaleY: [0.5, 1, 0.5] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                          style={{ transformOrigin: '13px 24px' }}
+                        />
+                        <motion.rect x="19" y="4" width="4" height="20" rx="1.5" fill="#a78bfa"
+                          animate={{ scaleY: [0.5, 1, 0.5] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
+                          style={{ transformOrigin: '21px 24px' }}
+                        />
+                      </motion.svg>
+                    ),
+                  },
+                  {
+                    title: 'Особый значок профиля',
+                    text: 'Рядом с именем появляется синий значок верификации, который виден всем пользователям платформы.',
+                    icon: (
+                      <motion.svg width="26" height="26" viewBox="0 0 26 26" fill="none"
+                        animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        <motion.path d="M13 2L15.5 8.5L22.5 9.2L17.5 14L19 20.5L13 17.2L7 20.5L8.5 14L3.5 9.2L10.5 8.5L13 2Z"
+                          fill="#3b82f6" fillOpacity="0.18" stroke="#3b82f6" strokeWidth="1.5" strokeLinejoin="round"
+                          animate={{ fillOpacity: [0.12, 0.3, 0.12] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                        <path d="M10 13L12.5 15.5L17 10.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </motion.svg>
+                    ),
+                  },
+                  {
+                    title: 'Шанс стать модератором',
+                    text: 'Верифицированные пользователи с хорошей репутацией могут быть приглашены в команду модераторов проекта.',
+                    icon: (
+                      <motion.svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                        <motion.path d="M13 2.5L19.5 5.5V12.5C19.5 16.5 16.5 20 13 21.5C9.5 20 6.5 16.5 6.5 12.5V5.5L13 2.5Z"
+                          stroke="#f59e0b" strokeWidth="1.5" strokeLinejoin="round" fill="#f59e0b" fillOpacity="0.1"
+                          animate={{ fillOpacity: [0.06, 0.2, 0.06] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                        <motion.path d="M10 13L12.2 15.5L16.5 10"
+                          stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                          initial={{ pathLength: 0 }} animate={{ pathLength: [0, 1, 1, 0] }}
+                          transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', times: [0, 0.35, 0.7, 1] }}
+                        />
+                      </motion.svg>
+                    ),
+                  },
+                  {
+                    title: 'Расширенные возможности',
+                    text: 'Доступ к закрытым функциям платформы, которые появятся в будущих обновлениях.',
+                    icon: (
+                      <motion.svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                        <motion.circle cx="13" cy="13" r="4.5" stroke="#34d399" strokeWidth="1.5"
+                          animate={{ r: [4.5, 5.5, 4.5] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                        <motion.circle cx="13" cy="13" r="9" stroke="#34d399" strokeWidth="1" strokeDasharray="2.5 2.5"
+                          animate={{ rotate: 360 }} transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
+                          style={{ transformOrigin: '13px 13px' }}
+                        />
+                        <motion.circle cx="13" cy="4" r="1.8" fill="#34d399"
+                          animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      </motion.svg>
+                    ),
+                  },
+                ] as { title: string; text: string; icon: React.ReactNode }[]).map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.07 * i, duration: 0.3 }}
+                    className="flex gap-4 items-start"
+                  >
+                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center mt-0.5">
+                      {item.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[15px] font-sf-ui-medium text-white/90 mb-1">{item.title}</div>
+                      <div className="text-[13px] text-white/40 font-sf-ui-light leading-relaxed">{item.text}</div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Кнопка подачи заявки */}
+              <div className="pt-2 pb-4">
                 <button
                   type="button"
-                  className="h-[72px] w-[72px] rounded-full bg-white text-black flex items-center justify-center transition-all active:scale-[0.9] hover:bg-white/90 shadow-[0_0_40px_rgba(255,255,255,0.15)] group"
-                  onClick={() => window.open('https://t.me/your_channel', '_blank')}
+                  className="flex items-center gap-4 w-full active:scale-[0.97] transition-transform"
+                  onClick={() => window.open('https://t.me/helloworld_support', '_blank')}
                 >
-                  <ChevronRight size={32} className="transition-transform group-hover:translate-x-0.5" />
+                  <div className="h-[64px] w-[64px] rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-[0_0_30px_rgba(255,255,255,0.15)]">
+                    <ChevronRight size={28} className="text-black" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-[17px] font-sf-ui-medium text-white leading-tight">Подать заявку на верификацию</div>
+                    <div className="text-[13px] text-white/35 font-sf-ui-light mt-0.5">Через Telegram поддержку</div>
+                  </div>
                 </button>
-
-                <button
-                  type="button"
-                  className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-all text-[15px]"
-                  style={{ fontFamily: 'var(--font-inter)' }}
-                  onClick={() => setShowVerification(false)}
-                >
-                  <ChevronLeft size={16} className="opacity-50" />
-                  <span className="font-light">Вернуться в настройки</span>
-                </button>
-              </motion.div>
+              </div>
             </div>
           </motion.div>
         )}
