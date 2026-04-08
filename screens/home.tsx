@@ -19,6 +19,8 @@ import StoreCatalog from './StoreCatalog'
 import Ads, { type StoredAd } from './ads'
 import AdDetail from './AdDetail'
 import FormattedText from '@/components/FormattedText'
+import dynamic from 'next/dynamic'
+const ModeratorPanel = dynamic(() => import('./ModeratorPanel'), { ssr: false })
 import Support from './Support'
 import Chat from './Chat'
 import Favorites from './Favorites'
@@ -43,6 +45,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [isIOS, setIsIOS] = useState(false)
   const [isAndroid, setIsAndroid] = useState(false)
   const [showIosTip, setShowIosTip] = useState(false)
+  const [isModerator, setIsModerator] = useState(false)
+  const [moderatorOpen, setModeratorOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [activeChatAd, setActiveChatAd] = useState<StoredAd | null>(null)
   const [chatReceiver, setChatReceiver] = useState<{ id: string; name: string; avatar: string | null } | null>(null)
@@ -60,6 +64,23 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     setIsStandalone(standalone)
     setShowIosTip(ios && !standalone)
   }, [])
+
+  useEffect(() => {
+    if (!isAuthed) return
+    const load = async () => {
+      try {
+        const { getSupabase, loadLocalAuth } = await import('@/lib/supabaseClient')
+        const auth = await loadLocalAuth()
+        const uid = auth?.uuid ?? auth?.uid
+        if (!uid) return
+        const client = getSupabase()
+        if (!client) return
+        const { data } = await client.from('profiles').select('is_moderator').eq('id', uid).maybeSingle()
+        if (data?.is_moderator) setIsModerator(true)
+      } catch {}
+    }
+    load()
+  }, [isAuthed])
 
   const [tab, setTab] = useState<'ads' | 'profile' | 'messages'>('ads')
   const [profileTab, setProfileTab] = useState<'ads' | 'about' | 'friends' | 'favorites'>('favorites')
@@ -2588,6 +2609,23 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                             <NavIcon type="profile" active={tab === 'profile' && !viewStoreId && viewProfileMode === 'own' && !storeCatalogOpen} />
                           </div>
                         </button>
+
+                        {/* Moderator */}
+                        {isModerator && (
+                          <button
+                            type="button"
+                            onClick={() => setModeratorOpen(true)}
+                            className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl transition-all duration-200"
+                          >
+                            <div className={moderatorOpen ? 'text-white' : 'text-white opacity-40'}>
+                              <motion.svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                                animate={moderatorOpen ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
+                              >
+                                <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6l-8-4z"/>
+                              </motion.svg>
+                            </div>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -3395,6 +3433,11 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
           </div>
         </div>
       )}
+      <AnimatePresence>
+        {moderatorOpen && (
+          <ModeratorPanel onClose={() => setModeratorOpen(false)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
