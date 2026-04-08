@@ -734,7 +734,7 @@ const BANNERS = [
     label: 'Продвижение',
     title: 'Здесь могло быть ваше объявление',
     link: 'Подробнее о продвижении',
-    href: '/partner-agreement',
+    href: '/promote',
   },
 ]
 

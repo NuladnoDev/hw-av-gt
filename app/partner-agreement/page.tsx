@@ -1,6 +1,24 @@
 'use client'
 
+import { useEffect } from 'react'
+
 export default function PartnerAgreementPage() {
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    html.style.position = 'static'
+    html.style.overflow = 'auto'
+    body.style.position = 'static'
+    body.style.overflow = 'auto'
+    body.style.height = 'auto'
+    return () => {
+      html.style.position = ''
+      html.style.overflow = ''
+      body.style.position = ''
+      body.style.overflow = ''
+      body.style.height = ''
+    }
+  }, [])
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white/80 overflow-y-auto">
       {/* Шапка с кнопкой назад */}

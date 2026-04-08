@@ -282,7 +282,7 @@ export default function Setting({
         <div className="absolute inset-0" style={{ backgroundColor: '#0A0A0A' }} />
 
         <div
-          className="absolute left-0 w-full bg-[#0A0A0A]"
+          className="absolute left-0 w-full"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))', height: '56px' }}
         >
           <div className="relative h-full w-full">

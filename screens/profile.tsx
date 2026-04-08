@@ -35,6 +35,8 @@ import VerifiedBadge from '../components/VerifiedBadge'
 import QualityBadge from '../components/QualityBadge'
 import FormattedText from '../components/FormattedText'
 import ModeratorBadge from '../components/ModeratorBadge'
+import dynamic from 'next/dynamic'
+const GridBackground3D = dynamic(() => import('../components/GridBackground3D'), { ssr: false })
 
 function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
