@@ -149,6 +149,7 @@ export default function Profile({
   const [political, setPolitical] = useState<string>('')
   const [hobbies, setHobbies] = useState<string>('')
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [contactsHidden, setContactsHidden] = useState(false)
   const [userAds, setUserAds] = useState<StoredAd[]>([])
   const [userAdsLoading, setUserAdsLoading] = useState(true)
   const [favoriteAds, setFavoriteAds] = useState<StoredAd[]>([])
@@ -251,6 +252,16 @@ export default function Profile({
     window.addEventListener('theme-updated', handleThemeUpdate)
     return () => window.removeEventListener('theme-updated', handleThemeUpdate)
   }, [])
+
+  useEffect(() => {
+    if (!isOwnProfile) return
+    if (typeof window !== 'undefined') {
+      setContactsHidden(localStorage.getItem('hw-contacts-hidden') === '1')
+    }
+    const handler = (e: Event) => setContactsHidden((e as CustomEvent).detail)
+    window.addEventListener('contacts-hidden-updated', handler)
+    return () => window.removeEventListener('contacts-hidden-updated', handler)
+  }, [isOwnProfile])
 
   const handleRefresh = async () => {
     if (isRefreshing) return
@@ -2164,8 +2175,48 @@ export default function Profile({
                     >
                       Способы связи
                     </div>
+                    {/* Плашка скрытия — только для своего профиля */}
+                    {isOwnProfile && (
+                      <button
+                        type="button"
+                        className="flex items-center justify-between w-full mb-3 px-3 py-2.5 rounded-[14px] active:opacity-70 transition-opacity"
+                        style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}
+                        onClick={() => window.dispatchEvent(new Event('open-settings'))}
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-white/40 flex-shrink-0">
+                            <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6l-8-4z"/>
+                          </svg>
+                          <span className="text-[12px] text-white/40 font-sf-ui-light">
+                            {contactsHidden ? 'Контакты скрыты' : 'Видны всем'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className={`w-1.5 h-1.5 rounded-full ${contactsHidden ? 'bg-blue-400' : 'bg-white/20'}`} />
+                          <span className="text-[11px] text-white/25 font-sf-ui-light">Конфиденциальность</span>
+                        </div>
+                      </button>
+                    )}
                     <div className="flex flex-col gap-1">
-                      {contactMethods.map((method) => {
+                      {contactsHidden && isOwnProfile ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-white/30">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                          </svg>
+                          <span className="text-[13px] text-white/30 font-sf-ui-light">
+                            Скрыто в{' '}
+                            <button
+                              type="button"
+                              className="underline underline-offset-2 text-white/45 active:opacity-60"
+                              onClick={() => window.dispatchEvent(new Event('open-settings'))}
+                            >
+                              настройках конфиденциальности
+                            </button>
+                          </span>
+                        </div>
+                      ) : (
+                      contactMethods.map((method) => {
                         const contact = contacts.find((c) => c.type === method.type)
                         return (
                           <div
@@ -2197,18 +2248,15 @@ export default function Profile({
                               >
                                 {method.label}
                               </span>
-                              {contact && (
-                                <span
-                                  className="text-white/50 text-xs"
-                                  style={{ marginTop: 2 }}
-                                >
+                              {contact ? (
+                                <span className="text-white/50 text-xs" style={{ marginTop: 2 }}>
                                   {contact.url}
                                 </span>
-                              )}
+                              ) : null}
                             </div>
                           </div>
                         )
-                      })}
+                      }))}
                     </div>
                   </motion.div>
                 </div>

@@ -6,6 +6,7 @@ import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart, X } from 'lucid
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import AdsCreate, { CONDITION_OPTIONS } from './Ads_Create'
 import AdsEdit from './Ads_Edit'
+import AdAnalytics from './AdAnalytics'
 import AdsFilters, { FilterState } from './AdsFilters'
 
 interface AdCardProps {
@@ -21,12 +22,14 @@ interface AdCardProps {
   onClick?: () => void
   onEdit?: () => void
   showEditLabel?: boolean
+  onAnalytics?: () => void
   createdAt?: number
   specs?: AdSpecItem[]
   storeId?: string | null
   storeName?: string | null
   storeAvatarUrl?: string | null
   onOpenStore?: (id: string) => void
+  userId?: string | null
 }
 
 const ADS_SIDE_PADDING = 0
@@ -74,6 +77,7 @@ export type StoredAd = {
   storeAvatarUrl?: string | null
   specs?: AdSpecItem[]
   createdAt: number
+  viewCount?: number
 }
 
 const toPrepositionalCity = (name: string): string => {
@@ -113,6 +117,7 @@ type AdsTableRow = {
   } | null
   specs: string | null
   created_at: string | null
+  view_count?: number | null
 }
 
 const toCacheAd = (ad: StoredAd): Partial<StoredAd> => {
@@ -213,6 +218,7 @@ const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
     storeAvatarUrl: row.stores?.avatar_url ?? null,
     specs,
     createdAt: created,
+    viewCount: row.view_count ?? 0,
   }
 }
 
@@ -320,16 +326,30 @@ export function AdCard({
   onClick,
   onEdit,
   showEditLabel,
+  onAnalytics,
   createdAt,
   specs,
   storeId,
   storeName,
   storeAvatarUrl,
   onOpenStore,
+  userId,
 }: AdCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [isFavorite, setIsFavorite] = useState(false)
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!userId || storeId) return
+    try {
+      const raw = localStorage.getItem('hw-profiles')
+      if (!raw) return
+      const map = JSON.parse(raw) as Record<string, { avatar_url?: string | null }>
+      const av = map[userId]?.avatar_url
+      if (typeof av === 'string' && av.length > 0) setUserAvatarUrl(av)
+    } catch {}
+  }, [userId, storeId])
 
   useEffect(() => {
     const saved = localStorage.getItem('hw-favorites')
@@ -421,6 +441,8 @@ export function AdCard({
                 <div className={`w-3.5 h-3.5 ${storeId ? 'rounded-[3px]' : 'rounded-full'} overflow-hidden bg-white/20 flex-shrink-0 flex items-center justify-center text-[7px] font-ttc-bold text-white`}>
                   {storeId && storeAvatarUrl ? (
                     <img src={storeAvatarUrl} alt={storeName ?? 'store'} className="h-full w-full object-cover" />
+                  ) : !storeId && userAvatarUrl ? (
+                    <img src={userAvatarUrl} alt={username} className="h-full w-full object-cover" />
                   ) : (
                     <span className="translate-y-[0.5px]">
                       {storeId ? (storeName?.[0]?.toUpperCase() ?? 'M') : username[0].toUpperCase()}
@@ -433,56 +455,7 @@ export function AdCard({
               </div>
             </div>
           )}
-          {isOwn && (
-            <button
-              type="button"
-              className="absolute right-2 top-2 z-20 flex items-center justify-center rounded-md bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 transition-colors"
-              style={{ width: 28, height: 28 }}
-              onClick={(e) => {
-                e.stopPropagation()
-                if (onEdit) onEdit()
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          )}
-
-          {!isOwn && (
-            <button
-              type="button"
-              className="absolute right-2 bottom-2 z-20 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all active:scale-90"
-              style={{ width: 32, height: 32 }}
-              onClick={toggleFavorite}
-            >
-              <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'text-red-500 fill-current' : 'text-white/60'}`} />
-            </button>
-          )}
-
-          {/* Condition Badge (WB style) */}
-          {conditionConfig && (
-            <div 
-              className="absolute bottom-2 left-2 z-20 rounded-lg"
-              style={{
-                width: 28,
-                height: 28,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: `${conditionConfig.color}22`,
-                border: `1px solid rgba(180, 180, 180, 0.25)`,
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                color: conditionConfig.color,
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0 }}>
-                {conditionConfig.icon}
-              </span>
-            </div>
-          )}
+          {/* Condition Badge убран с фото — теперь в info section */}
         </div>
 
         {/* Info Section */}
@@ -492,11 +465,49 @@ export function AdCard({
               {displayTitle}
             </h3>
 
-            <div className="flex items-baseline gap-1">
-              <span className="text-[17px] font-ttc-bold text-white/90 tracking-tight">
-                {Number(price).toLocaleString('ru-RU')}
-              </span>
-              <span className="text-[12px] font-sf-ui-bold text-white/30">₽</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-baseline gap-1">
+                <span className="text-[17px] font-ttc-bold text-white/90 tracking-tight">
+                  {Number(price).toLocaleString('ru-RU')}
+                </span>
+                <span className="text-[12px] font-sf-ui-bold text-white/30">₽</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {conditionConfig && (
+                  <div
+                    style={{
+                      width: 22, height: 22,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: '#1e1e1e',
+                      borderRadius: 7,
+                      color: conditionConfig.color,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0, transform: 'scale(0.8)' }}>
+                      {conditionConfig.icon}
+                    </span>
+                  </div>
+                )}
+                {isOwn && onEdit && (
+                  <button
+                    type="button"
+                    style={{
+                      width: 22, height: 22,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: '#1e1e1e',
+                      borderRadius: 7,
+                      flexShrink: 0,
+                    }}
+                    onClick={(e) => { e.stopPropagation(); onEdit() }}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M11.5 1.5L14.5 4.5L5.5 13.5L1.5 14.5L2.5 10.5L11.5 1.5Z" stroke="rgba(255,255,255,0.55)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M9.5 3.5L12.5 6.5" stroke="rgba(255,255,255,0.55)" strokeWidth="1.4" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -886,6 +897,7 @@ export default function Ads({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [isSearchActive, setIsSearchActive] = useState(false)
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
+  const [analyticsAd, setAnalyticsAd] = useState<StoredAd | null>(null)
   const [contactWarningOpen, setContactWarningOpen] = useState(false)
   const [contactWarningLocked, setContactWarningLocked] = useState(false)
   const [authWarningOpen, setAuthWarningOpen] = useState(false)
@@ -1573,6 +1585,7 @@ export default function Ads({
                   storeId={ad.storeId}
                   storeName={ad.storeName}
                   storeAvatarUrl={ad.storeAvatarUrl}
+                  userId={ad.userId}
                   onClick={() => {
                     if (onOpenAd) {
                       onOpenAd(ad)
@@ -1738,8 +1751,17 @@ export default function Ads({
         <AdsEdit
           ad={editingAd}
           onClose={() => setEditingAd(null)}
+          onAnalytics={() => { setAnalyticsAd(editingAd); setEditingAd(null) }}
         />
       )}
+      <AnimatePresence>
+        {analyticsAd && (
+          <AdAnalytics
+            ad={analyticsAd}
+            onClose={() => setAnalyticsAd(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

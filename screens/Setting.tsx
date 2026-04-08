@@ -44,6 +44,7 @@ export default function Setting({
   const [showNotifications, setShowNotifications] = useState(false)
   const [showAppearance, setShowAppearance] = useState(false)
   const [showVerification, setShowVerification] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [subNotifs, setSubNotifs] = useState(true)
@@ -58,6 +59,14 @@ export default function Setting({
       return (saved as 'everyone' | 'nobody') || 'everyone'
     }
     return 'everyone'
+  })
+  const [contactsHidden, setContactsHidden] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('hw-contacts-hidden') === '1'
+    return false
+  })
+  const [searchHidden, setSearchHidden] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('hw-search-hidden') === '1'
+    return false
   })
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof window !== 'undefined') {
@@ -88,12 +97,20 @@ export default function Setting({
 
   useEffect(() => {
     localStorage.setItem('hw-last-seen-visibility', lastSeenVisibility)
-    // Сохраняем в profiles
     const client = getSupabase()
     if (client && userId) {
       client.from('profiles').upsert({ id: userId, last_seen_visibility: lastSeenVisibility }).then(() => {})
     }
   }, [lastSeenVisibility, userId])
+
+  useEffect(() => {
+    localStorage.setItem('hw-contacts-hidden', contactsHidden ? '1' : '0')
+    window.dispatchEvent(new CustomEvent('contacts-hidden-updated', { detail: contactsHidden }))
+  }, [contactsHidden])
+
+  useEffect(() => {
+    localStorage.setItem('hw-search-hidden', searchHidden ? '1' : '0')
+  }, [searchHidden])
 
   const cardStyle = "bg-[var(--bg-secondary)] border border-[var(--border-light)] rounded-[32px] overflow-hidden"
   const itemStyle = "flex w-full items-center justify-between px-4 py-[18px] text-left bg-transparent active:bg-[var(--border-light)] transition-colors"
@@ -371,12 +388,14 @@ export default function Setting({
               
               <div className="h-[1px] bg-white/[0.03] mx-4" />
               
-              <button type="button" className={itemStyle} onClick={onOpenPhone}>
+              <button type="button" className={itemStyle} onClick={() => setShowPrivacy(true)}>
                 <div className="flex items-center gap-3">
                   <div className={iconBgStyle}>
-                    <img src="/setting/colors-01.svg" alt="" className="w-5 h-5 filter-none" />
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-primary)] opacity-80">
+                      <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6l-8-4z"/>
+                    </svg>
                   </div>
-                  <span className={labelStyle}>Устройства</span>
+                  <span className={labelStyle}>Конфиденциальность</span>
                 </div>
                 <ChevronRight size={18} className="text-[var(--text-tertiary)] opacity-30" />
               </button>
@@ -882,44 +901,6 @@ export default function Setting({
                     </div>
                   </div>
                 </div>
-
-                {/* Видимость последнего визита */}
-                <div className={cardStyle}>
-                  <div className="px-5 py-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex flex-col">
-                        <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Кто видит когда я был(а) в сети?</span>
-                        <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light mt-0.5">
-                          {lastSeenVisibility === 'everyone' ? 'Все пользователи видят время визита' : 'Все видят «Был(а) недавно»'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-4">
-                      <button
-                        type="button"
-                        onClick={() => setLastSeenVisibility('everyone')}
-                        className={`flex-1 h-10 rounded-[14px] text-[14px] font-sf-ui-medium transition-all ${
-                          lastSeenVisibility === 'everyone'
-                            ? 'bg-white text-black'
-                            : 'bg-white/[0.06] text-white/40 border border-white/[0.08]'
-                        }`}
-                      >
-                        Все
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLastSeenVisibility('nobody')}
-                        className={`flex-1 h-10 rounded-[14px] text-[14px] font-sf-ui-medium transition-all ${
-                          lastSeenVisibility === 'nobody'
-                            ? 'bg-white text-black'
-                            : 'bg-white/[0.06] text-white/40 border border-white/[0.08]'
-                        }`}
-                      >
-                        Никто
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
             </motion.div>
           )}
@@ -930,6 +911,106 @@ export default function Setting({
           style={{ bottom: 0, height: 'env(safe-area-inset-bottom, 0px)' }}
         />
       </div>
+
+      <AnimatePresence>
+        {showPrivacy && (
+          <motion.div
+            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-[60] bg-[var(--bg-primary)] flex flex-col"
+          >
+            <div className="flex items-center px-6 bg-[var(--bg-primary)]"
+              style={{ height: '56px', marginTop: 'calc(env(safe-area-inset-top, 0px) + var(--home-header-offset))' }}
+            >
+              <button type="button" onClick={() => setShowPrivacy(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <ChevronLeft size={24} className="text-white" />
+              </button>
+              <span className="ml-3 text-[17px] font-sf-ui-medium text-white">Конфиденциальность</span>
+            </div>
+
+            <div className="flex-1 px-6 mt-4 space-y-4 overflow-y-auto scrollbar-hidden">
+              {/* Контакты */}
+              <div className={cardStyle}>
+                <div className="px-5 py-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Скрыть способы связи</span>
+                      <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light mt-0.5">
+                        {contactsHidden ? 'Другие видят «Скрыт»' : 'Контакты видны всем'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setContactsHidden(!contactsHidden)}
+                      className={`w-12 h-6 rounded-full transition-all relative overflow-hidden ${
+                        contactsHidden ? 'bg-blue-600 shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]' : 'bg-[var(--border-light)]'
+                      }`}
+                    >
+                      {contactsHidden && <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />}
+                      <motion.div
+                        animate={{ x: contactsHidden ? 26 : 4 }}
+                        className={`absolute top-1 w-4 h-4 rounded-full shadow-sm ${contactsHidden ? 'bg-white' : 'bg-[var(--text-tertiary)]'}`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Онлайн */}
+              <div className={cardStyle}>
+                <div className="px-5 py-5">
+                  <div className="flex flex-col mb-4">
+                    <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Кто видит когда я в сети?</span>
+                    <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light mt-0.5">
+                      {lastSeenVisibility === 'everyone' ? 'Все видят время визита' : 'Все видят «Был(а) недавно»'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(['everyone', 'nobody'] as const).map((v) => (
+                      <button key={v} type="button" onClick={() => setLastSeenVisibility(v)}
+                        className={`flex-1 h-10 rounded-[14px] text-[14px] font-sf-ui-medium transition-all ${
+                          lastSeenVisibility === v ? 'bg-white text-black' : 'bg-white/[0.06] text-white/40 border border-white/[0.08]'
+                        }`}
+                      >
+                        {v === 'everyone' ? 'Все' : 'Никто'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Поиск */}
+              <div className={cardStyle}>
+                <div className="px-5 py-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[16px] font-sf-ui-medium text-[var(--text-primary)]">Скрыть из поиска</span>
+                      <span className="text-[13px] text-[var(--text-secondary)] font-sf-ui-light mt-0.5">
+                        {searchHidden ? 'Ваш тег не найти через поиск' : 'Вас можно найти по тегу'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSearchHidden(!searchHidden)}
+                      className={`w-12 h-6 rounded-full transition-all relative overflow-hidden ${
+                        searchHidden ? 'bg-blue-600 shadow-[inset_0_1px_3px_rgba(255,255,255,0.2)]' : 'bg-[var(--border-light)]'
+                      }`}
+                    >
+                      {searchHidden && <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/5 pointer-events-none" />}
+                      <motion.div
+                        animate={{ x: searchHidden ? 26 : 4 }}
+                        className={`absolute top-1 w-4 h-4 rounded-full shadow-sm ${searchHidden ? 'bg-white' : 'bg-[var(--text-tertiary)]'}`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showVerification && (

@@ -116,6 +116,19 @@ export default function AdDetail({
   const [visibleRecommendations, setVisibleRecommendations] = useState(12)
   const [showRecommendations, setShowRecommendations] = useState(true)
 
+  // Трекинг просмотра
+  useEffect(() => {
+    const track = async () => {
+      try {
+        const { getSupabase } = await import('@/lib/supabaseClient')
+        const client = getSupabase()
+        if (!client) return
+        await client.rpc('increment_ad_views', { ad_id: ad.id })
+      } catch {}
+    }
+    track()
+  }, [ad.id])
+
   useEffect(() => {
     // Load recommendations from same category or random fallback
     const toTokens = (value: string): string[] =>

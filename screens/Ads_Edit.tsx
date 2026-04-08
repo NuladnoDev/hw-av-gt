@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Plus, X, Trash2, Camera, ChevronRight, AlertCircle, Check } from 'lucide-react'
+import { Plus, X, Trash2, Camera, ChevronRight, AlertCircle, Check, BarChart2 } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 import type { StoredAd, AdSpecItem } from './ads'
 import { AdsCategory, AdsCondition, CONDITION_OPTIONS } from './Ads_Create'
@@ -10,9 +10,11 @@ import { AdsCategory, AdsCondition, CONDITION_OPTIONS } from './Ads_Create'
 export default function AdsEdit({
   ad,
   onClose,
+  onAnalytics,
 }: {
   ad: StoredAd
   onClose: () => void
+  onAnalytics?: () => void
 }) {
   const [scale, setScale] = useState(1)
   const [activeTab, setActiveTab] = useState<'info' | 'condition' | 'specs'>('info')
@@ -436,19 +438,20 @@ export default function AdsEdit({
       <div className="relative h-full w-full max-w-[375px] bg-[#0A0A0A] flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="sticky top-0 z-[130] w-full bg-[#0d0d0d] rounded-b-[28px] shadow-[0_8px_20px_rgba(0,0,0,0.3)]" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <div className="flex h-[56px] items-center justify-between px-5">
-            <button
-              onClick={onClose}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/[0.06] active:scale-90 transition-all"
-            >
-              <X className="w-5 h-5 text-white/70" />
-            </button>
-            <span className="text-[17px] font-sf-ui-medium text-white">Редактирование</span>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500/15 active:scale-90 transition-all"
-            >
+        <div className="flex-shrink-0 flex items-center justify-between px-4 border-b border-white/[0.05]"
+          style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        >
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 active:bg-white/10 transition-colors">
+            <X className="w-5 h-5 text-white/60" />
+          </button>
+          <span className="text-[17px] font-sf-ui-medium text-white">Редактирование</span>
+          <div className="flex items-center gap-2">
+            {onAnalytics && (
+              <button onClick={onAnalytics} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 active:bg-white/10 transition-colors">
+                <BarChart2 className="w-5 h-5 text-indigo-400" />
+              </button>
+            )}
+            <button onClick={() => setShowDeleteConfirm(true)} className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500/10 active:bg-red-500/20 transition-colors">
               <Trash2 className="w-5 h-5 text-red-400" />
             </button>
           </div>
@@ -456,14 +459,15 @@ export default function AdsEdit({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
-          <div className="px-6 py-6 space-y-8">
+          <div className="px-4 py-5 space-y-4">
             
-            {/* Photos Section */}
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[13px] font-sf-ui-medium text-white/30 tracking-wider">Добавленные изображения</h3>
-                <span className="text-[12px] text-white/20">{images.length} / 6</span>
+            {/* Photos Section — в плашке */}
+            <div className="rounded-[20px] overflow-hidden" style={{ background: '#111111' }}>
+              <div className="flex items-center justify-between px-4 pt-4 pb-3">
+                <h3 className="text-[11px] font-sf-ui-medium text-white/25 tracking-widest">Загруженные фото</h3>
+                <span className="text-[11px] text-white/20">{images.length} / 6</span>
               </div>
+              <div className="px-3 pb-4">
               {(() => {
                 const hasAdd = images.length < 6
                 const total = images.length + (hasAdd ? 1 : 0)
@@ -479,12 +483,12 @@ export default function AdsEdit({
                       if (cell.type === 'add') {
                         return (
                           <button key="add" type="button" onClick={openFilePicker}
-                            className="aspect-square rounded-[16px] border-2 border-dashed border-white/15 bg-white/[0.03] active:bg-white/[0.06] transition-all flex flex-col items-center justify-center gap-2"
+                            className="aspect-square rounded-[14px] border-2 border-dashed border-white/10 bg-white/[0.02] active:bg-white/[0.05] transition-all flex flex-col items-center justify-center gap-2"
                           >
-                            <div className="w-9 h-9 rounded-full bg-white/[0.07] flex items-center justify-center">
-                              <Plus size={18} className="text-white/50" />
+                            <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center">
+                              <Plus size={16} className="text-white/40" />
                             </div>
-                            {images.length === 0 && <span className="text-[12px] text-white/35 font-sf-ui-light">Добавить</span>}
+                            {images.length === 0 && <span className="text-[11px] text-white/30 font-sf-ui-light">Добавить</span>}
                           </button>
                         )
                       }
@@ -492,7 +496,7 @@ export default function AdsEdit({
                       return (
                         <motion.div
                           key={`${src}-${index}`}
-                          className="relative aspect-square rounded-[16px] overflow-hidden"
+                          className="relative aspect-square rounded-[14px] overflow-hidden"
                           layout
                           drag
                           dragConstraints={gridRef}
@@ -533,65 +537,103 @@ export default function AdsEdit({
                 )
               })()}
               {images.length > 1 && (
-                <p className="mt-2 text-[11px] text-white/20 font-sf-ui-light text-center">Перетащите чтобы изменить порядок</p>
+                <p className="mt-2 text-[11px] text-white/15 font-sf-ui-light text-center">Перетащите чтобы изменить порядок</p>
               )}
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple
                 onChange={(e) => handlePickedFiles(e.target.files)} />
-            </section>
+              </div>
+            </div>
+
+            {/* Плашка аналитики — стиль как у рекламного баннера */}
+            {onAnalytics && (
+              <button
+                type="button"
+                onClick={onAnalytics}
+                className="w-full flex items-center gap-3 p-4 rounded-[20px] active:opacity-75 transition-opacity text-left relative overflow-hidden"
+                style={{ background: '#111111' }}
+              >
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: 'radial-gradient(ellipse at 15% 50%, rgba(55,55,55,0.35) 0%, transparent 60%), linear-gradient(to right, #161616 0%, #0a0a0a 100%)',
+                }} />
+                <motion.div
+                  animate={{ x: ['-100%', '350%'] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'linear', repeatDelay: 7 }}
+                  className="absolute top-[45%] left-0 z-10 w-[25%] h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                />
+                <div className="w-10 h-10 rounded-[12px] bg-white/[0.06] flex items-center justify-center flex-shrink-0 relative z-10">
+                  <BarChart2 size={18} className="text-white/60" />
+                </div>
+                <div className="flex-1 min-w-0 relative z-10">
+                  <div className="text-[14px] font-sf-ui-medium text-white/85">Аналитика объявления</div>
+                  <div className="text-[12px] text-white/35 font-sf-ui-light mt-0.5">Просмотры · Статистика</div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/20 flex-shrink-0 relative z-10">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
+            )}
 
             {/* Tabs навигация */}
-            <div className="flex gap-1 border-b border-white/[0.06] -mx-6 px-6">
+            <div className="flex gap-1 rounded-[20px] p-1" style={{ background: '#111111' }}>
               {[
                 { id: 'info', label: 'Основное' },
                 { id: 'condition', label: 'Состояние' },
-                ...(category ? [{ id: 'specs', label: 'Характеристики' }] : []),
+                ...(category ? [{ id: 'specs', label: 'Остальное' }] : []),
               ].map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setActiveTab(t.id as any)}
-                  className={`relative px-3 py-2.5 text-[14px] font-sf-ui-medium transition-all ${activeTab === t.id ? 'text-white' : 'text-white/30'}`}
+                  className="relative flex-1 py-2.5 text-[13px] font-sf-ui-medium transition-colors rounded-[14px] z-10"
+                  style={{ color: activeTab === t.id ? '#000' : 'rgba(255,255,255,0.35)' }}
                 >
-                  {t.label}
                   {activeTab === t.id && (
-                    <motion.div layoutId="edit-tab-indicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+                    <motion.div
+                      layoutId="tab-bg"
+                      className="absolute inset-0 rounded-[14px] bg-white"
+                      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                    />
                   )}
+                  <span className="relative z-10">{t.label}</span>
                 </button>
               ))}
             </div>
 
             {/* Основное */}
             {activeTab === 'info' && (
-              <section className="space-y-4">
+              <section className="space-y-3">
                 <div className="space-y-1.5">
-                  <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Название</label>
+                  <label className="text-[11px] text-white/25 ml-1 font-sf-ui-medium  tracking-widest">Название</label>
                   <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Что продаете?"
-                    className="w-full h-[52px] bg-white/[0.04] border border-white/[0.06] rounded-[16px] px-4 text-[16px] text-white placeholder:text-white/20 focus:border-white/20 transition-all outline-none"
+                    className="w-full h-[52px] rounded-[20px] px-5 text-[15px] text-white placeholder:text-white/20 outline-none transition-all"
+                    style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Цена</label>
+                  <label className="text-[11px] text-white/25 ml-1 font-sf-ui-medium tracking-widest">Цена</label>
                   <div className="relative">
                     <input
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
                       placeholder="0"
                       type="number"
-                      className="w-full h-[52px] bg-white/[0.04] border border-white/[0.06] rounded-[16px] px-4 pr-10 text-[16px] text-white placeholder:text-white/20 focus:border-white/20 transition-all outline-none"
+                      className="w-full h-[52px] rounded-[20px] px-5 pr-10 text-[15px] text-white placeholder:text-white/20 outline-none transition-all"
+                      style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 font-sf-ui-medium">₽</span>
+                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-white/25 font-sf-ui-medium">₽</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">Описание</label>
+                  <label className="text-[11px] text-white/25 ml-1 font-sf-ui-medium tracking-widest">Описание товара</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Опишите товар подробнее..."
-                    className="w-full min-h-[120px] bg-white/[0.04] border border-white/[0.06] rounded-[16px] p-4 text-[15px] text-white placeholder:text-white/20 focus:border-white/20 transition-all outline-none resize-none leading-relaxed"
+                    className="w-full min-h-[110px] rounded-[20px] p-5 text-[15px] text-white placeholder:text-white/20 outline-none resize-none leading-relaxed transition-all"
+                    style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}
                   />
                 </div>
               </section>
@@ -606,22 +648,25 @@ export default function AdsEdit({
                     <button
                       key={opt.id}
                       onClick={() => setCondition(opt.id)}
-                      className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[18px] border transition-all ${
-                        isSelected ? 'bg-white/[0.07] border-white/20' : 'bg-white/[0.03] border-white/[0.05]'
-                      }`}
+                      className="w-full flex items-center justify-between px-4 py-3.5 rounded-[14px] transition-all"
+                      style={{
+                        background: isSelected ? '#0f172a' : '#141414',
+                        border: isSelected ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(255,255,255,0.05)',
+                      }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-[16px]"
-                          style={{ backgroundColor: `${opt.color}20`, color: opt.color }}>
+                        <div className="w-9 h-9 rounded-[10px] flex items-center justify-center"
+                          style={{ backgroundColor: `${opt.color}18`, color: opt.color }}>
                           {opt.icon}
                         </div>
                         <div className="text-left">
-                          <p className="text-[15px] font-sf-ui-medium text-white">{opt.label}</p>
-                          <p className="text-[12px] text-white/35 font-sf-ui-light">{opt.description}</p>
+                          <p className="text-[14px] font-sf-ui-medium text-white/90">{opt.label}</p>
+                          <p className="text-[11px] text-white/30 font-sf-ui-light">{opt.description}</p>
                         </div>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-white bg-white' : 'border-white/15'}`}>
-                        {isSelected && <Check className="w-3 h-3 text-black stroke-[3]" />}
+                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
+                        style={{ borderColor: isSelected ? '#6366f1' : 'rgba(255,255,255,0.15)', background: isSelected ? '#6366f1' : 'transparent' }}>
+                        {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
                       </div>
                     </button>
                   )
@@ -694,18 +739,18 @@ export default function AdsEdit({
         </div>
 
         {/* Bottom Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent safe-area-bottom">
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-4 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/95 to-transparent">
           <button
             onClick={handleSaveClick}
             disabled={!canSave || saving}
-            className={`w-full h-[56px] rounded-2xl font-sf-ui-bold text-[16px] shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${
-              canSave && !saving
-                ? 'bg-white text-black shadow-white/10'
-                : 'bg-white/5 text-white/20 grayscale'
-            }`}
+            className="w-full h-[52px] rounded-[14px] font-sf-ui-medium text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            style={{
+              background: canSave && !saving ? 'linear-gradient(135deg, #4f46e5, #6366f1)' : '#141414',
+              color: canSave && !saving ? 'white' : 'rgba(255,255,255,0.2)',
+            }}
           >
             {saving ? (
-              <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             ) : (
               'Сохранить изменения'
             )}
@@ -809,12 +854,13 @@ export default function AdsEdit({
 function SpecInput({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder: string }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[13px] text-white/40 ml-1 font-sf-ui-medium">{label}</label>
+      <label className="text-[11px] text-white/25 ml-1 font-sf-ui-medium uppercase tracking-widest">{label}</label>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-[52px] bg-white/5 border border-white/5 rounded-2xl px-5 text-[15px] text-white placeholder:text-white/20 focus:border-blue-500/30 focus:bg-white/[0.07] transition-all outline-none"
+        className="w-full h-[48px] rounded-[20px] px-5 text-[14px] text-white placeholder:text-white/20 outline-none transition-all"
+        style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.06)' }}
       />
     </div>
   )

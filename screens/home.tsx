@@ -66,15 +66,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     switch (type) {
       case 'ads':
         return (
-          <motion.svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <motion.svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
             animate={active ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
           >
             <rect x="3" y="3" width="7" height="7" rx="1" fill="none" />
@@ -85,15 +77,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
         )
       case 'messages':
         return (
-          <motion.svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <motion.svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
             animate={active ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
           >
             <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5H7l-4 2V12A8.5 8.5 0 0 1 11.5 3.5h1A8.5 8.5 0 0 1 21 12Z" fill="none" />
@@ -102,15 +86,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
         )
       case 'create':
         return (
-          <motion.svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <motion.svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
             animate={active ? { rotate: 90, scale: 1.15 } : { rotate: 0, scale: 1 }}
           >
             <circle cx="12" cy="12" r="10" fill="none" />
@@ -120,15 +96,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
         )
       case 'profile':
         return (
-          <motion.svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <motion.svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
             animate={active ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
           >
             <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" fill="none" />
