@@ -6,14 +6,12 @@ export default function PartnerAgreementPage() {
   useEffect(() => {
     const html = document.documentElement
     const body = document.body
-    html.style.position = 'static'
-    html.style.overflow = 'auto'
-    body.style.position = 'static'
-    body.style.overflow = 'auto'
-    body.style.height = 'auto'
+    html.style.cssText += '; position: static !important; overflow: auto !important; height: auto !important;'
+    body.style.cssText += '; position: static !important; overflow: auto !important; height: auto !important;'
     return () => {
       html.style.position = ''
       html.style.overflow = ''
+      html.style.height = ''
       body.style.position = ''
       body.style.overflow = ''
       body.style.height = ''

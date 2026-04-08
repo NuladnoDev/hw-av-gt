@@ -41,6 +41,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [scale, setScale] = useState(1)
   const [isStandalone, setIsStandalone] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
+  const [isAndroid, setIsAndroid] = useState(false)
   const [showIosTip, setShowIosTip] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [activeChatAd, setActiveChatAd] = useState<StoredAd | null>(null)
@@ -50,12 +51,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   useEffect(() => {
     const ua = navigator.userAgent || navigator.vendor || ''
     const ios = /iPhone|iPad|iPod/i.test(ua)
+    const android = /Android/i.test(ua)
     setIsIOS(ios)
+    setIsAndroid(android)
     const standalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       ((navigator as any).standalone === true)
     setIsStandalone(standalone)
-    // Show tip if on iOS and not standalone, even for guests
     setShowIosTip(ios && !standalone)
   }, [])
 
@@ -1179,14 +1181,16 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   }, [storeAuthWarningOpen])
 
   const isStandaloneIOS = isIOS && isStandalone
-  const frameWidth = isStandaloneIOS ? '100vw' : '375px'
-  const frameHeight = isStandaloneIOS ? '100dvh' : '812px'
-  const frameTransform = isStandaloneIOS ? 'none' : `scale(${scale})`
+  const isStandaloneAndroid = isAndroid && isStandalone
+  const isFullscreen = isFullscreen || isStandaloneAndroid
+  const frameWidth = isFullscreen ? '100vw' : '375px'
+  const frameHeight = isFullscreen ? '100dvh' : '812px'
+  const frameTransform = isFullscreen ? 'none' : `scale(${scale})`
   const safeTop = 'env(safe-area-inset-top, 0px)'
-  const homeHeaderOffset = isStandaloneIOS ? '0px' : 'var(--home-header-offset)'
-  const headerTop = isStandaloneIOS ? '0px' : `calc(${safeTop} + ${homeHeaderOffset})`
-  const headerHeight = isStandaloneIOS ? `calc(${safeTop} + 56px)` : '56px'
-  const headerInnerMarginTop = isStandaloneIOS ? safeTop : '0px'
+  const homeHeaderOffset = isFullscreen ? '0px' : 'var(--home-header-offset)'
+  const headerTop = isFullscreen ? '0px' : `calc(${safeTop} + ${homeHeaderOffset})`
+  const headerHeight = isFullscreen ? `calc(${safeTop} + 56px)` : '56px'
+  const headerInnerMarginTop = isFullscreen ? safeTop : '0px'
   const iosHeaderBackground =
     tab === 'ads'
       ? theme === 'light'
@@ -1200,7 +1204,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
     tab === 'ads'
       ? adsTopHeaderBackground
       : (theme === 'light' ? '#f5f5f7' : '#0a0a0a')
-  const homeContentTop = isStandaloneIOS
+  const homeContentTop = isFullscreen
     ? '56px'
     : `calc(${safeTop} + ${homeHeaderOffset} + 56px)`
   const homeContentHeight = `calc(${frameHeight} - (${homeContentTop}))`
@@ -1218,13 +1222,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   }, [topInsetColor])
 
   return (
-    <div className={`fixed inset-0 w-full bg-[var(--bg-primary)] overflow-hidden ${isStandaloneIOS ? '' : 'flex items-center justify-center'}`}>
+    <div className={`fixed inset-0 w-full bg-[var(--bg-primary)] overflow-hidden ${isFullscreen ? '' : 'flex items-center justify-center'}`}>
       <div className="relative" style={{ width: frameWidth, height: frameHeight, transform: frameTransform, transformOrigin: 'center center', fontSmooth: 'antialiased', WebkitFontSmoothing: 'antialiased', touchAction: 'pan-y' } as React.CSSProperties}>
         <div
           className="absolute left-0 top-0 h-full w-full"
           style={{ backgroundColor: 'var(--bg-primary)' }}
         />
-        {isStandaloneIOS && (
+        {isFullscreen && (
           <div
             className="absolute left-0 top-0 w-full z-[99] pointer-events-none"
             style={{
@@ -1240,10 +1244,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             style={{ 
               top: headerTop,
               height: headerHeight,
-              background: isStandaloneIOS ? topInsetColor : (tab === 'ads' || tab === 'messages' ? adsTopHeaderBackground : 'var(--bg-primary)'),
-              boxShadow: (tab === 'ads' || tab === 'messages') ? 'none' : (isStandaloneIOS ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.4)'),
-              backdropFilter: (tab === 'ads' || tab === 'messages') ? 'none' : (isStandaloneIOS ? 'blur(10px)' : 'none'),
-              WebkitBackdropFilter: (tab === 'ads' || tab === 'messages') ? 'none' : (isStandaloneIOS ? 'blur(10px)' : 'none'),
+              background: isFullscreen ? topInsetColor : (tab === 'ads' || tab === 'messages' ? adsTopHeaderBackground : 'var(--bg-primary)'),
+              boxShadow: (tab === 'ads' || tab === 'messages') ? 'none' : (isFullscreen ? 'none' : '0 4px 12px rgba(0, 0, 0, 0.4)'),
+              backdropFilter: (tab === 'ads' || tab === 'messages') ? 'none' : (isFullscreen ? 'blur(10px)' : 'none'),
+              WebkitBackdropFilter: (tab === 'ads' || tab === 'messages') ? 'none' : (isFullscreen ? 'blur(10px)' : 'none'),
               pointerEvents: tab === 'messages' ? 'none' : undefined,
               opacity: tab === 'messages' ? 0 : 1,
             }}

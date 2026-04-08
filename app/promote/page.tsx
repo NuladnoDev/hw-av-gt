@@ -56,24 +56,15 @@ export default function PromotePage() {
   useEffect(() => {
     const html = document.documentElement
     const body = document.body
-    const prevHtmlPos = html.style.position
-    const prevHtmlOverflow = html.style.overflow
-    const prevBodyPos = body.style.position
-    const prevBodyOverflow = body.style.overflow
-    const prevBodyHeight = body.style.height
-
-    html.style.position = 'static'
-    html.style.overflow = 'auto'
-    body.style.position = 'static'
-    body.style.overflow = 'auto'
-    body.style.height = 'auto'
-
+    html.style.cssText += '; position: static !important; overflow: auto !important; height: auto !important;'
+    body.style.cssText += '; position: static !important; overflow: auto !important; height: auto !important;'
     return () => {
-      html.style.position = prevHtmlPos
-      html.style.overflow = prevHtmlOverflow
-      body.style.position = prevBodyPos
-      body.style.overflow = prevBodyOverflow
-      body.style.height = prevBodyHeight
+      html.style.position = ''
+      html.style.overflow = ''
+      html.style.height = ''
+      body.style.position = ''
+      body.style.overflow = ''
+      body.style.height = ''
     }
   }, [])
 
@@ -235,7 +226,7 @@ export default function PromotePage() {
             Продвигать за {selectedPlan.price} ₽
           </button>
           <p className="text-center text-[11px] text-white/20 mt-3 leading-relaxed">
-            Стоимость согласовывается с менеджером платформы. Покупая продвижение вы принимаете наши условия.<br />
+            На данный момент покупка невозможна. Покупая продвижение вы принимаете наши условия.<br />
             Оплата до начала продвижения.
           </p>
         </div>
