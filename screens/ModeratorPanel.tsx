@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import { ChevronLeft, Search, Shield, Trash2, Ban, AlertTriangle, Check, X, User } from 'lucide-react'
 import { getSupabase } from '@/lib/supabaseClient'
 
+const PROTECTED_IDS = ['28d044d8-ae42-4c70-96c5-16e8f3fb8c3c']
+
 type TargetUser = {
   id: string
   tag: string
@@ -59,6 +61,7 @@ export default function ModeratorPanel({ onClose }: { onClose: () => void }) {
   const [searching, setSearching] = useState(false)
   const [target, setTarget] = useState<TargetUser | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [isProtected, setIsProtected] = useState(false)
   const [actionResult, setActionResult] = useState<{ action: string; success: boolean } | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [confirmAction, setConfirmAction] = useState<Action | null>(null)
@@ -69,22 +72,24 @@ export default function ModeratorPanel({ onClose }: { onClose: () => void }) {
     setNotFound(false)
     setTarget(null)
     setActionResult(null)
+    setIsProtected(false)
     try {
       const client = getSupabase()
       if (!client) return
       const tag = query.trim().replace(/^@/, '').toLowerCase()
       // Пробуем точное совпадение
-      let { data } = await client
+      let { data, error } = await client
         .from('profiles')
         .select('id, tag, avatar_url, is_banned')
         .ilike('tag', tag)
         .maybeSingle()
       // Fallback — поиск по всем и фильтр на клиенте
       if (!data) {
-        const { data: all } = await client
+        const { data: all, error: allError } = await client
           .from('profiles')
           .select('id, tag, avatar_url, is_banned')
           .limit(200)
+        console.log('[Moderator] all profiles:', all?.length, 'error:', allError)
         if (all) {
           const found = (all as TargetUser[]).find(u =>
             (u.tag ?? '').toLowerCase() === tag ||
@@ -93,8 +98,13 @@ export default function ModeratorPanel({ onClose }: { onClose: () => void }) {
           data = (found ?? null) as typeof data
         }
       }
+      console.log('[Moderator] search result:', data, 'error:', error)
       if (data) {
-        setTarget(data as TargetUser)
+        if (PROTECTED_IDS.includes((data as TargetUser).id)) {
+          setIsProtected(true)
+        } else {
+          setTarget(data as TargetUser)
+        }
       } else {
         setNotFound(true)
       }
@@ -195,6 +205,18 @@ export default function ModeratorPanel({ onClose }: { onClose: () => void }) {
               className="mt-3 text-[13px] text-white/30 font-sf-ui-light"
             >
               Пользователь не найден
+            </motion.div>
+          )}
+
+          {isProtected && (
+            <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+              className="mt-3 flex items-start gap-2.5 px-4 py-3 rounded-[12px]"
+              style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.15)' }}
+            >
+              <Shield size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <span className="text-[13px] text-amber-300/80 font-sf-ui-light leading-relaxed">
+                Этот пользователь имеет права выше, чем вы. Вы не можете взаимодействовать с этим пользователем.
+              </span>
             </motion.div>
           )}
         </div>
