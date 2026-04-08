@@ -1182,7 +1182,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
 
   const isStandaloneIOS = isIOS && isStandalone
   const isStandaloneAndroid = isAndroid && isStandalone
-  const isFullscreen = isFullscreen || isStandaloneAndroid
+  const isFullscreen = isStandaloneIOS || isStandaloneAndroid
   const frameWidth = isFullscreen ? '100vw' : '375px'
   const frameHeight = isFullscreen ? '100dvh' : '812px'
   const frameTransform = isFullscreen ? 'none' : `scale(${scale})`
