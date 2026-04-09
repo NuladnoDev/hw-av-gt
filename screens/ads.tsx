@@ -435,7 +435,7 @@ export function AdCard({
           />
           
           {/* Top Overlays */}
-          {!showEditLabel && (
+          {!showEditLabel && (storeId || username) && (
             <div className="absolute left-2 top-2 z-20 rounded-md bg-black/40 px-2 py-1 backdrop-blur-md border border-white/5">
               <div className="flex items-center gap-1.5 truncate">
                 <div className={`w-3.5 h-3.5 ${storeId ? 'rounded-[3px]' : 'rounded-full'} overflow-hidden bg-white/20 flex-shrink-0 flex items-center justify-center text-[7px] font-ttc-bold text-white`}>
@@ -445,7 +445,7 @@ export function AdCard({
                     <img src={userAvatarUrl} alt={username} className="h-full w-full object-cover" />
                   ) : (
                     <span className="translate-y-[0.5px]">
-                      {storeId ? (storeName?.[0]?.toUpperCase() ?? 'M') : username[0].toUpperCase()}
+                      {storeId ? (storeName?.[0]?.toUpperCase() ?? 'M') : (username?.[0]?.toUpperCase() ?? '?')}
                     </span>
                   )}
                 </div>

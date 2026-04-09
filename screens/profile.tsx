@@ -25,12 +25,15 @@ import {
   Package,
   X,
   RefreshCw,
-  Heart
+  Heart,
+  ShoppingBag
 } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import { avatarGradients } from '@/lib/avatarGradients'
 import { AdCard, AdCardSkeleton, loadAdsFromStorage, deleteAdById, StoredAd } from './ads'
 import AdsEdit from './Ads_Edit'
+import UserAdsScreen from './UserAdsScreen'
+import ProfileDecorations, { AvatarDecoration, type DecorationId } from './ProfileDecorations'
 import VerifiedBadge from '../components/VerifiedBadge'
 import QualityBadge from '../components/QualityBadge'
 import FormattedText from '../components/FormattedText'
@@ -125,9 +128,10 @@ export default function Profile({
   onOpenStoreById,
   isAuthed,
   onOpenAd,
+  onOpenChat,
 }: {
-  profileTab: 'ads' | 'about' | 'friends' | 'favorites'
-  setProfileTab: (t: 'ads' | 'about' | 'friends' | 'favorites') => void
+  profileTab: 'ads' | 'about' | 'friends' | 'favorites' | 'reviews'
+  setProfileTab: (t: 'ads' | 'about' | 'friends' | 'favorites' | 'reviews') => void
   userTag?: string
   editMode?: boolean
   isOwnProfile?: boolean
@@ -136,6 +140,7 @@ export default function Profile({
   onOpenStoreById?: (id: string) => void
   isAuthed?: boolean
   onOpenAd?: (ad: StoredAd) => void
+  onOpenChat?: (userId: string, userTag: string, avatarUrl: string | null) => void
 }) {
   const [tagText, setTagText] = useState<string>(typeof userTag === 'string' ? userTag.replace(/^@/, '') : '')
   const [tagEditing, setTagEditing] = useState(false)
@@ -221,6 +226,12 @@ export default function Profile({
   )
 
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
+  const [descExpanded, setDescExpanded] = useState(false)
+  const [showAllAds, setShowAllAds] = useState(false)
+  const [decoration, setDecoration] = useState<DecorationId>(null)
+  const [showDecorations, setShowDecorations] = useState(false)
+  const [showProfileUpdate, setShowProfileUpdate] = useState(false)
+  const PROFILE_UPDATE_VERSION = '2026-04-profile-v2'
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [viewerId, setViewerId] = useState<string | null>(null)
@@ -263,6 +274,19 @@ export default function Profile({
     const handler = (e: Event) => setContactsHidden((e as CustomEvent).detail)
     window.addEventListener('contacts-hidden-updated', handler)
     return () => window.removeEventListener('contacts-hidden-updated', handler)
+  }, [isOwnProfile])
+
+  useEffect(() => {
+    if (!isOwnProfile) return
+    const handler = () => setShowDecorations(true)
+    window.addEventListener('open-profile-decorations', handler)
+    return () => window.removeEventListener('open-profile-decorations', handler)
+  }, [isOwnProfile])
+
+  useEffect(() => {
+    if (!isOwnProfile) return
+    const seen = localStorage.getItem(`hw-profile-update:${PROFILE_UPDATE_VERSION}`)
+    if (!seen) setShowProfileUpdate(true)
   }, [isOwnProfile])
 
   const handleRefresh = async () => {
@@ -594,7 +618,7 @@ export default function Profile({
       try {
         const { data: prof, error: err } = await client
           .from('profiles')
-          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts, is_verified, is_quality, is_moderator')
+          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts, is_verified, is_quality, is_moderator, decoration')
           .eq('id', idLocal)
           .maybeSingle()
         if (err || !prof) {
@@ -603,6 +627,7 @@ export default function Profile({
         setIsVerified(!!prof.is_verified)
         setIsQuality(!!prof.is_quality)
         setIsModerator(!!prof.is_moderator)
+        if (prof.decoration) setDecoration(prof.decoration as DecorationId)
         const tagFromDb = (prof.tag as string | undefined) ?? undefined
         const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
         const descFromDb = (prof.description as string | undefined) ?? ''
@@ -1230,8 +1255,8 @@ export default function Profile({
           '--profile-section-margin-top': '24px',
           '--profile-name-size': '28px',
           '--profile-name-margin-top': '6px',
-          '--profile-avatar-size': '110px',
-          '--profile-cover-height': '90px',
+          '--profile-avatar-size': '84px',
+          '--profile-cover-height': '70px',
           '--profile-avatar-top-offset': '0px',
           '--profile-border-radius': '32px',
           '--profile-button-radius': '20px',
@@ -1262,7 +1287,7 @@ export default function Profile({
       </AnimatePresence>
       <div
         ref={scrollRef}
-        className="absolute left-0 w-full px-6 overflow-y-auto pb-8 scrollbar-hidden"
+        className="absolute left-0 w-full px-6 overflow-y-auto overflow-x-hidden pb-8 scrollbar-hidden"
         style={{
           top: '0px',
           height: '100%',
@@ -1296,460 +1321,288 @@ export default function Profile({
         <div
           className="w-full relative"
           style={{ height: 'var(--profile-cover-height)', background: 'transparent', marginLeft: '-24px', marginRight: '-24px', width: 'calc(100% + 48px)' }}
-        >
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#0A0A0A] to-transparent pointer-events-none" />
-        </div>
-        
-        <div className="flex w-full flex-col items-center relative" style={{ marginTop: 'calc(calc(var(--profile-avatar-size) / -2) + var(--profile-avatar-top-offset, 0px))' }}>
-          <div className="relative">
-          <div
-            className="rounded-full overflow-hidden relative"
-            style={{
-              width: 'var(--profile-avatar-size)',
-              height: 'var(--profile-avatar-size)',
-              boxShadow: theme === 'dark' ? `0 0 30px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.8)` : `0 4px 18px rgba(0,0,0,0.1)`,
-              background: avatarUrl ? 'var(--bg-primary)' : gradient,
-            }}
-          >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-white font-vk-demi text-[36px]">
-                {initialLetter}
-              </div>
-            )}
-            {editMode && (
-              <button
-                type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                className="absolute left-0 top-0 h-full w-full flex items-center justify-center bg-black/20"
-                aria-label="Сменить аватар"
+        />
+
+        {/* YouTube-style header */}
+        <div className="w-full" style={{ marginTop: 'calc(calc(var(--profile-avatar-size) / -2) + var(--profile-avatar-top-offset, 0px))' }}>
+          <div className="flex items-start gap-4">
+            {/* Аватарка слева */}
+            <div className="relative flex-shrink-0" style={{ isolation: 'isolate' }}>
+              <div
+                className="rounded-full overflow-hidden relative"
+                style={{
+                  width: 'var(--profile-avatar-size)',
+                  height: 'var(--profile-avatar-size)',
+                  background: avatarUrl ? 'var(--bg-primary)' : gradient,
+                }}
               >
-                <img
-                  src="/interface/image-add.svg"
-                  alt="add"
-                  className="h-[40px] w-[40px]"
-                  style={{
-                    filter: theme === 'dark' 
-                      ? 'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)'
-                      : 'none',
-                    opacity: 0.9,
-                  }}
-                />
-              </button>
-            )}
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleAvatarFile(e.target.files)}
-            />
-          </div>
-          {/* Онлайн-кружок */}
-          {!isOwnProfile && profileLastSeen && profileLastSeen !== 'nobody' && (new Date().getTime() - new Date(profileLastSeen).getTime()) < 120000 && (
-            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#64CF86] border-2 border-[var(--bg-primary)]" />
-          )}
-          </div>
-
-          {!tagEditing ? (
-            <div className="w-full flex items-center justify-center" style={{ marginTop: 'var(--profile-name-margin-top)' }}>
-              {/* Левый пустой блок для симметрии (ширина кнопок + отступ) */}
-              <div className="flex-1 flex justify-end items-center gap-2 mr-4">
-                {isModerator && <ModeratorBadge size={22} />}
-                {isQuality && <QualityBadge size={22} />}
-              </div>
-              
-              <div className="leading-[2.3em] text-[var(--text-primary)] font-ttc-bold" style={{ fontSize: 'var(--profile-name-size)' }}>
-                {tagText && tagText.trim().length > 0 ? tagText : 'user'}
-              </div>
-
-              <div className="flex-1 flex items-center gap-2 ml-4">
-                {isVerified && <VerifiedBadge size={22} />}
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-white font-vk-demi text-[36px]">
+                    {initialLetter}
+                  </div>
+                )}
                 {editMode && (
-                  <button
-                    type="button"
-                    className="opacity-80"
-                    onClick={() => setTagEditing(true)}
-                    aria-label="Редактировать тег"
+                  <button type="button" onClick={() => avatarInputRef.current?.click()}
+                    className="absolute left-0 top-0 h-full w-full flex items-center justify-center bg-black/20"
                   >
-                    <img
-                      src="/interface/krr.svg"
-                      alt="edit-tag"
-                      className="h-[18px] w-[18px]"
-                      style={{
-                        filter: theme === 'dark'
-                          ? 'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)'
-                          : 'none',
-                      }}
+                    <img src="/interface/image-add.svg" alt="add" className="h-[40px] w-[40px]"
+                      style={{ filter: theme === 'dark' ? 'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)' : 'none', opacity: 0.9 }}
                     />
                   </button>
                 )}
-                {editMode && (
-                  <button
-                    type="button"
-                    className="opacity-80"
-                    onClick={async () => {
-                      if (!userId) {
-                        setAvatarUrl(null)
-                        const ev = new CustomEvent('profile-updated', { detail: { avatar_url: null } })
-                        window.dispatchEvent(ev)
-                        return
-                      }
-                      const client = getSupabase()
-                      if (client) {
-                        await client.from('profiles').upsert({ id: userId, avatar_url: null })
-                      }
-                      const profRaw = window.localStorage.getItem('hw-profiles')
-                      const profMap = profRaw ? (JSON.parse(profRaw) as Record<string, { tag?: string; avatar_url?: string }>) : {}
-                      const prev = profMap[userId] ?? {}
-                      const next = { ...prev }
-                      delete next.avatar_url
-                      profMap[userId] = next
-                      window.localStorage.setItem('hw-profiles', JSON.stringify(profMap))
-                      setAvatarUrl(null)
-                      const ev = new CustomEvent('profile-updated', { detail: { avatar_url: null } })
-                      window.dispatchEvent(ev)
-                    }}
-                    aria-label="Удалить фото"
-                  >
-                    <img
-                      src="/interface/trash-03.svg"
-                      alt="trash"
-                      className="h-[18px] w-[18px]"
-                      style={{ filter: theme === 'dark' ? 'invert(1) brightness(0.7)' : 'brightness(0.5)' }}
-                    />
-                  </button>
-                )}
+                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleAvatarFile(e.target.files)} />
               </div>
-            </div>
-          ) : (
-            <div className="w-full flex items-center justify-center" style={{ marginTop: 'var(--profile-name-margin-top)' }}>
-              <input
-                value={tagText}
-                onChange={(e) => setTagText(e.target.value)}
-                onBlur={() => {
-                  setTagEditing(false)
-                  const next = tagText.trim()
-                  if (next.length > 0) saveTag(next)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setTagEditing(false)
-                    const next = tagText.trim()
-                    if (next.length > 0) saveTag(next)
-                  }
-                }}
-                className="h-[40px] w-[220px] border border-[var(--border-light)] bg-[var(--bg-secondary)] px-3 text-[16px] leading-[1.4em] text-[var(--text-primary)] outline-none"
-                style={{ borderRadius: 'var(--profile-border-radius)' }}
-              />
-            </div>
-          )}
-
-          {/* Онлайн-кружок на аватарке добавлен ниже в блоке аватара */}
-
-          {!isOwnProfile && (
-            <div className="w-full mt-4 px-6">
-              <div className="flex items-center gap-2">
-                <motion.button
-                  type="button"
-                  layout
-                  className="h-11 flex items-center justify-center font-vk-demi"
-                  style={{
-                    flex: isSubscribed ? 3 : 4,
-                    backgroundColor: isSubscribed ? '#7bcf9bff' : '#FFFFFF',
-                    color: isSubscribed ? '#FFFFFF' : '#000000',
-                    fontSize: 14,
-                    borderRadius: 'var(--profile-button-radius)',
-                  }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={async () => {
-                    if (!isAuthed) {
-                      window.dispatchEvent(new Event('trigger-auth'))
-                      return
-                    }
-                    if (!viewerId || !userId) {
-                      console.warn('Follow button clicked but missing viewerId or userId:', { viewerId, userId })
-                      return
-                    }
-                    const follower = isUuid(viewerId) ? viewerId : null
-                    const target = isUuid(userId) ? userId : null
-                    const nextSubscribed = !isSubscribed
-                    const nextNotifications = nextSubscribed ? true : false
-                    
-                    // Update UI immediately
-                    setIsSubscribed(nextSubscribed)
-                    setNotificationsEnabled(nextNotifications)
-                    writeLocalFollow(viewerId, userId, nextSubscribed, nextNotifications)
-                    showToast(nextSubscribed ? 'Подписка оформлена' : 'Вы отписались')
-
-                    const client = getSupabase()
-                    console.log('Follow action:', { 
-                      hasClient: !!client, 
-                      follower, 
-                      target, 
-                      nextSubscribed,
-                      viewerId,
-                      userId
-                    })
-
-                    if (client && follower && target) {
-                      if (nextSubscribed) {
-                        try {
-                          // Try to ensure session is fresh before action
-                          const { data: { session } } = await client.auth.getSession()
-                          console.log('Session status before upsert:', !!session)
-
-                          const { error } = await client.from('follows').upsert({
-                            follower_id: follower,
-                            target_id: target,
-                            notifications_enabled: nextNotifications,
-                          })
-                          if (error) {
-                            console.error('Failed to upsert follow in DB:', error)
-                          } else {
-                            console.log('Successfully upserted follow to DB')
-                            // Записываем уведомление для target
-                            try {
-                              await client.from('notifications').insert({
-                                user_id: target,
-                                type: 'new_follower',
-                                actor_id: follower,
-                                actor_tag: tagText || null,
-                                actor_avatar: avatarUrl || null,
-                              })
-                            } catch {
-                              // не критично
-                            }
-                            // Only try push subscription if DB sync was successful
-                            try {
-                              await ensurePushSubscription()
-                              await fetch('/api/push/new-follow', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ followerId: follower, targetId: target }),
-                              })
-                            } catch (err) {
-                              console.error('Failed to handle push/notification logic:', err)
-                            }
-                          }
-                        } catch (err) {
-                          console.error('Unexpected error during follow:', err)
-                        }
-                      } else {
-                        try {
-                          const { error } = await client
-                            .from('follows')
-                            .delete()
-                            .eq('follower_id', follower)
-                            .eq('target_id', target)
-                          if (error) {
-                            console.error('Failed to delete follow from DB:', error)
-                          } else {
-                            console.log('Successfully deleted follow from DB')
-                          }
-                        } catch (err) {
-                          console.error('Unexpected error during unfollow:', err)
-                        }
-                      }
-                    } else {
-                      console.warn('Follow button: Skipping DB sync. Reasons:', { 
-                        noClient: !client, 
-                        followerNotUuid: !follower, 
-                        targetNotUuid: !target 
-                      })
-                    }
-                  }}
-                >
-                  {isSubscribed ? 'Вы подписаны' : 'Подписаться'}
-                </motion.button>
-                {isSubscribed && (
-                  <motion.button
-                    type="button"
-                    layout
-                    className="h-11 flex items-center justify-center"
-                    style={{
-                      flex: 1,
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: 'var(--profile-button-radius)',
-                    }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={async () => {
-                      if (!isAuthed) {
-                        window.dispatchEvent(new Event('trigger-auth'))
-                        return
-                      }
-                      if (!viewerId || !userId) {
-                        return
-                      }
-                      const follower = isUuid(viewerId) ? viewerId : null
-                      const target = isUuid(userId) ? userId : null
-                      const next = !notificationsEnabled
-                      
-                      // Update UI immediately
-                      setNotificationsEnabled(next)
-                      writeLocalFollow(viewerId, userId, true, next)
-                      showToast(next ? 'Уведомления включены' : 'Уведомления выключены')
-
-                      if (next) {
-                        // Attempt to ensure subscription but don't block if it fails
-                        try {
-                          await ensurePushSubscription()
-                        } catch (err) {
-                          console.error('Failed to ensure push subscription:', err)
-                        }
-                      }
-                      
-                      const client = getSupabase()
-                      if (client && follower && target) {
-                        try {
-                          await client
-                            .from('follows')
-                            .upsert({
-                              follower_id: follower,
-                              target_id: target,
-                              notifications_enabled: next,
-                            })
-                        } catch (err) {
-                          console.error('Failed to sync notification preference to DB:', err)
-                        }
-                      }
-                    }}
-                  >
-                    <motion.div
-                      key={notificationsEnabled ? 'bell-ring' : 'bell'}
-                      initial={{ y: 0, rotate: 0 }}
-                      animate={{
-                        y: [0, -4, 0],
-                        rotate: [0, -10, 10, -10, 10, 0],
-                      }}
-                      transition={{
-                        duration: 0.4,
-                        ease: "easeInOut",
-                      }}
-                    >
-                      {notificationsEnabled ? (
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M15 17V18C15 19.6569 13.6569 21 12 21C10.3431 21 9 19.6569 9 18V17M15 17H9M15 17H18.5905C18.973 17 19.1652 17 19.3201 16.9478C19.616 16.848 19.8475 16.6156 19.9473 16.3198C19.9997 16.1643 19.9997 15.9715 19.9997 15.5859C19.9997 15.4172 19.9995 15.3329 19.9863 15.2524C19.9614 15.1004 19.9024 14.9563 19.8126 14.8312C19.7651 14.7651 19.7048 14.7048 19.5858 14.5858L19.1963 14.1963C19.0706 14.0706 19 13.9001 19 13.7224V10C19 6.134 15.866 2.99999 12 3C8.13401 3.00001 5 6.13401 5 10V13.7224C5 13.9002 4.92924 14.0706 4.80357 14.1963L4.41406 14.5858C4.29476 14.7051 4.23504 14.765 4.1875 14.8312C4.09766 14.9564 4.03815 15.1004 4.0132 15.2524C4 15.3329 4 15.4172 4 15.586C4 15.9715 4 16.1642 4.05245 16.3197C4.15225 16.6156 4.3848 16.848 4.68066 16.9478C4.83556 17 5.02701 17 5.40956 17H9M18.0186 2.01367C19.3978 3.05299 20.4843 4.43177 21.1724 6.01574M5.98197 2.01367C4.60275 3.05299 3.5162 4.43177 2.82812 6.01574" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      ) : (
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M15 17V18C15 19.6569 13.6569 21 12 21C10.3431 21 9 19.6569 9 18V17M15 17H9M15 17H18.5905C18.973 17 19.1652 17 19.3201 16.9478C19.616 16.848 19.8475 16.6156 19.9473 16.3198C19.9997 16.1643 19.9997 15.9715 19.9997 15.5859C19.9997 15.4172 19.9995 15.3329 19.9863 15.2524C19.9614 15.1004 19.9024 14.9563 19.8126 14.8312C19.7651 14.7651 19.7048 14.7048 19.5858 14.5858L19.1963 14.1963C19.0706 14.0706 19 13.9001 19 13.7224V10C19 6.134 15.866 2.99999 12 3C8.13401 3.00001 5 6.13401 5 10V13.7224C5 13.9002 4.92924 14.0706 4.80357 14.1963L4.41406 14.5858C4.29476 14.7051 4.23504 14.765 4.1875 14.8312C4.09766 14.9564 4.03815 15.1004 4.0132 15.2524C4 15.3329 4 15.4172 4 15.586C4 15.9715 4 16.1642 4.05245 16.3197C4.15225 16.6156 4.3848 16.848 4.68066 16.9478C4.83556 17 5.02701 17 5.40956 17H9" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </motion.div>
-                  </motion.button>
-                )}
-              </div>
-            </div>
-          )}
-          <div 
-            className="flex w-full items-center justify-center" 
-            style={{ 
-              marginTop: 'var(--profile-switch-offset)',
-              marginLeft: 'calc(-1 * var(--profile-switch-negative-margin, 12px))',
-              marginRight: 'calc(-1 * var(--profile-switch-negative-margin, 12px))',
-              width: 'calc(100% + (2 * var(--profile-switch-negative-margin, 12px)))'
-            }}
-          >
-            <div
-              className="relative flex w-full items-center gap-1 border border-[#2B2B2B] bg-[#111111]"
-              style={{
-                height: 'var(--profile-switch-height, 52px)',
-                padding: 'var(--profile-switch-padding, 4px)',
-                maxWidth: 'var(--profile-max-width, 380px)',
-                borderRadius: 'var(--profile-border-radius)',
-              }}
-            >
-              {isOwnProfile ? (
-                <button
-                  type="button"
-                  onClick={() => setProfileTab('favorites')}
-                  className="relative flex-1 h-full px-3 text-[14px] overflow-hidden"
-                  style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                >
-                  {profileTab === 'favorites' && (
-                    <motion.div
-                      layoutId="profile-tabs-active"
-                      className="absolute inset-0 bg-[#222222]"
-                      style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 500,
-                        damping: 30,
-                        mass: 0.8,
-                      }}
-                    />
-                  )}
-                  <span className={`relative z-10 ${profileTab === 'favorites' ? 'text-white' : 'text-white/70'}`}>Избранное</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setProfileTab('ads')}
-                  className="relative flex-1 h-full px-3 text-[14px] overflow-hidden"
-                  style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                >
-                  {profileTab === 'ads' && (
-                    <motion.div
-                      layoutId="profile-tabs-active"
-                      className="absolute inset-0 bg-[#222222]"
-                      style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 500,
-                        damping: 30,
-                        mass: 0.8,
-                      }}
-                    />
-                  )}
-                  <span className={`relative z-10 ${profileTab === 'ads' ? 'text-white' : 'text-white/70'}`}>Объявления</span>
-                </button>
+              {/* Онлайн-кружок */}
+              {!isOwnProfile && profileLastSeen && profileLastSeen !== 'nobody' && (new Date().getTime() - new Date(profileLastSeen).getTime()) < 120000 && (
+                <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#64CF86] border-2 border-[var(--bg-primary)]" />
               )}
-              <button
-                type="button"
-                onClick={() => setProfileTab('about')}
-                className="relative flex-1 h-full px-3 text-[14px] overflow-hidden"
-                style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-              >
-                {profileTab === 'about' && (
-                  <motion.div
-                    layoutId="profile-tabs-active"
-                    className="absolute inset-0 bg-[#222222]"
-                    style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 500,
-                      damping: 30,
-                      mass: 0.8,
-                    }}
-                  />
-                )}
-                <span className={`relative z-10 ${profileTab === 'about' ? 'text-white' : 'text-white/70'}`}>О себе</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setProfileTab('friends')}
-                className="relative flex-1 h-full px-3 text-[14px] overflow-hidden"
-                style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-              >
-                {profileTab === 'friends' && (
-                  <motion.div
-                    layoutId="profile-tabs-active"
-                    className="absolute inset-0 bg-[#222222]"
-                    style={{ borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 500,
-                      damping: 30,
-                      mass: 0.8,
-                    }}
-                  />
-                )}
-                <span className={`relative z-10 ${profileTab === 'friends' ? 'text-white' : 'text-white/70'}`}>Подписки</span>
-              </button>
+              {/* Украшение */}
+              <AvatarDecoration id={decoration} size={84} />
+            </div>
+
+            {/* Инфо справа */}
+            <div className="flex-1 min-w-0 pt-2">
+              {/* Ник + кнопка подписки в одну строку */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  {!tagEditing ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[var(--text-primary)] font-sf-ui-medium leading-tight truncate" style={{ fontSize: '17px' }}>
+                        {tagText && tagText.trim().length > 0 ? tagText : 'user'}
+                      </span>
+                      {editMode && (
+                        <button type="button" className="opacity-60" onClick={() => setTagEditing(true)}>
+                          <img src="/interface/krr.svg" alt="edit" className="h-[16px] w-[16px]"
+                            style={{ filter: theme === 'dark' ? 'brightness(0) saturate(100%) invert(84%) sepia(68%) saturate(569%) hue-rotate(360deg) brightness(101%) contrast(101%)' : 'none' }}
+                          />
+                        </button>
+                      )}
+                      {editMode && avatarUrl && (
+                        <button type="button" className="opacity-60" onClick={async () => {
+                          if (!userId) { setAvatarUrl(null); return }
+                          const client = getSupabase()
+                          if (client) await client.from('profiles').upsert({ id: userId, avatar_url: null })
+                          setAvatarUrl(null)
+                          window.dispatchEvent(new CustomEvent('profile-updated', { detail: { avatar_url: null } }))
+                        }}>
+                          <img src="/interface/trash-03.svg" alt="trash" className="h-[16px] w-[16px]"
+                            style={{ filter: theme === 'dark' ? 'invert(1) brightness(0.7)' : 'brightness(0.5)' }}
+                          />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      value={tagText}
+                      onChange={(e) => setTagText(e.target.value)}
+                      onBlur={() => { setTagEditing(false); const n = tagText.trim(); if (n.length > 0) saveTag(n) }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { setTagEditing(false); const n = tagText.trim(); if (n.length > 0) saveTag(n) } }}
+                      className="h-[36px] w-full border border-[var(--border-light)] bg-[var(--bg-secondary)] px-3 text-[15px] text-[var(--text-primary)] outline-none rounded-xl"
+                    />
+                  )}
+
+                  {/* Онлайн — тестовый */}
+                  <div className="mt-0.5 text-[12px] text-[var(--text-secondary)] font-sf-ui-light">
+                    Был(а) недавно
+                  </div>
+
+                  {/* Бейджи + кнопка подписки в одну строку */}
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center gap-1.5">
+                      {isVerified && <VerifiedBadge size={16} />}
+                      {isModerator && <ModeratorBadge size={16} />}
+                      {isQuality && <QualityBadge size={16} />}
+                    </div>
+
+                    {/* Кнопка подписки напротив бейджей */}
+                    {!isOwnProfile && (
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <motion.button
+                          type="button" whileTap={{ scale: 0.95 }}
+                          className="h-9 px-5 flex items-center justify-center font-sf-ui-medium text-[13px] rounded-full"
+                          style={{
+                            background: isSubscribed ? 'rgba(255,255,255,0.1)' : '#FFFFFF',
+                            color: isSubscribed ? 'var(--text-primary)' : '#000000',
+                          }}
+                          onClick={async () => {
+                            if (!isAuthed) { window.dispatchEvent(new Event('trigger-auth')); return }
+                            if (!viewerId || !userId) return
+                            const follower = isUuid(viewerId) ? viewerId : null
+                            const target = isUuid(userId) ? userId : null
+                            const nextSubscribed = !isSubscribed
+                            setIsSubscribed(nextSubscribed)
+                            setNotificationsEnabled(nextSubscribed)
+                            writeLocalFollow(viewerId, userId, nextSubscribed, nextSubscribed)
+                            showToast(nextSubscribed ? 'Подписка оформлена' : 'Вы отписались')
+                            const client = getSupabase()
+                            if (client && follower && target) {
+                              if (nextSubscribed) {
+                                try {
+                                  await client.auth.getSession()
+                                  const { error } = await client.from('follows').upsert({ follower_id: follower, target_id: target, notifications_enabled: true })
+                                  if (!error) {
+                                    try { await client.from('notifications').insert({ user_id: target, type: 'new_follower', actor_id: follower, actor_tag: tagText || null, actor_avatar: avatarUrl || null }) } catch {}
+                                    try { await ensurePushSubscription(); await fetch('/api/push/new-follow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ followerId: follower, targetId: target }) }) } catch {}
+                                  }
+                                } catch {}
+                              } else {
+                                try { await client.from('follows').delete().eq('follower_id', follower).eq('target_id', target) } catch {}
+                              }
+                            }
+                          }}
+                        >
+                          {isSubscribed ? 'Подписан' : 'Подписаться'}
+                        </motion.button>
+                        {isSubscribed && (
+                          <motion.button type="button" whileTap={{ scale: 0.95 }}
+                            className="h-8 w-8 flex items-center justify-center rounded-full"
+                            style={{ background: 'rgba(255,255,255,0.08)' }}
+                            onClick={() => {
+                              const next = !notificationsEnabled
+                              setNotificationsEnabled(next)
+                              if (viewerId && userId) writeLocalFollow(viewerId, userId, true, next)
+                              showToast(next ? 'Уведомления включены' : 'Уведомления выключены')
+                              const client = getSupabase()
+                              if (client && isUuid(viewerId ?? '') && isUuid(userId ?? '')) {
+                                client.from('follows').upsert({ follower_id: viewerId, target_id: userId, notifications_enabled: next }).then(() => {})
+                              }
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                              className={notificationsEnabled ? 'text-white' : 'text-white/40'}
+                            >
+                              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                              {!notificationsEnabled && <path d="M1 1L23 23" strokeLinecap="round"/>}
+                            </svg>
+                          </motion.button>
+                        )}
+                        {/* Кнопка чата */}
+                        <motion.button type="button" whileTap={{ scale: 0.95 }}
+                          className="h-8 w-8 flex items-center justify-center rounded-full"
+                          style={{ background: 'rgba(255,255,255,0.08)' }}
+                          onClick={() => {
+                            if (!isAuthed) { window.dispatchEvent(new Event('trigger-auth')); return }
+                            if (onOpenChat && userId) {
+                              onOpenChat(userId, tagText || 'user', avatarUrl)
+                            }
+                          }}
+                        >
+                          {/* SVG из навигации */}
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-white/70">
+                            <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5H7l-4 2V12A8.5 8.5 0 0 1 11.5 3.5h1A8.5 8.5 0 0 1 21 12Z"/>
+                            <path d="M8.5 10.5h7M8.5 14h5"/>
+                          </svg>
+                        </motion.button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Описание под шапкой */}
+        {description && description.trim().length > 0 && (
+          <div className="mt-3">
+            {editMode ? (
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => saveDescription(description.trim())}
+                className="w-full min-h-[60px] bg-transparent text-[13px] text-white/50 font-sf-ui-light leading-relaxed outline-none resize-none"
+              />
+            ) : (
+              <div className="flex items-start gap-2">
+                <p className={`text-[13px] text-white/50 font-sf-ui-light leading-relaxed flex-1 ${!descExpanded && description.length > 80 ? 'line-clamp-2' : ''}`}>
+                  <FormattedText text={description} />
+                </p>
+                {description.length > 80 && (
+                  <button
+                    type="button"
+                    className="text-[12px] text-white/35 font-sf-ui-light flex-shrink-0 active:opacity-60 mt-0.5"
+                    onClick={() => setDescExpanded(e => !e)}
+                  >
+                    {descExpanded ? 'Свернуть' : 'Ещё'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Табы — стиль как в магазине */}
+        <div className="flex overflow-x-auto scrollbar-hidden gap-1 mt-6 border-b border-white/[0.06]"
+          style={{ marginLeft: 'calc(-1 * var(--profile-switch-negative-margin, 12px))', marginRight: 'calc(-1 * var(--profile-switch-negative-margin, 12px))' }}
+        >
+          {(isOwnProfile
+            ? [
+                { id: 'favorites', label: 'Избранное', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                )},
+                { id: 'about', label: 'Описание', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
+                )},
+                { id: 'friends', label: 'Подписки', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                )},
+                { id: 'reviews', label: 'Отзывы', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                )},
+              ]
+            : [
+                { id: 'ads', label: 'Товары', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    {/* Коробка с товаром */}
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                )},
+                { id: 'about', label: 'Описание', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
+                )},
+                { id: 'friends', label: 'Подписки', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                )},
+                { id: 'reviews', label: 'Отзывы', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                )},
+              ]
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setProfileTab(tab.id as any)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-sf-ui-medium transition-all relative ${
+                profileTab === tab.id ? 'text-white' : 'text-white/35'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+              {profileTab === tab.id && (
+                <motion.div layoutId="profile-tab-indicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
           <motion.div
             key={profileTab}
             className="relative w-full h-full profile-switch-transition"
@@ -1778,39 +1631,40 @@ export default function Profile({
                     ))}
                   </div>
                 ) : userAds.length > 0 ? (
-                  <div
-                    className="grid grid-cols-2 pb-4"
-                    style={{
-                      columnGap: 6,
-                      rowGap: 6,
-                      paddingLeft: 4,
-                      paddingRight: 4,
-                      marginLeft: -24,
-                      marginRight: -24,
-                      width: 'calc(100% + 48px)',
-                    }}
-                  >
-                  {userAds.map((ad) => (
-                    <AdCard
-                      key={ad.id}
-                      id={ad.id}
-                      title={ad.title}
-                      price={ad.price}
-                      imageUrl={ad.imageUrl}
-                      username={(ad.userTag ?? 'user').replace(/^@/, '')}
-                      condition={ad.condition ?? undefined}
-                      location={ad.location ?? undefined}
-                      createdAt={ad.createdAt}
-                      onDelete={isOwnProfile ? () => deleteAdById(ad.id) : undefined}
-                      isOwn={isOwnProfile}
-                      onEdit={isOwnProfile ? () => setEditingAd(ad) : undefined}
-                      showEditLabel={isOwnProfile}
-                      onClick={() => {
-                        if (onOpenAd) onOpenAd(ad)
-                      }}
-                    />
-                  ))}
-                  </div>
+                  <>
+                    <div
+                      className="grid grid-cols-2 pb-2"
+                      style={{ columnGap: 6, rowGap: 6, paddingLeft: 4, paddingRight: 4, marginLeft: -24, marginRight: -24, width: 'calc(100% + 48px)' }}
+                    >
+                      {(isOwnProfile ? userAds : userAds.slice(0, 2)).map((ad) => (
+                        <AdCard
+                          key={ad.id}
+                          id={ad.id}
+                          title={ad.title}
+                          price={ad.price}
+                          imageUrl={ad.imageUrl}
+                          username={isOwnProfile ? (ad.userTag ?? 'user').replace(/^@/, '') : ''}
+                          condition={ad.condition ?? undefined}
+                          location={ad.location ?? undefined}
+                          createdAt={ad.createdAt}
+                          onDelete={isOwnProfile ? () => deleteAdById(ad.id) : undefined}
+                          isOwn={isOwnProfile}
+                          onEdit={isOwnProfile ? () => setEditingAd(ad) : undefined}
+                          showEditLabel={isOwnProfile}
+                          onClick={() => { if (onOpenAd) onOpenAd(ad) }}
+                        />
+                      ))}
+                    </div>
+                    {!isOwnProfile && userAds.length > 2 && (
+                      <button
+                        type="button"
+                        className="mt-1 px-1 py-2 text-[12px] font-sf-ui-light text-white/45 active:opacity-60 transition-opacity text-left"
+                        onClick={() => setShowAllAds(true)}
+                      >
+                        Показать больше объявлений
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <div className="flex flex-col items-center pt-2">
                     <div
@@ -1865,7 +1719,7 @@ export default function Profile({
               <div className="w-full">
                 {favoritesLoading ? (
                   <div
-                    className="grid grid-cols-2 pb-4"
+                    className="grid grid-cols-2 pb-6"
                     style={{
                       columnGap: 6,
                       rowGap: 6,
@@ -1890,7 +1744,7 @@ export default function Profile({
                       paddingRight: 4,
                       marginLeft: -24,
                       marginRight: -24,
-                      width: 'calc(100% + 48px)',
+                      width: 'calc(100% + 56px)',
                     }}
                   >
                   {favoriteAds.map((ad) => (
@@ -1912,8 +1766,8 @@ export default function Profile({
                   ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center pt-8 pb-12 px-6 text-center">
-                    <div className="w-full max-w-[200px] mb-2 opacity-80">
+                  <div className="flex flex-col items-center justify-center pt-24 pb-12 px-6 text-center">
+                    <div className="w-full max-w-[200px] mb-4 opacity-80">
                       <EmptyFavoritesIllustration />
                     </div>
                     <div>
@@ -1937,43 +1791,6 @@ export default function Profile({
                 }}
               >
                 <div className="space-y-4">
-                  <div className="mt-1">
-                    {editMode ? (
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        onBlur={() => saveDescription(description.trim())}
-                        className="w-full min-h-[80px] border border-[#2B2B2B] bg-[#111111] px-3 py-2 leading-[1.6em] text-white outline-none"
-                        style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                      />
-                    ) : (
-                      profileInfoLoading ? (
-                        <div
-                          className="bg-[#0D0D0D] px-3 py-3"
-                          style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                        >
-                          <div className="space-y-2">
-                            <div className="relative h-3 w-4/5 rounded bg-[#222222] overflow-hidden">
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
-                            </div>
-                            <div className="relative h-3 w-full rounded bg-[#222222] overflow-hidden">
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
-                            </div>
-                            <div className="relative h-3 w-2/3 rounded bg-[#222222] overflow-hidden">
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          className="bg-[#0D0D0D] px-3 py-2 leading-[1.6em] text-[#A1A1A1] whitespace-pre-wrap"
-                          style={{ fontSize: 'var(--profile-public-text-size)', borderRadius: 'calc(var(--profile-border-radius) - 4px)' }}
-                        >
-                          {description && description.trim().length > 0 ? <FormattedText text={description} /> : 'Описание не заполнено'}
-                        </div>
-                      )
-                    )}
-                  </div>
                   <motion.div
                     className="bg-[#101010] px-3 py-3"
                     style={{ borderRadius: 'calc(var(--profile-border-radius) - 2px)' }}
@@ -2177,28 +1994,7 @@ export default function Profile({
                     >
                       Способы связи
                     </div>
-                    {/* Плашка скрытия — только для своего профиля */}
-                    {isOwnProfile && (
-                      <button
-                        type="button"
-                        className="flex items-center justify-between w-full mb-3 px-3 py-2.5 rounded-[14px] active:opacity-70 transition-opacity"
-                        style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.06)' }}
-                        onClick={() => window.dispatchEvent(new Event('open-settings'))}
-                      >
-                        <div className="flex items-center gap-2">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-white/40 flex-shrink-0">
-                            <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6l-8-4z"/>
-                          </svg>
-                          <span className="text-[12px] text-white/40 font-sf-ui-light">
-                            {contactsHidden ? 'Контакты скрыты' : 'Видны всем'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className={`w-1.5 h-1.5 rounded-full ${contactsHidden ? 'bg-blue-400' : 'bg-white/20'}`} />
-                          <span className="text-[11px] text-white/25 font-sf-ui-light">Конфиденциальность</span>
-                        </div>
-                      </button>
-                    )}
+                    {/* Плашка скрытия убрана — только надпись ниже */}
                     <div className="flex flex-col gap-1">
                       {contactsHidden && isOwnProfile ? (
                         <div className="flex items-center gap-2 py-2">
@@ -2265,13 +2061,13 @@ export default function Profile({
               </div>
             ) : profileTab === 'friends' ? (
               <div
-                className="mx-auto w-full border border-white/[0.05] bg-[#111111]/60 backdrop-blur-xl p-4"
+                className="mx-auto w-full rounded-[20px] overflow-hidden"
                 style={{
+                  background: '#111111',
                   maxWidth: 'var(--profile-max-width, 380px)',
                   marginLeft: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
                   marginRight: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
                   width: 'calc(100% + (2 * var(--profile-about-negative-margin, 12px)))',
-                  borderRadius: 'var(--profile-border-radius)',
                 }}
               >
                 {subscriptionsLoading ? (
@@ -2309,79 +2105,124 @@ export default function Profile({
                     Пока ни на кого не подписан
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-1">
-                    {subscriptions.map((sub) => {
+                  <div className="flex flex-col">
+                    {subscriptions.map((sub, idx) => {
                       const base = sub.id || sub.tag || 'user'
                       let sum = 0
                       for (let i = 0; i < base.length; i += 1) sum += base.charCodeAt(i)
-                      const idx = sum % avatarGradients.length
-                      const grad = avatarGradients[idx]
-                      const letter = sub.tag && sub.tag.length > 0 ? sub.tag.charAt(0).toUpperCase() : 'U'
+                      const grad = avatarGradients[sum % avatarGradients.length]
+                      const letter = sub.tag?.[0]?.toUpperCase() ?? 'U'
                       return (
-                        <motion.button
-                          key={sub.id}
-                          type="button"
-                          className="flex items-center gap-4 w-full px-3 py-2 transition-colors active:bg-white/[0.05]"
-                          style={{ borderRadius: '24px' }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => {
-                            if (onOpenProfileById) {
-                              onOpenProfileById(sub.id)
-                            } else if (typeof window !== 'undefined') {
-                              const url = new URL(window.location.href)
-                              url.searchParams.set('sellerId', sub.id)
-                              url.searchParams.set('profileTab', 'ads')
-                              window.location.href = url.toString()
-                            }
-                          }}
-                        >
-                          <div
-                            className="flex items-center justify-center text-white shadow-lg shadow-black/20"
-                            style={{
-                              borderRadius: '999px',
-                              background: grad,
-                              width: '40px',
-                              height: '40px',
-                              flexShrink: 0
+                        <div key={sub.id}>
+                          <motion.button
+                            type="button"
+                            whileTap={{ scale: 0.98 }}
+                            className="flex items-center gap-3 w-full px-4 py-3 active:bg-white/[0.03] transition-colors text-left"
+                            onClick={() => {
+                              if (onOpenProfileById) onOpenProfileById(sub.id)
                             }}
                           >
-                            {sub.avatarUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={sub.avatarUrl}
-                                alt={sub.tag}
-                                className="object-cover rounded-full w-full h-full"
-                              />
-                            ) : (
-                              <span
-                                className="font-ttc-bold text-[18px] leading-none"
-                              >
-                                {letter}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-start min-w-0">
-                            <span
-                              className="text-white font-sf-ui-medium text-[17px] leading-tight truncate w-full"
+                            {/* Аватарка */}
+                            <div className="flex-shrink-0 w-11 h-11 rounded-full overflow-hidden flex items-center justify-center text-white font-ttc-bold text-[16px]"
+                              style={{ background: sub.avatarUrl ? '#0a0a0a' : grad }}
                             >
-                              {sub.tag}
-                            </span>
-                            <span className="text-white/40 font-sf-ui-light text-[13px]">
-                              id: {sub.id.slice(0, 8)}...
-                            </span>
-                          </div>
-                          <div className="ml-auto">
-                            <ChevronLeft size={16} className="text-white opacity-20 rotate-180" />
-                          </div>
-                        </motion.button>
+                              {sub.avatarUrl
+                                ? <img src={sub.avatarUrl} alt={sub.tag} className="w-full h-full object-cover" />
+                                : letter
+                              }
+                            </div>
+                            {/* Инфо */}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[15px] font-sf-ui-medium text-white/90 truncate">@{sub.tag}</div>
+                              <div className="text-[12px] text-white/30 font-sf-ui-light mt-0.5 truncate">{sub.id.slice(0, 12)}...</div>
+                            </div>
+                            <ChevronRight size={14} className="text-white/20 flex-shrink-0" />
+                          </motion.button>
+                          {idx < subscriptions.length - 1 && (
+                            <div className="h-px bg-white/[0.04] mx-4" />
+                          )}
+                        </div>
                       )
                     })}
                   </div>
                 )}
               </div>
+            ) : profileTab === 'reviews' ? (
+              <div className="py-10 flex flex-col items-center text-center px-4">
+                <svg width="180" height="160" viewBox="0 0 180 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Большая шестерёнка */}
+                  <motion.g
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
+                    style={{ transformOrigin: '70px 75px' }}
+                  >
+                    <circle cx="70" cy="75" r="22" stroke="#555" strokeWidth="3" fill="none"/>
+                    <circle cx="70" cy="75" r="10" stroke="#666" strokeWidth="2.5" fill="none"/>
+                    {[0,45,90,135,180,225,270,315].map((angle, i) => {
+                      const rad = (angle * Math.PI) / 180
+                      const x1 = 70 + 22 * Math.cos(rad)
+                      const y1 = 75 + 22 * Math.sin(rad)
+                      const x2 = 70 + 30 * Math.cos(rad)
+                      const y2 = 75 + 30 * Math.sin(rad)
+                      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#555" strokeWidth="5" strokeLinecap="round"/>
+                    })}
+                  </motion.g>
+
+                  {/* Маленькая шестерёнка */}
+                  <motion.g
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                    style={{ transformOrigin: '118px 52px' }}
+                  >
+                    <circle cx="118" cy="52" r="14" stroke="#4a4a4a" strokeWidth="2.5" fill="none"/>
+                    <circle cx="118" cy="52" r="6" stroke="#555" strokeWidth="2" fill="none"/>
+                    {[0,60,120,180,240,300].map((angle, i) => {
+                      const rad = (angle * Math.PI) / 180
+                      const x1 = 118 + 14 * Math.cos(rad)
+                      const y1 = 52 + 14 * Math.sin(rad)
+                      const x2 = 118 + 20 * Math.cos(rad)
+                      const y2 = 52 + 20 * Math.sin(rad)
+                      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#4a4a4a" strokeWidth="4" strokeLinecap="round"/>
+                    })}
+                  </motion.g>
+
+                  {/* Гаечный ключ */}
+                  <motion.g
+                    animate={{ rotate: [-15, 15, -15] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{ transformOrigin: '38px 118px' }}
+                  >
+                    <path d="M28 108 Q22 102 24 94 Q26 86 34 84 Q38 83 40 85 L36 89 Q38 91 40 89 L44 85 Q50 90 48 98 Q46 106 38 110 Z" stroke="#666" strokeWidth="1.5" fill="#2a2a2a" strokeLinejoin="round"/>
+                    <rect x="35" y="108" width="6" height="22" rx="3" fill="#333" stroke="#555" strokeWidth="1.5"/>
+                  </motion.g>
+
+                  {/* Звёздочки-искры */}
+                  <motion.g animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2, repeat: Infinity, delay: 0 }}>
+                    <path d="M140 90 L142 95 L147 97 L142 99 L140 104 L138 99 L133 97 L138 95 Z" fill="#888"/>
+                  </motion.g>
+                  <motion.g animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.8 }}>
+                    <path d="M25 55 L26.5 59 L30.5 60.5 L26.5 62 L25 66 L23.5 62 L19.5 60.5 L23.5 59 Z" fill="#666"/>
+                  </motion.g>
+                  <motion.g animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}>
+                    <path d="M155 120 L156 123 L159 124 L156 125 L155 128 L154 125 L151 124 L154 123 Z" fill="#666"/>
+                  </motion.g>
+
+                  {/* Прогресс-бар внизу */}
+                  <rect x="30" y="145" width="120" height="6" rx="3" fill="#222"/>
+                  <motion.rect
+                    x="30" y="145" height="6" rx="3" fill="#666"
+                    animate={{ width: [20, 90, 20] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                </svg>
+
+                <div className="mt-4 text-[17px] font-sf-ui-medium text-white/70">Раздел скоро появится</div>
+                <div className="mt-1.5 text-[13px] text-white/30 font-sf-ui-light leading-relaxed max-w-[220px]">
+                  Раздел отзывов скоро появится. Мы работаем над этим. Новости о разработке в нашем Telegram канале. А точно, его нет.
+                </div>
+              </div>
             ) : null}
           </motion.div>
-        </div>
         {editingAd && (
           <AdsEdit
             ad={editingAd}
@@ -2389,6 +2230,118 @@ export default function Profile({
           />
         )}
       </div>
+      <AnimatePresence>
+        {showAllAds && (
+          <UserAdsScreen
+            ads={userAds}
+            userTag={tagText || 'user'}
+            onClose={() => setShowAllAds(false)}
+            onOpenAd={(ad) => { setShowAllAds(false); if (onOpenAd) onOpenAd(ad) }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showDecorations && (
+          <ProfileDecorations
+            userId={userId}
+            currentDecoration={decoration}
+            avatarUrl={avatarUrl}
+            gradient={gradient}
+            initialLetter={initialLetter}
+            tagText={tagText || undefined}
+            description={description || undefined}
+            onClose={() => setShowDecorations(false)}
+            onSave={(id) => setDecoration(id)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Плашка обновления профиля */}
+      <AnimatePresence>
+        {showProfileUpdate && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { localStorage.setItem(`hw-profile-update:${PROFILE_UPDATE_VERSION}`, '1'); setShowProfileUpdate(false) }}
+              className="fixed inset-0 z-[165] bg-black/75 backdrop-blur-md"
+            />
+            <div className="fixed inset-0 z-[170] flex items-end justify-center pointer-events-none">
+              <motion.div
+                initial={{ translateY: '100%' }} animate={{ translateY: 0 }} exit={{ translateY: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+                className="relative w-full bg-[#121212] border-t border-white/10 rounded-t-[32px] px-6 pt-7 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pointer-events-auto"
+              >
+                <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/15" />
+
+                {/* Шапка */}
+                <div className="flex items-start gap-4 mb-5">
+                  <div className="w-11 h-11 rounded-[14px] flex items-center justify-center flex-shrink-0" style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-white/80">
+                      <circle cx="12" cy="8" r="4"/>
+                      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                      <path d="M18 3l1.5 1.5M20 6h2M18 9l1.5-1.5" stroke="currentColor" strokeWidth="1.5"/>
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-[22px] font-ttc-bold text-white leading-tight">Обновление профиля</h3>
+                    <p className="mt-1.5 text-[13px] text-white/40 font-sf-ui-light leading-relaxed">
+                      Мы переработали страницу профиля и добавили новые возможности
+                    </p>
+                  </div>
+                </div>
+
+                {/* Фичи */}
+                <div className="space-y-2.5">
+                  {[
+                    {
+                      icon: (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
+                          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                        </svg>
+                      ),
+                      text: 'Новый дизайн шапки профиля — аватарка слева, ник и статус справа',
+                    },
+                    {
+                      icon: (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                      ),
+                      text: 'Украшения профиля — выбери эффект рядом с аватаркой',
+                    },
+                    {
+                      icon: (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+                          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                        </svg>
+                      ),
+                      text: 'Новые вкладки: Товары, О себе, Подписки, Отзывы',
+                    },
+                  ].map((item, i) => (
+                    <motion.div key={i}
+                      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + i * 0.07 }}
+                      className="flex items-start gap-3 rounded-[16px] px-4 py-3"
+                      style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.05)' }}
+                    >
+                      <div className="mt-0.5 flex-shrink-0">{item.icon}</div>
+                      <span className="text-[13px] text-white/70 font-sf-ui-light leading-relaxed">{item.text}</span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => { localStorage.setItem(`hw-profile-update:${PROFILE_UPDATE_VERSION}`, '1'); setShowProfileUpdate(false) }}
+                  className="mt-5 h-14 w-full rounded-[22px] bg-white text-black font-sf-ui-bold text-[16px] active:scale-[0.97] transition-all"
+                >
+                  Понятно
+                </button>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {showCreateStore && (
           <CreateStoreFlow 

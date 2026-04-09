@@ -739,16 +739,15 @@ export default function ProfileEdit({
 
               <button
                 type="button"
-                onClick={async () => {
-                  const client = getSupabase()
-                  if (client) await client.auth.signOut()
-                  await clearLocalAuth()
-                  window.dispatchEvent(new Event('local-auth-changed'))
-                }}
-                className="w-full h-[56px] bg-red-500/10 border border-red-500/10 rounded-[28px] flex items-center justify-center gap-2 group hover:bg-red-500/20 transition-all"
+                onClick={() => window.dispatchEvent(new Event('open-profile-decorations'))}
+                className="w-full h-[56px] bg-white/[0.04] border border-white/[0.06] rounded-[28px] flex items-center justify-center gap-2 hover:bg-white/[0.07] transition-all"
               >
-                <LogOut size={20} className="text-red-500" />
-                <span className="text-red-500 font-sf-ui-medium">Выйти из аккаунта</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-white/70">
+                  <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+                  <circle cx="18" cy="5" r="2" fill="currentColor" stroke="none" className="text-yellow-400"/>
+                  <circle cx="6" cy="18" r="1.5" fill="currentColor" stroke="none" className="text-pink-400"/>
+                </svg>
+                <span className="text-white/70 font-sf-ui-medium">Украшения профиля</span>
               </button>
             </div>
           </div>
@@ -877,12 +876,31 @@ export default function ProfileEdit({
 
                   <button
                     type="button"
+                    onClick={async () => {
+                      const client = getSupabase()
+                      if (client) await client.auth.signOut()
+                      await clearLocalAuth()
+                      window.dispatchEvent(new Event('local-auth-changed'))
+                    }}
+                    className="w-full flex items-center justify-between p-5 hover:bg-orange-500/5 transition-colors group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+                        <LogOut size={20} className="text-orange-400" />
+                      </div>
+                      <span className="text-orange-400 font-sf-ui-medium">Выйти из аккаунта</span>
+                    </div>
+                    <ChevronRight size={20} className="text-orange-400/20 group-hover:translate-x-1 transition-transform" />
+                  </button>
+
+                  <div className="h-[1px] bg-white/[0.03] mx-5" />
+
+                  <button
+                    type="button"
                     onClick={() => {
                       setShowAccountSettings(false)
                       setShowConfirm(false)
                       setIdRevealed(false)
-                      // Trigger delete confirm from Setting or local state
-                      // For now we'll use a local delete confirm or dispatch event
                       window.dispatchEvent(new Event('profile-delete-request'))
                     }}
                     className="w-full flex items-center justify-between p-5 hover:bg-red-500/5 transition-colors group"

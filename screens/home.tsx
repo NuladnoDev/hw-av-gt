@@ -83,7 +83,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   }, [isAuthed])
 
   const [tab, setTab] = useState<'ads' | 'profile' | 'messages'>('ads')
-  const [profileTab, setProfileTab] = useState<'ads' | 'about' | 'friends' | 'favorites'>('favorites')
+  const [profileTab, setProfileTab] = useState<'ads' | 'about' | 'friends' | 'favorites' | 'reviews'>('favorites')
 
   const NavIcon = ({ type, active }: { type: 'ads' | 'messages' | 'create' | 'profile', active: boolean }) => {
     switch (type) {
@@ -1379,7 +1379,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   className="text-[22px] font-sf-ui-medium leading-[1em] text-[var(--text-primary)] transition-opacity duration-200"
                   style={{ opacity: profileToastActive ? 0 : 1 }}
                 >
-                  {viewStoreId ? 'Витрины' : 'Профиль'}
+                  {viewStoreId ? 'Витрины' : ''}
                 </div>
               </div>
             </div>
@@ -1466,6 +1466,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                   setViewProfileUserId(id)
                   setViewStoreId(null)
                   setProfileTab('ads')
+                }}
+                onOpenChat={(uid, uTag, uAvatar) => {
+                  setChatReceiver({ id: uid, name: uTag, avatar: uAvatar })
+                  setChatOpen(true)
                 }}
               />
             )}
