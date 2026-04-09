@@ -38,6 +38,7 @@ import VerifiedBadge from '../components/VerifiedBadge'
 import QualityBadge from '../components/QualityBadge'
 import FormattedText from '../components/FormattedText'
 import ModeratorBadge from '../components/ModeratorBadge'
+import NewcomerBadge from '../components/NewcomerBadge'
 import dynamic from 'next/dynamic'
 const GridBackground3D = dynamic(() => import('../components/GridBackground3D'), { ssr: false })
 
@@ -241,6 +242,7 @@ export default function Profile({
   const [isVerified, setIsVerified] = useState(false)
   const [isQuality, setIsQuality] = useState(false)
   const [isModerator, setIsModerator] = useState(false)
+  const [isNewcomer, setIsNewcomer] = useState(false)
   const [userStores, setUserStores] = useState<{ id: string; name: string; avatar_url: string | null }[]>([])
   const [storesLoading, setStoresLoading] = useState(false)
   const [showCreateStore, setShowCreateStore] = useState(false)
@@ -618,7 +620,7 @@ export default function Profile({
       try {
         const { data: prof, error: err } = await client
           .from('profiles')
-          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts, is_verified, is_quality, is_moderator, decoration')
+          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts, is_verified, is_quality, is_moderator, decoration, is_newcomer')
           .eq('id', idLocal)
           .maybeSingle()
         if (err || !prof) {
@@ -627,6 +629,7 @@ export default function Profile({
         setIsVerified(!!prof.is_verified)
         setIsQuality(!!prof.is_quality)
         setIsModerator(!!prof.is_moderator)
+        setIsNewcomer(prof.is_newcomer !== false)
         if (prof.decoration) setDecoration(prof.decoration as DecorationId)
         const tagFromDb = (prof.tag as string | undefined) ?? undefined
         const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
@@ -1403,10 +1406,19 @@ export default function Profile({
                     />
                   )}
 
-                  {/* Онлайн — тестовый */}
-                  <div className="mt-0.5 text-[12px] text-[var(--text-secondary)] font-sf-ui-light">
-                    Был(а) недавно
-                  </div>
+                  {/* Онлайн */}
+                  {!isOwnProfile && (
+                    <div className="mt-0.5 text-[12px] text-[var(--text-secondary)] font-sf-ui-light">
+                      {profileLastSeen
+                        ? profileLastSeen === 'nobody'
+                          ? 'Был(а) недавно'
+                          : (new Date().getTime() - new Date(profileLastSeen).getTime()) < 120000
+                            ? 'Онлайн'
+                            : `Был(а) ${new Date(profileLastSeen).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                        : 'Был(а) недавно'
+                      }
+                    </div>
+                  )}
 
                   {/* Бейджи + кнопка подписки в одну строку */}
                   <div className="flex items-center justify-between mt-1">
@@ -1414,6 +1426,7 @@ export default function Profile({
                       {isVerified && <VerifiedBadge size={16} />}
                       {isModerator && <ModeratorBadge size={16} />}
                       {isQuality && <QualityBadge size={16} />}
+                      {isNewcomer && <NewcomerBadge size={16} />}
                     </div>
 
                     {/* Кнопка подписки напротив бейджей */}
@@ -2061,13 +2074,11 @@ export default function Profile({
               </div>
             ) : profileTab === 'friends' ? (
               <div
-                className="mx-auto w-full rounded-[20px] overflow-hidden"
+                className="w-full overflow-hidden"
                 style={{
-                  background: '#111111',
-                  maxWidth: 'var(--profile-max-width, 380px)',
-                  marginLeft: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
-                  marginRight: 'calc(-1 * var(--profile-about-negative-margin, 12px))',
-                  width: 'calc(100% + (2 * var(--profile-about-negative-margin, 12px)))',
+                  marginLeft: '-24px',
+                  marginRight: '-24px',
+                  width: 'calc(100% + 48px)',
                 }}
               >
                 {subscriptionsLoading ? (
@@ -2117,7 +2128,7 @@ export default function Profile({
                           <motion.button
                             type="button"
                             whileTap={{ scale: 0.98 }}
-                            className="flex items-center gap-3 w-full px-4 py-3 active:bg-white/[0.03] transition-colors text-left"
+                            className="flex items-center gap-3 w-full px-6 py-3 active:bg-white/[0.03] transition-colors text-left"
                             onClick={() => {
                               if (onOpenProfileById) onOpenProfileById(sub.id)
                             }}
@@ -2139,7 +2150,7 @@ export default function Profile({
                             <ChevronRight size={14} className="text-white/20 flex-shrink-0" />
                           </motion.button>
                           {idx < subscriptions.length - 1 && (
-                            <div className="h-px bg-white/[0.04] mx-4" />
+                            <div className="h-px bg-white/[0.04] mx-6" />
                           )}
                         </div>
                       )

@@ -156,7 +156,7 @@ export default function Home() {
         return
       }
       if (/invalid|jwt|token/i.test(error.message)) {
-        setPasswordError('настройки Supabase неверны')
+        setPasswordError('Обратитесь к администратору. Обращаем внимание, что наиболее часто такая ошибка происходит из-за латиницы в имени. Попробуйте создать никнейм на Английском')
       } else {
         setPasswordError('не удалось зарегистрироваться')
       }
