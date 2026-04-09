@@ -565,6 +565,7 @@ export default function Profile({
   useEffect(() => {
     if (typeof window === 'undefined') return
     setProfileInfoLoading(true)
+    setDecoration(null) // сброс при смене профиля
     let idLocal: string | null = null
     let altLocal: string | null = null
     if (viewUserId) {
@@ -1512,6 +1513,24 @@ export default function Profile({
                       </div>
                     )}
                   </div>
+
+                  {/* Облачко под бейджами — только свой профиль */}
+                  {isOwnProfile && (
+                    <div className="mt-1.5">
+                      <motion.button
+                        type="button" whileTap={{ scale: 0.95 }}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-[14px] active:opacity-70 transition-opacity -ml-1.5"
+                        style={{ background: '#1a1a1a' }}
+                        onClick={() => window.dispatchEvent(new Event('profile-empty-add-click'))}
+                      >
+                        <span className="text-[12px] font-sf-ui-light text-white/50">Создать объявление?</span>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/30">
+                          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                      </motion.button>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>
