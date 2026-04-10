@@ -13,7 +13,17 @@ type Message = {
   sender_id: string
   message: string
   image_url: string | null
+  image_urls?: string[] | null
   ad_context?: StoredAd | null
+  review_context?: {
+    review_id: string
+    target_id: string
+    target_tag: string
+    target_avatar: string | null
+    author_tag: string
+    rating: number
+    text: string | null
+  } | null
   created_at: string
   read_at?: string | null
 }
@@ -52,27 +62,33 @@ export default function Chat({
   receiverName, 
   receiverAvatar,
   adContext,
+  reviewContext,
   initialMessage = '',
   contacts: initialContacts = [],
-  forceReceiverTitle = false
+  forceReceiverTitle = false,
+  onOpenProfileById,
 }: { 
   onClose: () => void 
   receiverId: string
   receiverName?: string
   receiverAvatar?: string | null
   adContext?: StoredAd | null
+  reviewContext?: Message['review_context']
   initialMessage?: string
   contacts?: Array<{ type: 'vk' | 'telegram', url: string }>
   forceReceiverTitle?: boolean
+  onOpenProfileById?: (id: string, reviewId?: string) => void
 }) {
   const [userId, setUserId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [previewImage, setPreviewImage] = useState<{ urls: string[]; index: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [chatId, setChatId] = useState<string | null>(null)
   const [showAdPreview, setShowAdPreview] = useState(!!adContext)
+  const [pendingReviewCtx, setPendingReviewCtx] = useState<Message['review_context']>(reviewContext ?? null)
+  const [pendingImages, setPendingImages] = useState<{ file: File; previewUrl: string }[]>([])
   const [contacts, setContacts] = useState(initialContacts)
   const [receiverLastSeen, setReceiverLastSeen] = useState<string | null>(null)
   const [isReceiverTyping, setIsReceiverTyping] = useState(false)
@@ -368,7 +384,8 @@ export default function Chat({
               chat_id: `${receiverId}:direct`,
               sender_id: row.sender_id,
               message: row.message || '',
-              image_url: row.image_url || null,
+              image_url: row.image_url && !row.image_url.includes('|||') ? row.image_url : (row.image_url?.split('|||')[0] ?? null),
+              image_urls: row.image_url?.includes('|||') ? row.image_url.split('|||') : null,
               ad_context: row.ad_id ? {
                 id: row.ad_id,
                 title: row.ad_title || '',
@@ -381,6 +398,15 @@ export default function Chat({
                 location: null,
                 category: null,
                 createdAt: new Date(row.created_at).getTime(),
+              } : null,
+              review_context: row.review_id ? {
+                review_id: row.review_id,
+                target_id: row.review_target_id || '',
+                target_tag: row.review_target_tag || '',
+                target_avatar: row.review_target_avatar || null,
+                author_tag: row.review_author_tag || '',
+                rating: row.review_rating || 0,
+                text: row.review_text || null,
               } : null,
               created_at: row.created_at,
               read_at: row.read_at || null,
@@ -610,13 +636,12 @@ export default function Chat({
     setNewMessage(initialMessage)
   }, [initialMessage])
 
-  const handleSendMessage = async (text: string, context: StoredAd | null = null) => {
-    if (!text.trim() && !context) return
+  const handleSendMessage = async (text: string, context: StoredAd | null = null, revCtx: Message['review_context'] = null) => {
+    if (!text.trim() && !context && !revCtx) return
     if (!userId) return
 
     setSending(true)
 
-    // Оптимистично добавляем в UI
     localMessageCounterRef.current += 1
     const tempId = `temp-${receiverId}-${localMessageCounterRef.current}`
     const msg: Message = {
@@ -626,6 +651,7 @@ export default function Chat({
       message: text,
       image_url: null,
       ad_context: context,
+      review_context: revCtx,
       created_at: new Date().toISOString(),
       read_at: null,
     }
@@ -639,7 +665,6 @@ export default function Chat({
     if (context) setShowAdPreview(false)
     scrollToBottom()
 
-    // Отправляем в Supabase
     const client = getSupabase()
     if (client) {
       const { data, error } = await client
@@ -653,12 +678,18 @@ export default function Chat({
           ad_title: context?.title ?? null,
           ad_price: context?.price ?? null,
           ad_image_url: context?.imageUrl ?? null,
+          review_id: revCtx?.review_id ?? null,
+          review_target_id: revCtx?.target_id ?? null,
+          review_target_tag: revCtx?.target_tag ?? null,
+          review_target_avatar: revCtx?.target_avatar ?? null,
+          review_author_tag: revCtx?.author_tag ?? null,
+          review_rating: revCtx?.rating ?? null,
+          review_text: revCtx?.text ?? null,
         })
         .select('id, created_at')
         .single()
 
       if (!error && data) {
-        // Заменяем temp id на реальный
         setMessages((prev) => {
           const next = prev.map((m) =>
             m.id === tempId ? { ...m, id: data.id, created_at: data.created_at } : m
@@ -666,7 +697,6 @@ export default function Chat({
           persistChatState(userId, next)
           return next
         })
-        // Push-уведомление получателю (fire & forget)
         fetch('/api/push/new-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -679,82 +709,78 @@ export default function Chat({
     window.scrollTo(0, 0)
   }
 
-  const handleSendImage = async (file: File | null) => {
-    if (!file || !userId) return
+  const uploadImage = async (file: File): Promise<string | null> => {
     try {
       const client = getSupabase()
-      let imageUrl: string | null = null
-
       if (client) {
-        // Загружаем в Supabase Storage
         const ext = file.name.split('.').pop() || 'jpg'
-        const path = `chat/${userId}/${Date.now()}.${ext}`
+        const path = `chat/${userId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
         const { data: uploadData, error: uploadError } = await client.storage
           .from('chat-images')
           .upload(path, file, { upsert: false })
         if (!uploadError && uploadData) {
           const { data: urlData } = client.storage.from('chat-images').getPublicUrl(path)
-          imageUrl = urlData?.publicUrl ?? null
+          if (urlData?.publicUrl) return urlData.publicUrl
         }
       }
-
-      // Fallback: base64 если storage недоступен
-      if (!imageUrl) {
-        imageUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
-          reader.readAsDataURL(file)
-        })
-      }
-
-      if (!imageUrl) return
-
-      localMessageCounterRef.current += 1
-      const tempId = `temp-img-${receiverId}-${localMessageCounterRef.current}`
-      const msg: Message = {
-        id: tempId,
-        chat_id: `${receiverId}:direct`,
-        sender_id: userId,
-        message: '',
-        image_url: imageUrl,
-        ad_context: null,
-        created_at: new Date().toISOString(),
-        read_at: null,
-      }
-      setMessages((prev) => {
-        const next = [...prev, msg]
-        persistChatState(userId, next)
-        return next
+      // Fallback base64
+      return await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+        reader.readAsDataURL(file)
       })
-      scrollToBottom()
+    } catch { return null }
+  }
 
-      if (client) {
-        const { data, error } = await client
-          .from('chat_messages')
-          .insert({
-            sender_id: userId,
-            receiver_id: receiverId,
-            message: null,
-            image_url: imageUrl,
-          })
-          .select('id, created_at')
-          .single()
-        if (!error && data) {
-          setMessages((prev) => {
-            const next = prev.map((m) =>
-              m.id === tempId ? { ...m, id: data.id, created_at: data.created_at } : m
-            )
-            persistChatState(userId, next)
-            return next
-          })
-          fetch('/api/push/new-message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ senderId: userId, receiverId, message: 'Фото' }),
-          }).catch(() => {})
-        }
+  const handleSendImage = async (file: File | null) => {
+    if (!file || !userId) return
+    const imageUrl = await uploadImage(file)
+    if (!imageUrl) return
+    localMessageCounterRef.current += 1
+    const tempId = `temp-img-${receiverId}-${localMessageCounterRef.current}`
+    const msg: Message = {
+      id: tempId, chat_id: `${receiverId}:direct`, sender_id: userId,
+      message: '', image_url: imageUrl, ad_context: null,
+      created_at: new Date().toISOString(), read_at: null,
+    }
+    setMessages((prev) => { const next = [...prev, msg]; persistChatState(userId, next); return next })
+    scrollToBottom()
+    const client = getSupabase()
+    if (client) {
+      const { data, error } = await client.from('chat_messages')
+        .insert({ sender_id: userId, receiver_id: receiverId, message: null, image_url: imageUrl })
+        .select('id, created_at').single()
+      if (!error && data) {
+        setMessages((prev) => { const next = prev.map(m => m.id === tempId ? { ...m, id: data.id, created_at: data.created_at } : m); persistChatState(userId, next); return next })
+        fetch('/api/push/new-message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senderId: userId, receiverId, message: 'Фото' }) }).catch(() => {})
       }
-    } catch {}
+    }
+  }
+
+  const handleSendImages = async (files: File[]) => {
+    if (!files.length || !userId) return
+    const urls = await Promise.all(files.map(uploadImage))
+    const validUrls = urls.filter(Boolean) as string[]
+    if (!validUrls.length) return
+    localMessageCounterRef.current += 1
+    const tempId = `temp-imgs-${receiverId}-${localMessageCounterRef.current}`
+    const msg: Message = {
+      id: tempId, chat_id: `${receiverId}:direct`, sender_id: userId,
+      message: '', image_url: validUrls[0], image_urls: validUrls, ad_context: null,
+      created_at: new Date().toISOString(), read_at: null,
+    }
+    setMessages((prev) => { const next = [...prev, msg]; persistChatState(userId, next); return next })
+    scrollToBottom()
+    const client = getSupabase()
+    if (client) {
+      const { data, error } = await client.from('chat_messages')
+        .insert({ sender_id: userId, receiver_id: receiverId, message: null, image_url: validUrls.join('|||') })
+        .select('id, created_at').single()
+      if (!error && data) {
+        setMessages((prev) => { const next = prev.map(m => m.id === tempId ? { ...m, id: data.id, created_at: data.created_at } : m); persistChatState(userId, next); return next })
+        fetch('/api/push/new-message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senderId: userId, receiverId, message: `${validUrls.length} фото` }) }).catch(() => {})
+      }
+    }
   }
 
   const startRecording = async () => {
@@ -1015,13 +1041,33 @@ export default function Chat({
                         <div className="mb-2">
                           <VoiceMessage url={msg.image_url.slice(6)} isMe={isMe} />
                         </div>
+                      ) : msg.image_urls && msg.image_urls.length > 1 ? (
+                        <div className={`mb-2 rounded-[20px] overflow-hidden grid gap-0.5 ${
+                          msg.image_urls.length === 2 ? 'grid-cols-2 w-[220px]' :
+                          msg.image_urls.length === 3 ? 'grid-cols-2 w-[220px]' :
+                          'grid-cols-2 w-[220px]'
+                        }`}>
+                          {msg.image_urls.map((url, i) => {
+                            const isOdd = msg.image_urls!.length % 2 !== 0
+                            const isLast = i === msg.image_urls!.length - 1
+                            const spanFull = isOdd && isLast
+                            return (
+                              <div key={i} className={`overflow-hidden bg-white/5 ${spanFull ? 'col-span-2' : ''}`}
+                                style={{ aspectRatio: spanFull ? '2/1' : '1' }}
+                              >
+                                <img src={url} alt="" className="w-full h-full object-cover cursor-zoom-in"
+                                  onClick={() => setPreviewImage({ urls: msg.image_urls!, index: i })} />
+                              </div>
+                            )
+                          })}
+                        </div>
                       ) : (
                         <div className="mb-2 w-[220px] rounded-[20px] overflow-hidden border border-white/10 bg-white/5">
                           <img
                             src={msg.image_url}
                             alt=""
                             className="w-full h-[220px] object-cover cursor-zoom-in"
-                            onClick={() => setPreviewImage(msg.image_url || null)}
+                            onClick={() => setPreviewImage({ urls: [msg.image_url!], index: 0 })}
                           />
                         </div>
                       )
@@ -1040,6 +1086,45 @@ export default function Chat({
                         />
                       </div>
                     )}
+                    {msg.review_context && (() => {
+                      const rc = msg.review_context!
+                      return (
+                      <button
+                        type="button"
+                        onClick={() => onOpenProfileById?.(rc.target_id, rc.review_id)}
+                        className="mb-2 w-[230px] bg-[#161616] border border-white/10 rounded-[20px] overflow-hidden text-left active:opacity-75 transition-opacity"
+                      >
+                        <div className="px-4 pt-3 pb-1 flex items-center gap-2 border-b border-white/5">
+                          <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-white/10 flex items-center justify-center text-white text-[11px] font-ttc-bold"
+                            style={{ background: rc.target_avatar ? '#0a0a0a' : undefined }}
+                          >
+                            {rc.target_avatar
+                              ? <img src={rc.target_avatar} alt="" className="w-full h-full object-cover" />
+                              : rc.target_tag?.[0]?.toUpperCase() ?? 'U'
+                            }
+                          </div>
+                          <span className="text-[12px] text-white/50 font-sf-ui-light truncate">Отзыв о @{rc.target_tag}</span>
+                        </div>
+                        <div className="px-4 py-3">
+                          <div className="flex gap-0.5 mb-1.5">
+                            {[1,2,3,4,5].map(i => (
+                              <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2L14.4 8.8L21.6 9.3L16.4 13.9L18.1 21L12 17.3L5.9 21L7.6 13.9L2.4 9.3L9.6 8.8L12 2Z"
+                                  fill={i <= rc.rating ? '#4a9edd' : 'none'}
+                                  stroke={i <= rc.rating ? '#4a9edd' : 'rgba(255,255,255,0.2)'}
+                                  strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                                />
+                              </svg>
+                            ))}
+                          </div>
+                          {rc.text && (
+                            <p className="text-[13px] text-white/70 font-sf-ui-light leading-relaxed line-clamp-2">{rc.text}</p>
+                          )}
+                          <p className="text-[11px] text-white/30 font-sf-ui-light mt-1">от @{rc.author_tag}</p>
+                        </div>
+                      </button>
+                      )
+                    })()}
                     
                     {msg.message && (
                       <div 
@@ -1191,7 +1276,7 @@ export default function Chat({
                 {quickResponses.map((text) => (
                   <button
                     key={text}
-                    onClick={() => handleSendMessage(text, showAdPreview ? adContext : null)}
+                    onClick={() => handleSendMessage(text, showAdPreview ? adContext : null, pendingReviewCtx)}
                     className="whitespace-nowrap px-4 py-2.5 rounded-full bg-white/[0.035] border border-white/[0.045] text-white/60 text-[13px] font-sf-ui-medium active:scale-95 transition-all hover:bg-white/[0.06]"
                   >
                     {text}
@@ -1213,6 +1298,91 @@ export default function Chat({
               </button>
             ) : (
               <div className="relative">
+                {/* Превью выбранных фото */}
+                <AnimatePresence>
+                  {pendingImages.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: 'auto' }}
+                      exit={{ opacity: 0, y: 8, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className={`mx-0 bg-[#141414] border border-white/[0.06] px-3 pt-3 pb-2 ${pendingReviewCtx ? '' : 'rounded-t-[20px] border-b-0'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] text-white/35 font-sf-ui-light">{pendingImages.length} фото</span>
+                          <button type="button" onClick={() => setPendingImages([])} className="text-white/30 active:text-white/60">
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className={`grid gap-1 ${
+                          pendingImages.length === 1 ? 'grid-cols-1' :
+                          pendingImages.length === 2 ? 'grid-cols-2' :
+                          pendingImages.length <= 4 ? 'grid-cols-2' :
+                          'grid-cols-3'
+                        }`}>
+                          {pendingImages.map((img, i) => (
+                            <div key={i} className="relative rounded-[10px] overflow-hidden bg-white/5"
+                              style={{ aspectRatio: pendingImages.length === 1 ? '16/9' : '1' }}
+                            >
+                              <img src={img.previewUrl} alt="" className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setPendingImages(prev => prev.filter((_, idx) => idx !== i))}
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center"
+                              >
+                                <X size={10} className="text-white" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Превью пересылаемого отзыва */}
+                <AnimatePresence>
+                  {pendingReviewCtx && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: 'auto' }}
+                      exit={{ opacity: 0, y: 8, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mx-0 rounded-t-[20px] bg-[#141414] border border-white/[0.06] border-b-0 px-4 pt-3 pb-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] text-white/35 font-sf-ui-light">Пересылка отзыва</span>
+                          <button type="button" onClick={() => setPendingReviewCtx(null)} className="text-white/30 active:text-white/60">
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 bg-white/10 flex items-center justify-center text-white text-[9px] font-ttc-bold">
+                            {pendingReviewCtx.target_avatar
+                              ? <img src={pendingReviewCtx.target_avatar} alt="" className="w-full h-full object-cover" />
+                              : pendingReviewCtx.target_tag?.[0]?.toUpperCase() ?? 'U'
+                            }
+                          </div>
+                          <span className="text-[12px] text-white/45 font-sf-ui-light">Отзыв о @{pendingReviewCtx.target_tag}</span>
+                        </div>
+                        <div className="flex gap-0.5 mb-1">
+                          {[1,2,3,4,5].map(i => (
+                            <svg key={i} width="11" height="11" viewBox="0 0 24 24" fill="none">
+                              <path d="M12 2L14.4 8.8L21.6 9.3L16.4 13.9L18.1 21L12 17.3L5.9 21L7.6 13.9L2.4 9.3L9.6 8.8L12 2Z"
+                                fill={i <= pendingReviewCtx.rating ? '#4a9edd' : 'none'}
+                                stroke={i <= pendingReviewCtx.rating ? '#4a9edd' : 'rgba(255,255,255,0.2)'}
+                                strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                              />
+                            </svg>
+                          ))}
+                        </div>
+                        {pendingReviewCtx.text && (
+                          <p className="text-[12px] text-white/55 font-sf-ui-light leading-relaxed line-clamp-2">{pendingReviewCtx.text}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {/* UI записи голосового */}
                 <AnimatePresence>
                   {isRecording && (
@@ -1279,52 +1449,71 @@ export default function Chat({
                     }
                   }}
                   placeholder={'\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435...'}
-                  className="w-full max-h-[180px] min-h-[58px] bg-[#141414] border border-white/[0.06] rounded-[26px] pl-11 pr-14 py-[16px] text-[16px] text-white outline-none focus:border-white/[0.14] transition-all placeholder:text-white/25 resize-none font-sf-ui-light leading-normal scrollbar-hidden"
+                  className={`w-full max-h-[180px] min-h-[58px] bg-[#141414] border border-white/[0.06] pl-11 pr-14 py-[16px] text-[16px] text-white outline-none focus:border-white/[0.14] transition-all placeholder:text-white/25 resize-none font-sf-ui-light leading-normal scrollbar-hidden ${(pendingReviewCtx || pendingImages.length > 0) ? 'rounded-b-[26px] rounded-t-none border-t-0' : 'rounded-[26px]'}`}
                   rows={1}
                   style={{ height: '58px' }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault()
-                      handleSendMessage(newMessage, showAdPreview ? adContext : null)
+                      if (newMessage.trim()) handleSendMessage(newMessage, showAdPreview ? adContext : null, null)
+                      if (pendingImages.length > 0) { handleSendImages(pendingImages.map(i => i.file)); setPendingImages([]) }
+                      if (pendingReviewCtx) { handleSendMessage('', null, pendingReviewCtx); setPendingReviewCtx(null) }
                     }
                   }}
                 />
-                <button
-                  onClick={() => handleSendMessage(newMessage, showAdPreview ? adContext : null)}
-                  disabled={!newMessage.trim() || sending}
-                  className={`absolute right-3.5 bottom-[19px] transition-all ${
-                    newMessage.trim() ? 'text-white active:scale-90' : 'text-white/28'
-                  }`}
-                >
-                  {newMessage.trim() ? (
+                {(newMessage.trim() || pendingReviewCtx || pendingImages.length > 0) ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (newMessage.trim()) {
+                        handleSendMessage(newMessage, showAdPreview ? adContext : null, null)
+                      }
+                      if (pendingImages.length > 0) {
+                        await handleSendImages(pendingImages.map(i => i.file))
+                        setPendingImages([])
+                      }
+                      if (pendingReviewCtx) {
+                        handleSendMessage('', null, pendingReviewCtx)
+                        setPendingReviewCtx(null)
+                      }
+                    }}
+                    disabled={sending}
+                    className="absolute right-3.5 bottom-[19px] transition-all text-white active:scale-90"
+                  >
                     <ArrowUp size={20} strokeWidth={3} className="text-current fill-none" />
-                  ) : (
-                    <button
-                      type="button"
-                      onPointerDown={(e) => { e.preventDefault(); startRecording() }}
-                      onPointerUp={() => stopRecording()}
-                      onPointerLeave={() => { if (isRecording) stopRecording() }}
-                      className={`w-8 h-8 flex items-center justify-center transition-all ${isRecording ? 'text-red-500 scale-110' : 'text-white/50 active:text-white/80'}`}
-                    >
-                      <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                        <line x1="12" y1="19" x2="12" y2="23"/>
-                        <line x1="8" y1="23" x2="16" y2="23"/>
-                      </svg>
-                    </button>
-                  )}
-                </button>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => { e.preventDefault(); startRecording() }}
+                    onPointerUp={() => stopRecording()}
+                    onPointerLeave={() => { if (isRecording) stopRecording() }}
+                    className={`absolute right-3.5 bottom-[19px] w-8 h-8 flex items-center justify-center transition-all ${isRecording ? 'text-red-500 scale-110' : 'text-white/50 active:text-white/80'}`}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                      <line x1="12" y1="19" x2="12" y2="23"/>
+                      <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                  </button>
+                )}
                 <input
                   ref={imageInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   tabIndex={-1}
                   aria-hidden="true"
                   className="hidden"
                   onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null
-                    void handleSendImage(file)
+                    const files = Array.from(e.target.files ?? [])
+                    if (!files.length) return
+                    const newItems = files.map(file => ({
+                      file,
+                      previewUrl: URL.createObjectURL(file),
+                    }))
+                    setPendingImages(prev => [...prev, ...newItems].slice(0, 9))
                     e.currentTarget.value = ''
                   }}
                 />
@@ -1343,55 +1532,106 @@ export default function Chat({
             >
               {/* Шапка */}
               <div
-                className="absolute top-0 left-0 right-0 flex items-center justify-end gap-2 px-5 z-10"
+                className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 z-10"
                 style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <button
-                  type="button"
-                  className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-all"
-                  onClick={async (e) => {
-                    e.stopPropagation()
-                    try {
-                      const res = await fetch(previewImage)
-                      const blob = await res.blob()
-                      const url = URL.createObjectURL(blob)
-                      const a = document.createElement('a')
-                      a.href = url
-                      a.download = `photo_${Date.now()}.jpg`
-                      document.body.appendChild(a)
-                      a.click()
-                      document.body.removeChild(a)
-                      URL.revokeObjectURL(url)
-                    } catch {
-                      window.open(previewImage, '_blank')
-                    }
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-all"
-                  onClick={() => setPreviewImage(null)}
-                >
-                  <X size={20} className="text-white" />
-                </button>
+                <div className="text-[14px] text-white/50 font-sf-ui-light">
+                  {previewImage.urls.length > 1 && `${previewImage.index + 1} / ${previewImage.urls.length}`}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-all"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      const url = previewImage.urls[previewImage.index]
+                      try {
+                        const res = await fetch(url)
+                        const blob = await res.blob()
+                        const objUrl = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = objUrl
+                        a.download = `photo_${Date.now()}.jpg`
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                        URL.revokeObjectURL(objUrl)
+                      } catch { window.open(url, '_blank') }
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10 active:bg-white/20 transition-all"
+                    onClick={() => setPreviewImage(null)}
+                  >
+                    <X size={20} className="text-white" />
+                  </button>
+                </div>
               </div>
-              {/* Фото */}
-              <div className="absolute inset-0 flex items-center justify-center p-5 pt-20 pb-10">
-                <motion.img
-                  src={previewImage}
-                  alt=""
-                  className="max-h-full max-w-full object-contain"
-                  initial={{ scale: 0.92, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  onClick={(e) => e.stopPropagation()}
-                />
+
+              {/* Фото с листанием */}
+              <div className="absolute inset-0 flex items-center justify-center p-5 pt-20 pb-10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={previewImage.index}
+                    src={previewImage.urls[previewImage.index]}
+                    alt=""
+                    className="max-h-full max-w-full object-contain"
+                    initial={{ opacity: 0, x: 40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -40 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    drag={previewImage.urls.length > 1 ? 'x' : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.x < -60 && previewImage.index < previewImage.urls.length - 1) {
+                        setPreviewImage(prev => prev ? { ...prev, index: prev.index + 1 } : null)
+                      } else if (info.offset.x > 60 && previewImage.index > 0) {
+                        setPreviewImage(prev => prev ? { ...prev, index: prev.index - 1 } : null)
+                      }
+                    }}
+                  />
+                </AnimatePresence>
               </div>
+
+              {/* Стрелки навигации */}
+              {previewImage.urls.length > 1 && (
+                <>
+                  {previewImage.index > 0 && (
+                    <button type="button"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20 z-10"
+                      onClick={(e) => { e.stopPropagation(); setPreviewImage(prev => prev ? { ...prev, index: prev.index - 1 } : null) }}
+                    >
+                      <ChevronLeft size={20} className="text-white" />
+                    </button>
+                  )}
+                  {previewImage.index < previewImage.urls.length - 1 && (
+                    <button type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20 z-10"
+                      onClick={(e) => { e.stopPropagation(); setPreviewImage(prev => prev ? { ...prev, index: prev.index + 1 } : null) }}
+                    >
+                      <ChevronLeft size={20} className="text-white rotate-180" />
+                    </button>
+                  )}
+                  {/* Точки */}
+                  <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-1.5 z-10">
+                    {previewImage.urls.map((_, i) => (
+                      <button key={i} type="button"
+                        onClick={(e) => { e.stopPropagation(); setPreviewImage(prev => prev ? { ...prev, index: i } : null) }}
+                        className={`rounded-full transition-all ${i === previewImage.index ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30'}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

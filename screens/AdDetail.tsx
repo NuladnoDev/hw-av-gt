@@ -260,6 +260,7 @@ export default function AdDetail({
   const [sellerAvatar, setSellerAvatar] = useState<string | null>(null)
   const [storeInfo, setStoreInfo] = useState<{ name: string; avatar_url: string | null } | null>(null)
   const [contactsVisible, setContactsVisible] = useState(false)
+  const [sellerRating, setSellerRating] = useState<{ avg: number; count: number } | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const imageScrollRef = useRef<HTMLDivElement | null>(null)
   const contactsRef = useRef<HTMLDivElement | null>(null)
@@ -549,6 +550,28 @@ export default function AdDetail({
     return () => {
       cancelled = true
     }
+  }, [ad.userId])
+
+  useEffect(() => {
+    const sellerId = ad.userId
+    if (!sellerId) { setSellerRating({ avg: 0, count: 0 }); return }
+    const load = async () => {
+      try {
+        const client = getSupabase()
+        if (!client) { setSellerRating({ avg: 0, count: 0 }); return }
+        const { data } = await client
+          .from('reviews')
+          .select('rating')
+          .eq('target_id', sellerId)
+        if (data && data.length > 0) {
+          const avg = data.reduce((s: number, r: { rating: number }) => s + r.rating, 0) / data.length
+          setSellerRating({ avg, count: data.length })
+        } else {
+          setSellerRating({ avg: 0, count: 0 })
+        }
+      } catch { setSellerRating({ avg: 0, count: 0 }) }
+    }
+    load()
   }, [ad.userId])
 
   useEffect(() => {
@@ -1002,7 +1025,26 @@ export default function AdDetail({
 
                 <div className="min-w-0 flex-1">
                   <div className="text-[22px] font-ttc-bold text-white/95 truncate">{sellerName}</div>
-                  <div className="text-[13px] text-white/45 font-sf-ui-medium mt-0.5">{sellerTypeLabel}</div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {sellerRating !== null ? (
+                      <>
+                        {[1,2,3,4,5].map(i => (
+                          <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L14.4 8.8L21.6 9.3L16.4 13.9L18.1 21L12 17.3L5.9 21L7.6 13.9L2.4 9.3L9.6 8.8L12 2Z"
+                              fill={i <= Math.round(sellerRating.avg) ? '#4a9edd' : 'none'}
+                              stroke={i <= Math.round(sellerRating.avg) ? '#4a9edd' : 'rgba(255,255,255,0.2)'}
+                              strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                            />
+                          </svg>
+                        ))}
+                        {sellerRating.count > 0 && (
+                          <span className="text-[12px] text-white/35 font-sf-ui-light ml-1">{sellerRating.avg.toFixed(1)}</span>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-[13px] text-white/45 font-sf-ui-medium">{sellerTypeLabel}</div>
+                    )}
+                  </div>
                   <div className="text-[13px] text-emerald-400 font-sf-ui-medium mt-2">Открыть профиль</div>
                 </div>
               </div>

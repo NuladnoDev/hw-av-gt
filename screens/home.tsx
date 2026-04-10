@@ -24,6 +24,7 @@ const ModeratorPanel = dynamic(() => import('./ModeratorPanel'), { ssr: false })
 import Support from './Support'
 import Chat from './Chat'
 import Favorites from './Favorites'
+import { avatarGradients } from '@/lib/avatarGradients'
 
 export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   type ChatPreview = {
@@ -51,6 +52,8 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [activeChatAd, setActiveChatAd] = useState<StoredAd | null>(null)
   const [chatReceiver, setChatReceiver] = useState<{ id: string; name: string; avatar: string | null } | null>(null)
   const [chatInitialMessage, setChatInitialMessage] = useState('')
+  const [activeChatReview, setActiveChatReview] = useState<Parameters<typeof Chat>[0]['reviewContext']>(null)
+  const [forwardPickerOpen, setForwardPickerOpen] = useState(false)
   
   useEffect(() => {
     const ua = navigator.userAgent || navigator.vendor || ''
@@ -1425,8 +1428,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                     }
                     return prev
                   })
-                  setViewProfileMode('foreign')
-                  setViewProfileUserId(id)
+                  if (id === currentUserId) {
+                    setViewProfileMode('own')
+                    setViewProfileUserId(null)
+                  } else {
+                    setViewProfileMode('foreign')
+                    setViewProfileUserId(id)
+                  }
                   setViewStoreId(null)
                   setProfileTab('ads')
                 }}
@@ -1462,14 +1470,24 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                     }
                     return prev
                   })
-                  setViewProfileMode('foreign')
-                  setViewProfileUserId(id)
+                  if (id === currentUserId) {
+                    setViewProfileMode('own')
+                    setViewProfileUserId(null)
+                  } else {
+                    setViewProfileMode('foreign')
+                    setViewProfileUserId(id)
+                  }
                   setViewStoreId(null)
                   setProfileTab('ads')
                 }}
                 onOpenChat={(uid, uTag, uAvatar) => {
                   setChatReceiver({ id: uid, name: uTag, avatar: uAvatar })
                   setChatOpen(true)
+                }}
+                onForwardReview={(review) => {
+                  setActiveChatReview(review)
+                  setActiveChatAd(null)
+                  setForwardPickerOpen(true)
                 }}
               />
             )}
@@ -2777,6 +2795,77 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             }}
           />
         )}
+        {/* Плашка выбора получателя для пересылки отзыва */}
+        <AnimatePresence>
+          {forwardPickerOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[210] bg-black/70 backdrop-blur-sm"
+                onClick={() => { setForwardPickerOpen(false); setActiveChatReview(null) }}
+              />
+              <div className="fixed inset-0 z-[220] flex items-end justify-center pointer-events-none">
+                <motion.div
+                  initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+                  className="w-full bg-[#141414] border-t border-white/10 rounded-t-[28px] pt-5 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pointer-events-auto max-h-[70vh] flex flex-col"
+                >
+                  <div className="w-12 h-1.5 rounded-full bg-white/15 mx-auto mb-4 flex-shrink-0" />
+                  <div className="text-[17px] font-sf-ui-medium text-white px-6 mb-3 flex-shrink-0">Переслать отзыв</div>
+                  <div className="overflow-y-auto flex-1">
+                    {chatPreviews.length === 0 ? (
+                      <div className="px-6 py-8 text-[14px] text-white/30 font-sf-ui-light text-center">Нет диалогов</div>
+                    ) : (
+                      <div className="flex flex-col">
+                        {chatPreviews.map((chat, idx) => {
+                          let sum = 0
+                          const base = chat.receiverId || 'u'
+                          for (let i = 0; i < base.length; i++) sum += base.charCodeAt(i)
+                          const grad = avatarGradients[sum % avatarGradients.length]
+                          return (
+                            <div key={chat.id}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setForwardPickerOpen(false)
+                                  setChatReceiver({ id: chat.receiverId, name: chat.receiverName, avatar: chat.receiverAvatar })
+                                  setActiveChatAd(null)
+                                  setChatInitialMessage('')
+                                  setChatOpen(true)
+                                }}
+                                className="flex items-center gap-3 w-full px-6 py-3 active:bg-white/[0.03] transition-colors text-left"
+                              >
+                                <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-white font-ttc-bold text-[15px]"
+                                  style={{ background: chat.receiverAvatar ? '#0a0a0a' : grad }}
+                                >
+                                  {chat.receiverAvatar
+                                    ? <img src={chat.receiverAvatar} alt="" className="w-full h-full object-cover" />
+                                    : chat.receiverName?.[0]?.toUpperCase() ?? 'U'
+                                  }
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-[15px] font-sf-ui-medium text-white/90 truncate">{chat.receiverName}</div>
+                                  {chat.lastMessage && (
+                                    <div className="text-[12px] text-white/30 font-sf-ui-light truncate mt-0.5">{chat.lastMessage}</div>
+                                  )}
+                                </div>
+                                <ChevronRight size={14} className="text-white/20 flex-shrink-0" />
+                              </button>
+                              {idx < chatPreviews.length - 1 && (
+                                <div className="h-px bg-white/[0.04] mx-6" />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>
+
         {chatOpen && chatReceiver && (
           <Chat
             onClose={() => {
@@ -2784,13 +2873,40 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
               setActiveChatAd(null)
               setChatReceiver(null)
               setChatInitialMessage('')
+              setActiveChatReview(null)
             }}
             receiverId={chatReceiver.id}
             receiverName={chatReceiver.name}
             receiverAvatar={chatReceiver.avatar}
             adContext={activeChatAd}
-            forceReceiverTitle={!activeChatAd}
+            reviewContext={activeChatReview}
+            forceReceiverTitle={!activeChatAd && !activeChatReview}
             initialMessage={chatInitialMessage}
+            onOpenProfileById={(id, reviewId) => {
+              setChatOpen(false)
+              setActiveChatAd(null)
+              setChatReceiver(null)
+              setChatInitialMessage('')
+              setActiveChatReview(null)
+              setTab('profile')
+              setProfileEdit(false)
+              setSelectedAd(null)
+              if (id === currentUserId) {
+                setViewProfileMode('own')
+                setViewProfileUserId(null)
+              } else {
+                setViewProfileMode('foreign')
+                setViewProfileUserId(id)
+              }
+              setViewStoreId(null)
+              setProfileTab('reviews')
+              if (reviewId) {
+                setTimeout(() => {
+                  const el = document.getElementById(`review-${reviewId}`)
+                  el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }, 400)
+              }
+            }}
             contacts={(() => {
               if (!activeChatAd?.userId) return []
               try {

@@ -34,6 +34,7 @@ import { AdCard, AdCardSkeleton, loadAdsFromStorage, deleteAdById, StoredAd } fr
 import AdsEdit from './Ads_Edit'
 import UserAdsScreen from './UserAdsScreen'
 import ProfileDecorations, { AvatarDecoration, type DecorationId } from './ProfileDecorations'
+import Reviews from './Reviews'
 import VerifiedBadge from '../components/VerifiedBadge'
 import QualityBadge from '../components/QualityBadge'
 import FormattedText from '../components/FormattedText'
@@ -130,6 +131,7 @@ export default function Profile({
   isAuthed,
   onOpenAd,
   onOpenChat,
+  onForwardReview,
 }: {
   profileTab: 'ads' | 'about' | 'friends' | 'favorites' | 'reviews'
   setProfileTab: (t: 'ads' | 'about' | 'friends' | 'favorites' | 'reviews') => void
@@ -142,6 +144,7 @@ export default function Profile({
   isAuthed?: boolean
   onOpenAd?: (ad: StoredAd) => void
   onOpenChat?: (userId: string, userTag: string, avatarUrl: string | null) => void
+  onForwardReview?: (review: { review_id: string; target_id: string; target_tag: string; target_avatar: string | null; author_tag: string; rating: number; text: string | null }) => void
 }) {
   const [tagText, setTagText] = useState<string>(typeof userTag === 'string' ? userTag.replace(/^@/, '') : '')
   const [tagEditing, setTagEditing] = useState(false)
@@ -2178,78 +2181,14 @@ export default function Profile({
                 )}
               </div>
             ) : profileTab === 'reviews' ? (
-              <div className="py-10 flex flex-col items-center text-center px-4">
-                <svg width="180" height="160" viewBox="0 0 180 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Большая шестерёнка */}
-                  <motion.g
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-                    style={{ transformOrigin: '70px 75px' }}
-                  >
-                    <circle cx="70" cy="75" r="22" stroke="#555" strokeWidth="3" fill="none"/>
-                    <circle cx="70" cy="75" r="10" stroke="#666" strokeWidth="2.5" fill="none"/>
-                    {[0,45,90,135,180,225,270,315].map((angle, i) => {
-                      const rad = (angle * Math.PI) / 180
-                      const x1 = 70 + 22 * Math.cos(rad)
-                      const y1 = 75 + 22 * Math.sin(rad)
-                      const x2 = 70 + 30 * Math.cos(rad)
-                      const y2 = 75 + 30 * Math.sin(rad)
-                      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#555" strokeWidth="5" strokeLinecap="round"/>
-                    })}
-                  </motion.g>
-
-                  {/* Маленькая шестерёнка */}
-                  <motion.g
-                    animate={{ rotate: -360 }}
-                    transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-                    style={{ transformOrigin: '118px 52px' }}
-                  >
-                    <circle cx="118" cy="52" r="14" stroke="#4a4a4a" strokeWidth="2.5" fill="none"/>
-                    <circle cx="118" cy="52" r="6" stroke="#555" strokeWidth="2" fill="none"/>
-                    {[0,60,120,180,240,300].map((angle, i) => {
-                      const rad = (angle * Math.PI) / 180
-                      const x1 = 118 + 14 * Math.cos(rad)
-                      const y1 = 52 + 14 * Math.sin(rad)
-                      const x2 = 118 + 20 * Math.cos(rad)
-                      const y2 = 52 + 20 * Math.sin(rad)
-                      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#4a4a4a" strokeWidth="4" strokeLinecap="round"/>
-                    })}
-                  </motion.g>
-
-                  {/* Гаечный ключ */}
-                  <motion.g
-                    animate={{ rotate: [-15, 15, -15] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                    style={{ transformOrigin: '38px 118px' }}
-                  >
-                    <path d="M28 108 Q22 102 24 94 Q26 86 34 84 Q38 83 40 85 L36 89 Q38 91 40 89 L44 85 Q50 90 48 98 Q46 106 38 110 Z" stroke="#666" strokeWidth="1.5" fill="#2a2a2a" strokeLinejoin="round"/>
-                    <rect x="35" y="108" width="6" height="22" rx="3" fill="#333" stroke="#555" strokeWidth="1.5"/>
-                  </motion.g>
-
-                  {/* Звёздочки-искры */}
-                  <motion.g animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2, repeat: Infinity, delay: 0 }}>
-                    <path d="M140 90 L142 95 L147 97 L142 99 L140 104 L138 99 L133 97 L138 95 Z" fill="#888"/>
-                  </motion.g>
-                  <motion.g animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.8 }}>
-                    <path d="M25 55 L26.5 59 L30.5 60.5 L26.5 62 L25 66 L23.5 62 L19.5 60.5 L23.5 59 Z" fill="#666"/>
-                  </motion.g>
-                  <motion.g animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}>
-                    <path d="M155 120 L156 123 L159 124 L156 125 L155 128 L154 125 L151 124 L154 123 Z" fill="#666"/>
-                  </motion.g>
-
-                  {/* Прогресс-бар внизу */}
-                  <rect x="30" y="145" width="120" height="6" rx="3" fill="#222"/>
-                  <motion.rect
-                    x="30" y="145" height="6" rx="3" fill="#666"
-                    animate={{ width: [20, 90, 20] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                </svg>
-
-                <div className="mt-4 text-[17px] font-sf-ui-medium text-white/70">Раздел скоро появится</div>
-                <div className="mt-1.5 text-[13px] text-white/30 font-sf-ui-light leading-relaxed max-w-[220px]">
-                  Раздел отзывов скоро появится. Мы работаем над этим. Новости о разработке в нашем Telegram канале. А точно, его нет.
-                </div>
+              <div className="pb-8">
+                <Reviews
+                  targetId={viewUserId ?? userId ?? ''}
+                  isAuthed={isAuthed && !isOwnProfile}
+                  targetTag={tagText}
+                  targetAvatar={avatarUrl}
+                  onForwardReview={onForwardReview}
+                />
               </div>
             ) : null}
           </motion.div>
