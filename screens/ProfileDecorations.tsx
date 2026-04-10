@@ -49,7 +49,8 @@ export function AvatarDecoration({ id, size = 84 }: { id: DecorationId; size?: n
           position: 'absolute',
           width: 3 + (i % 3) * 2, height: 3 + (i % 3) * 2,
           borderRadius: '50%', background: '#fff',
-          left: (i % 8) * 24, top: (i % 4) * (h / 4),
+          left: (i % 8) * 24,
+          top: Math.floor(i / 8) * (h / 2) + (i % 4) * (h / 8),
           boxShadow: '0 0 4px 2px rgba(255,255,255,0.6)',
         }}
           animate={{ opacity: [0, 1, 0], scale: [0.3, 1.4, 0.3] }}

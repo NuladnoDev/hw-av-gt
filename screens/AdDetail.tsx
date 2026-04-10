@@ -115,6 +115,9 @@ export default function AdDetail({
   const [recommendations, setRecommendations] = useState<StoredAd[]>([])
   const [visibleRecommendations, setVisibleRecommendations] = useState(12)
   const [showRecommendations, setShowRecommendations] = useState(true)
+  const [aiSummaryOpen, setAiSummaryOpen] = useState(false)
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
 
   // Трекинг просмотра
   useEffect(() => {
@@ -333,6 +336,78 @@ export default function AdDetail({
 
   const sellerName = ad.storeId && storeInfo ? storeInfo.name : (ad.userTag || 'Продавец')
   const sellerTypeLabel = ad.storeId ? 'Магазин' : 'Частное лицо'
+
+  // Умный пересказ без API
+  const generateSummary = () => {
+    if (aiSummary) { setAiSummaryOpen(true); return }
+    setAiLoading(true)
+    setAiSummaryOpen(true)
+    setTimeout(() => {
+      const s = ad.specs ?? []
+      const get = (label: string) => s.find(x => x.label.toLowerCase().includes(label.toLowerCase()))?.value
+
+      const parts: string[] = []
+      const cat = ad.category
+
+      // Состояние
+      if (ad.condition) parts.push(`Состояние: ${ad.condition}.`)
+
+      // Характеристики по категории — главный источник
+      if (cat === 'nicotine') {
+        const brand = get('Бренд'), type = get('Тип'), puffs = get('затяжек'), strength = get('Крепость'), flavor = get('Вкус'), battery = get('аккумулятор'), volume = get('Объем')
+        if (brand) parts.push(`Бренд: ${brand}.`)
+        if (type) parts.push(`Тип: ${type}.`)
+        if (volume) parts.push(`Объём жидкости: ${volume}.`)
+        if (battery) parts.push(`Аккумулятор: ${battery}.`)
+        if (strength) parts.push(`Крепость: ${strength}.`)
+        if (puffs) parts.push(`Затяжек: ${puffs}.`)
+        if (flavor) parts.push(`Вкус: ${flavor}.`)
+      } else if (cat === 'things') {
+        const brand = get('Бренд'), model = get('Модель'), memory = get('Память'), diag = get('Диагональ'), year = get('Год'), kit = get('Комплект'), warranty = get('Гарантия'), color = get('Цвет')
+        if (brand) parts.push(`Бренд: ${brand}.`)
+        if (model) parts.push(`Модель: ${model}.`)
+        if (memory) parts.push(`Память: ${memory}.`)
+        if (diag) parts.push(`Экран: ${diag}.`)
+        if (year) parts.push(`Год выпуска: ${year}.`)
+        if (warranty) parts.push(`Гарантия: ${warranty}.`)
+        if (kit) parts.push(`Комплект: ${kit}.`)
+        if (color) parts.push(`Цвет: ${color}.`)
+      } else if (cat === 'service') {
+        const type = get('Вид'), exp = get('Опыт'), format = get('Формат'), region = get('Регион'), price = get('Стоимость')
+        if (type) parts.push(`Услуга: ${type}.`)
+        if (exp) parts.push(`Опыт: ${exp}.`)
+        if (format) parts.push(`Формат: ${format}.`)
+        if (price) parts.push(`Стоимость: ${price}.`)
+        if (region) parts.push(`Регион: ${region}.`)
+      } else if (cat === 'job') {
+        const pos = get('Должность'), salary = get('Зарплата'), schedule = get('График'), format = get('Формат'), exp = get('Требуемый'), employment = get('Занятость')
+        if (pos) parts.push(`Вакансия: ${pos}.`)
+        if (salary) parts.push(`Зарплата: ${salary}.`)
+        if (employment) parts.push(`Занятость: ${employment}.`)
+        if (schedule) parts.push(`График: ${schedule}.`)
+        if (format) parts.push(`Формат: ${format}.`)
+        if (exp) parts.push(`Требуемый опыт: ${exp}.`)
+      } else {
+        // Все характеристики
+        s.forEach(spec => parts.push(`${spec.label}: ${spec.value}.`))
+      }
+
+      // Описание (если есть и не совпадает с названием)
+      if (ad.description && ad.description.trim().length > 10 && ad.description.trim() !== ad.title) {
+        const desc = ad.description.trim()
+        parts.push(desc.length > 120 ? desc.slice(0, 120).replace(/\s\S*$/, '') + '...' : desc)
+      }
+
+      // Цена
+      parts.push(`Цена: ${ad.price} ₽.`)
+
+      // Локация
+      if (ad.location) parts.push(`Местоположение: ${ad.location}.`)
+
+      setAiSummary(parts.length > 1 ? parts.join(' ') : `${ad.title}. Цена: ${ad.price} ₽.`)
+      setAiLoading(false)
+    }, 600)
+  }
 
   const openChatWithMessage = (text?: string) => {
     if (onOpenChat && ad.userId) {
@@ -825,6 +900,70 @@ export default function AdDetail({
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  {/* Пересказ ИИ — внутри плашки описания */}
+                  <div className="mt-3 border-t border-white/[0.05] pt-3">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between active:opacity-70 transition-opacity"
+                      onClick={generateSummary}
+                    >
+                      <div className="flex items-center gap-2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          {/* Левое полушарие */}
+                          <path d="M12 5C9 5 6 7 6 10c0 1.5.5 2.5 1 3.5C6 15 6 17 7 18c1 1 2.5 1 4 1"/>
+                          {/* Правое полушарие */}
+                          <path d="M12 5c3 0 6 2 6 5 0 1.5-.5 2.5-1 3.5 1 1.5 1 3.5 0 4.5-1 1-2.5 1-4 1"/>
+                          {/* Центральная линия */}
+                          <line x1="12" y1="5" x2="12" y2="19"/>
+                          {/* Извилины левые */}
+                          <path d="M9 9c-1 .5-1.5 1.5-1 2.5"/>
+                          <path d="M8 13c-.5 1 0 2 1 2.5"/>
+                          {/* Извилины правые */}
+                          <path d="M15 9c1 .5 1.5 1.5 1 2.5"/>
+                          <path d="M16 13c.5 1 0 2-1 2.5"/>
+                        </svg>
+                        <span className="text-[12px] font-sf-ui-medium text-white/45 leading-none">Быстрый пересказ с AI</span>
+                      </div>
+                      <motion.svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className="text-white/20"
+                        animate={{ rotate: aiSummaryOpen ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <path d="M6 9l6 6 6-6"/>
+                      </motion.svg>
+                    </button>
+
+                    <AnimatePresence>
+                      {aiSummaryOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22, ease: 'easeInOut' }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pt-3">
+                            {aiLoading ? (
+                              <div className="flex items-center gap-2">
+                                <div className="flex gap-1">
+                                  {[0,1,2].map(i => (
+                                    <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-white/60"
+                                      animate={{ opacity: [0.3, 1, 0.3] }}
+                                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-[12px] text-white/25 font-sf-ui-light">Анализирую...</span>
+                              </div>
+                            ) : (
+                              <p className="text-[13px] text-white/55 font-sf-ui-light leading-relaxed">{aiSummary}</p>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </>
               )}
