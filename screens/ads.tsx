@@ -938,6 +938,7 @@ export default function Ads({
 
   const [userCity, setUserCity] = useState<string | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [showCategories, setShowCategories] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('hw-show-categories')
@@ -1155,11 +1156,31 @@ export default function Ads({
     const load = async () => {
       const all = await loadAdsFromStorage()
       if (cancelled) return
-      // Объединяем реальные объявления из БД с фейковыми для наполнения
-      const merged = [...all, ...FAKE_ADS]
-      const sorted = merged.sort((a, b) => b.createdAt - a.createdAt)
+      if (all.length === 0) {
+        // Проверяем есть ли вообще соединение с Supabase
+        const client = getSupabase()
+        if (!client) {
+          setLoadError(true)
+          setInitialLoading(false)
+          return
+        }
+        // Пробуем простой запрос чтобы понять — пусто или ошибка
+        try {
+          const { error } = await client.from('ads').select('id').limit(1)
+          if (error) {
+            setLoadError(true)
+            setInitialLoading(false)
+            return
+          }
+        } catch {
+          setLoadError(true)
+          setInitialLoading(false)
+          return
+        }
+      }
+      setLoadError(false)
+      const sorted = [...all].sort((a, b) => b.createdAt - a.createdAt)
       setItems(sorted)
-      // Save to localStorage for other components (like AdDetail recommendations)
       persistAdsCache(sorted)
       setInitialLoading(false)
     }
@@ -1547,6 +1568,36 @@ export default function Ads({
             {Array.from({ length: 6 }).map((_, index) => (
               <AdCardSkeleton key={`skeleton-${index}`} />
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="w-full min-h-[360px] rounded-[20px] bg-white/[0.028] border border-white/[0.05] px-6 py-10 flex flex-col items-center justify-center text-center">
+            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Глобус */}
+              <circle cx="60" cy="60" r="36" stroke="rgba(255,255,255,0.12)" strokeWidth="2.5" fill="none"/>
+              <ellipse cx="60" cy="60" rx="16" ry="36" stroke="rgba(255,255,255,0.10)" strokeWidth="2" fill="none"/>
+              <line x1="24" y1="60" x2="96" y2="60" stroke="rgba(255,255,255,0.10)" strokeWidth="2"/>
+              <line x1="30" y1="42" x2="90" y2="42" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
+              <line x1="30" y1="78" x2="90" y2="78" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
+              {/* Перечёркивающая линия */}
+              <line x1="28" y1="28" x2="92" y2="92" stroke="rgba(255,80,80,0.55)" strokeWidth="3" strokeLinecap="round"/>
+              {/* Замок снизу справа */}
+              <rect x="72" y="82" width="22" height="16" rx="4" fill="#1a1a1a" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
+              <path d="M76 82v-4a7 7 0 0 1 14 0v4" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" fill="none"/>
+              <circle cx="83" cy="90" r="2" fill="rgba(255,255,255,0.35)"/>
+            </svg>
+            <div className="mt-5 text-[18px] font-sf-ui-medium text-white/80 leading-snug">
+              Проблема на стороне провайдера
+            </div>
+            <div className="mt-2 text-[13px] text-white/35 font-sf-ui-light leading-relaxed max-w-[260px]">
+              Попробуйте зайти позже или включить средство подмены трафика (VPN)
+            </div>
+            <button
+              type="button"
+              onClick={() => { setLoadError(false); setInitialLoading(true); loadAdsFromStorage().then(all => { const sorted = [...all].sort((a,b) => b.createdAt - a.createdAt); setItems(sorted); persistAdsCache(sorted); setInitialLoading(false) }).catch(() => { setLoadError(true); setInitialLoading(false) }) }}
+              className="mt-6 px-6 py-2.5 rounded-full bg-white/8 border border-white/10 text-[14px] text-white/60 font-sf-ui-light active:opacity-70 transition-opacity"
+            >
+              Попробовать снова
+            </button>
           </div>
         ) : visibleItems.length === 0 ? (
           <div className="w-full min-h-[300px] rounded-[20px] bg-white/[0.028] border border-white/[0.05] px-5 py-8 flex flex-col items-center justify-center text-center">
