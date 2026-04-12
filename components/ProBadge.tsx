@@ -49,8 +49,8 @@ export default function ProBadge({ size = 20 }: { size?: number }) {
           </svg>
           {/* PRO text */}
           <span
-            className="font-ttc-bold text-white select-none"
-            style={{ fontSize: size * 0.52, lineHeight: 1 }}
+            className="font-ttc-bold text-white select-none inline-flex items-center"
+            style={{ fontSize: size * 0.52, lineHeight: 1, paddingTop: 1 }}
           >PRO</span>
         </div>
       </motion.div>
