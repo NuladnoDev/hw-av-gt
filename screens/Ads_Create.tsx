@@ -318,6 +318,7 @@ export default function AdsCreate({
   const [aiMode, setAiMode] = useState<'idle' | 'input' | 'loading'>('idle')
   const [aiError, setAiError] = useState(false)
   const [showProSheet, setShowProSheet] = useState(false)
+  const [isPro, setIsPro] = useState(false)
 
   const getConditionLabel = (c: AdsCondition | null) => {
     const found = CONDITION_OPTIONS.find((o) => o.id === c)
@@ -563,6 +564,13 @@ export default function AdsCreate({
             avatar_url: m.stores.avatar_url
           })))
         }
+        // Check pro status
+        const { data: prof } = await client
+          .from('profiles')
+          .select('is_pro')
+          .eq('id', uid)
+          .maybeSingle()
+        if (prof?.is_pro) setIsPro(true)
       } catch (e) {
         console.error('Error loading stores for ad creation:', e)
       }
@@ -1875,7 +1883,7 @@ export default function AdsCreate({
                   {aiMode === 'idle' && (
                     <button
                       type="button"
-                      onClick={() => setShowProSheet(true)}
+                      onClick={() => isPro ? setAiMode('input') : setShowProSheet(true)}
                       className="w-full flex items-center gap-3 px-5 py-3.5 rounded-[26px] border border-[#2B2B2B] bg-[#111111] active:bg-white/5 transition-colors"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
