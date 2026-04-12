@@ -314,6 +314,10 @@ export default function AdsCreate({
   const [publishing, setPublishing] = useState(false)
   const [publishPhase, setPublishPhase] = useState<'idle' | 'running' | 'full'>('idle')
   const [showPublishAnimation, setShowPublishAnimation] = useState(false)
+  const [aiHint, setAiHint] = useState('')
+  const [aiMode, setAiMode] = useState<'idle' | 'input' | 'loading'>('idle')
+  const [aiError, setAiError] = useState(false)
+  const [showProSheet, setShowProSheet] = useState(false)
 
   const getConditionLabel = (c: AdsCondition | null) => {
     const found = CONDITION_OPTIONS.find((o) => o.id === c)
@@ -417,6 +421,28 @@ export default function AdsCreate({
     const client = getSupabase()
     if (!client) return false
 
+    // NSFW / 18+ check — temporarily disabled
+    // TODO: re-enable when nsfwjs is configured
+    let isAdult = false
+    /*
+    try {
+      const nsfwRes = await fetch('/api/check-nsfw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: images.slice(0, 3),
+          category,
+          title: titleTrim,
+          description: descriptionTrim,
+        }),
+      })
+      if (nsfwRes.ok) {
+        const nsfwData = await nsfwRes.json() as { isAdult?: boolean }
+        isAdult = !!nsfwData.isAdult
+      }
+    } catch {}
+    */
+
     let finalStoreId: string | null = selectedStoreId
     if (selectedStoreId && uid) {
       try {
@@ -444,6 +470,7 @@ export default function AdsCreate({
       location,
       category,
       store_id: finalStoreId,
+      is_adult: isAdult,
       created_at: new Date().toISOString(),
     }
 
@@ -817,6 +844,7 @@ export default function AdsCreate({
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-[150] flex w-full items-center justify-center bg-[#0A0A0A] overflow-hidden" style={{ height: '100dvh' }}>
       <div className="relative h-[812px] w-[375px]" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         <div className="absolute left-0 top-0 h-[812px] w-[375px]" style={{ backgroundColor: '#0A0A0A' }} />
@@ -1268,10 +1296,10 @@ export default function AdsCreate({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Название товара"
-                  className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                  className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                 />
 
-                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                <div className="mt-4 rounded-[20px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
                   <div className="flex-shrink-0">
                     <StepIllustration step={3} />
                   </div>
@@ -1352,7 +1380,7 @@ export default function AdsCreate({
                 </div>
 
                 <div className="mt-8 flex items-center gap-4">
-                  <div className="flex-1 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-3">
+                  <div className="flex-1 rounded-[24px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-3">
                     <div className="flex-shrink-0 scale-75 origin-center">
                       <StepIllustration step={4} />
                     </div>
@@ -1399,7 +1427,7 @@ export default function AdsCreate({
                             value={brand}
                             onChange={(e) => setBrand(e.target.value)}
                             placeholder="HQD, Elf Bar и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                            className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                           />
                         </div>
                       </div>
@@ -1415,7 +1443,7 @@ export default function AdsCreate({
                             value={nicotineFormat}
                             onChange={(e) => setNicotineFormat(e.target.value)}
                             placeholder="Одноразовое, pod-система, мод"
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                            className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                           />
                         </div>
                       </div>
@@ -1432,7 +1460,7 @@ export default function AdsCreate({
                             onChange={(e) => handleDecimalChange(e.target.value, setNicotineTankVolume)}
                             inputMode="decimal"
                             placeholder="2.5, 5, 10"
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                            className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                           />
                         </div>
                       </div>
@@ -1449,7 +1477,7 @@ export default function AdsCreate({
                             onChange={(e) => handleNumericChange(e.target.value, setNicotineBatteryCapacity)}
                             inputMode="numeric"
                             placeholder="400, 850, 1500"
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                            className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                           />
                         </div>
                       </div>
@@ -1466,7 +1494,7 @@ export default function AdsCreate({
                             onChange={(e) => handleDecimalChange(e.target.value, setNicotineStrength)}
                             inputMode="decimal"
                             placeholder="3, 20, 50"
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                            className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                           />
                         </div>
                       </div>
@@ -1483,7 +1511,7 @@ export default function AdsCreate({
                             onChange={(e) => handleNumericChange(e.target.value, setNicotinePuffs)}
                             inputMode="numeric"
                             placeholder="800, 1500, 2500"
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                            className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                           />
                         </div>
                       </div>
@@ -1499,7 +1527,7 @@ export default function AdsCreate({
                             value={nicotineFlavor}
                             onChange={(e) => setNicotineFlavor(e.target.value)}
                             placeholder="Манго, ягодный микс, кола"
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                            className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                           />
                         </div>
                       </div>
@@ -1515,7 +1543,7 @@ export default function AdsCreate({
                             value={color}
                             onChange={(e) => setColor(e.target.value)}
                             placeholder="Черный, градиент и др."
-                            className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                            className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] pl-11 pr-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                           />
                         </div>
                       </div>
@@ -1532,7 +1560,7 @@ export default function AdsCreate({
                           value={brand}
                           onChange={(e) => setBrand(e.target.value)}
                           placeholder="Apple, Samsung, Sony"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1543,7 +1571,7 @@ export default function AdsCreate({
                           value={thingsModel}
                           onChange={(e) => setThingsModel(e.target.value)}
                           placeholder="iPhone 13, PlayStation 5"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1555,7 +1583,7 @@ export default function AdsCreate({
                           onChange={(e) => handleNumericChange(e.target.value, setThingsMemory)}
                           inputMode="numeric"
                           placeholder="128, 256, 512"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1567,7 +1595,7 @@ export default function AdsCreate({
                           onChange={(e) => handleDecimalChange(e.target.value, setThingsDiagonal)}
                           inputMode="decimal"
                           placeholder='6.1, 13.3, 55'
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1579,7 +1607,7 @@ export default function AdsCreate({
                           onChange={(e) => handleNumericChange(e.target.value, setThingsYear)}
                           inputMode="numeric"
                           placeholder="2020, 2021"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1590,7 +1618,7 @@ export default function AdsCreate({
                           value={thingsKit}
                           onChange={(e) => setThingsKit(e.target.value)}
                           placeholder="Коробка, зарядка, документы"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1601,7 +1629,7 @@ export default function AdsCreate({
                           value={thingsWarranty}
                           onChange={(e) => setThingsWarranty(e.target.value)}
                           placeholder="Осталось 6 месяцев, без гарантии"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1612,7 +1640,7 @@ export default function AdsCreate({
                           value={color}
                           onChange={(e) => setColor(e.target.value)}
                           placeholder="Черный, белый, серебристый"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                     </>
@@ -1628,7 +1656,7 @@ export default function AdsCreate({
                           value={serviceType}
                           onChange={(e) => setServiceType(e.target.value)}
                           placeholder="Маникюр, репетитор, доставка и др."
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1639,7 +1667,7 @@ export default function AdsCreate({
                           value={serviceExperience}
                           onChange={(e) => setServiceExperience(e.target.value)}
                           placeholder="Без опыта, 3 года и т.п."
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1650,7 +1678,7 @@ export default function AdsCreate({
                           value={serviceFormat}
                           onChange={(e) => setServiceFormat(e.target.value)}
                           placeholder="Выезд, у себя, онлайн"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1661,7 +1689,7 @@ export default function AdsCreate({
                           value={servicePrice}
                           onChange={(e) => setServicePrice(e.target.value)}
                           placeholder="1500 ₽/час, по договоренности"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1672,7 +1700,7 @@ export default function AdsCreate({
                           value={serviceRegion}
                           onChange={(e) => setServiceRegion(e.target.value)}
                           placeholder="Город, район, метро"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                     </>
@@ -1688,7 +1716,7 @@ export default function AdsCreate({
                           value={jobPosition}
                           onChange={(e) => setJobPosition(e.target.value)}
                           placeholder="Официант, бариста, SMM-специалист"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1699,7 +1727,7 @@ export default function AdsCreate({
                           value={jobEmploymentType}
                           onChange={(e) => setJobEmploymentType(e.target.value)}
                           placeholder="Полная, частичная, подработка"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1710,7 +1738,7 @@ export default function AdsCreate({
                           value={jobSchedule}
                           onChange={(e) => setJobSchedule(e.target.value)}
                           placeholder="5/2, 2/2, смены"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1721,7 +1749,7 @@ export default function AdsCreate({
                           value={jobFormat}
                           onChange={(e) => setJobFormat(e.target.value)}
                           placeholder="Офис, удалёнка, гибрид"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1732,7 +1760,7 @@ export default function AdsCreate({
                           value={jobSalary}
                           onChange={(e) => setJobSalary(e.target.value)}
                           placeholder="от 40 000 ₽"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1743,7 +1771,7 @@ export default function AdsCreate({
                           value={jobExperience}
                           onChange={(e) => setJobExperience(e.target.value)}
                           placeholder="Без опыта, 1 год и т.п."
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                     </>
@@ -1759,7 +1787,7 @@ export default function AdsCreate({
                           value={otherType}
                           onChange={(e) => setOtherType(e.target.value)}
                           placeholder="Что за товар или объект"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1770,7 +1798,7 @@ export default function AdsCreate({
                           value={brand}
                           onChange={(e) => setBrand(e.target.value)}
                           placeholder="При наличии бренда"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1781,7 +1809,7 @@ export default function AdsCreate({
                           value={color}
                           onChange={(e) => setColor(e.target.value)}
                           placeholder="Основной цвет товара"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                       <div>
@@ -1792,14 +1820,14 @@ export default function AdsCreate({
                           value={otherDetails}
                           onChange={(e) => setOtherDetails(e.target.value)}
                           placeholder="Размер, материал, особенности"
-                          className="h-[48px] w-full rounded-[10px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                          className="h-[48px] w-full rounded-[20px] border border-[#2B2B2B] bg-[#111111] px-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                         />
                       </div>
                     </>
                   )}
                 </div>
 
-                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
+                <div className="mt-4 rounded-[27px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
                   <div className="flex-shrink-0">
                     <StepIllustration step={5} />
                   </div>
@@ -1839,15 +1867,118 @@ export default function AdsCreate({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Расскажите о товаре: его особенности, история покупки, причина продажи..."
-                  className="h-[160px] w-full resize-none rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
+                  className="h-[160px] w-full resize-none rounded-[28px] border border-[#2B2B2B] bg-[#111111] p-4 text-[16px] leading-[1.4em] text-white outline-none font-sf-ui-light"
                 />
-                <div className="mt-4 rounded-[10px] border border-[#2B2B2B] bg-[#111111] p-4 flex items-center gap-4">
-                  <div className="flex-shrink-0">
-                    <StepIllustration step={6} />
-                  </div>
-                  <div className="text-[13px] leading-[1.4em] text-white/60 font-sf-ui-light">
-                    Подробное описание помогает покупателю принять решение. Укажите важные детали и особенности товара
-                  </div>
+
+                {/* AI генерация */}
+                <div className="mt-3">
+                  {aiMode === 'idle' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowProSheet(true)}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 rounded-[26px] border border-[#2B2B2B] bg-[#111111] active:bg-white/5 transition-colors"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/>
+                        <path d="M19 16L19.75 18.25L22 19L19.75 19.75L19 22L18.25 19.75L16 19L18.25 18.25L19 16Z"/>
+                      </svg>
+                      <span className="text-[15px] font-sf-ui-medium text-white/60">Сгенерировать AI</span>
+                    </button>
+                  )}
+
+                  {aiMode === 'input' && (
+                    <div className="rounded-[18px] border border-[#2B2B2B] bg-[#111111] overflow-hidden">
+                      <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/>
+                        </svg>
+                        <span className="text-[12px] text-white/40 font-sf-ui-light">AI генерация</span>
+                      </div>
+                      <input
+                        autoFocus
+                        value={aiHint}
+                        onChange={e => setAiHint(e.target.value)}
+                        placeholder="Подскажите AI, что у вас за товар"
+                        className="w-full bg-transparent px-4 py-2 text-[15px] text-white placeholder:text-white/25 font-sf-ui-light outline-none"
+                        onKeyDown={async e => {
+                          if (e.key === 'Enter' && aiHint.trim()) {
+                            e.preventDefault()
+                            setAiMode('loading')
+                            setAiError(false)
+                            try {
+                              const res = await fetch('/api/generate-description', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ hint: aiHint, title, category, specs: buildSpecs() }),
+                              })
+                              const data = await res.json() as { description?: string }
+                              if (data.description) {
+                                setDescription(data.description)
+                                setAiMode('idle')
+                                setAiHint('')
+                              } else {
+                                setAiError(true)
+                                setAiMode('input')
+                              }
+                            } catch {
+                              setAiError(true)
+                              setAiMode('input')
+                            }
+                          }
+                        }}
+                      />
+                      <div className="flex items-center justify-between px-4 pb-3 pt-1">
+                        {aiError && <span className="text-[12px] text-red-400 font-sf-ui-light">Ошибка, попробуйте снова</span>}
+                        <div className="ml-auto flex gap-2">
+                          <button type="button" onClick={() => { setAiMode('idle'); setAiHint(''); setAiError(false) }}
+                            className="text-[13px] text-white/30 font-sf-ui-light active:text-white/60">
+                            Отмена
+                          </button>
+                          <button type="button"
+                            disabled={!aiHint.trim()}
+                            onClick={async () => {
+                              if (!aiHint.trim()) return
+                              setAiMode('loading')
+                              setAiError(false)
+                              try {
+                                const res = await fetch('/api/generate-description', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ hint: aiHint, title, category, specs: buildSpecs() }),
+                                })
+                                const data = await res.json() as { description?: string }
+                                if (data.description) {
+                                  setDescription(data.description)
+                                  setAiMode('idle')
+                                  setAiHint('')
+                                } else {
+                                  setAiError(true)
+                                  setAiMode('input')
+                                }
+                              } catch {
+                                setAiError(true)
+                                setAiMode('input')
+                              }
+                            }}
+                            className="text-[13px] text-white/70 font-sf-ui-medium active:text-white disabled:opacity-30">
+                            Создать
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {aiMode === 'loading' && (
+                    <div className="w-full flex items-center gap-3 px-5 py-3.5 rounded-[18px] border border-[#2B2B2B] bg-[#111111]">
+                      <div className="flex gap-1">
+                        {[0, 0.15, 0.3].map(d => (
+                          <div key={d} className="w-1.5 h-1.5 rounded-full bg-white/40"
+                            style={{ animation: `pulse 1s ease-in-out ${d}s infinite` }} />
+                        ))}
+                      </div>
+                      <span className="text-[14px] text-white/40 font-sf-ui-light">AI генерирует описание...</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-10 flex justify-center">
@@ -2014,5 +2145,130 @@ export default function AdsCreate({
         )}
       </div>
     </div>
+
+      {/* HW Pro bottom sheet */}
+      {showProSheet && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm"
+            onClick={() => setShowProSheet(false)}
+          />
+          <div className="fixed inset-0 z-[210] flex items-end justify-center pointer-events-none">
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }}
+              transition={{ type: 'spring', damping: 32, stiffness: 380 }}
+              className="w-full pointer-events-auto overflow-y-auto"
+              style={{ maxHeight: '94dvh', borderRadius: '28px 28px 0 0', background: '#0e0e0e', borderTop: '1px solid rgba(255,255,255,0.08)', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-4 pb-2 sticky top-0 bg-[#0e0e0e] z-10">
+                <div className="w-10 h-1 rounded-full bg-white/15" />
+              </div>
+
+              <div className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+28px)]">
+                {/* Hero */}
+                <div className="relative rounded-[24px] overflow-hidden mb-6 mt-2" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}>
+                  {/* Animated background dots */}
+                  <div className="absolute inset-0 overflow-hidden">
+                    {[...Array(6)].map((_, i) => (
+                      <motion.div key={i}
+                        className="absolute rounded-full"
+                        style={{ width: 80 + i * 30, height: 80 + i * 30, left: `${10 + i * 15}%`, top: `${-20 + i * 10}%`, background: 'rgba(99,102,241,0.08)' }}
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+                        transition={{ duration: 3 + i, repeat: Infinity, delay: i * 0.5 }}
+                      />
+                    ))}
+                  </div>
+                  <div className="relative z-10 px-6 py-8 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-5">
+                      {/* Badge icon */}
+                      <motion.span
+                        className="text-[52px] leading-none select-none"
+                        animate={{ opacity: [0.7, 1, 0.7] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                      >✦</motion.span>
+                      <div>
+                        <div className="text-[11px] font-sf-ui-medium text-white/40 uppercase tracking-[0.15em] mb-1">HelloWorld</div>
+                        <div className="text-[26px] font-ttc-bold text-white leading-none">hw-pro</div>
+                        <div className="text-[12px] text-white/45 font-sf-ui-light mt-1">Максимум возможностей</div>
+                      </div>
+                    </div>
+                    {/* Price */}
+                    <div className="flex flex-col items-end flex-shrink-0">
+                      <span className="text-[28px] font-ttc-bold text-white leading-none">199 ₽</span>
+                      <span className="text-[12px] text-white/40 font-sf-ui-light mt-0.5">/ месяц</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <div className="text-[13px] font-sf-ui-medium text-white/35 tracking-[0.12em] mb-3">Что входит</div>
+                <div className="bg-white/[0.04] rounded-[32px] border border-white/[0.06] mb-6 overflow-hidden">
+                  {[
+                    { icon: <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/>, label: 'AI генерация описаний', sub: 'Безлимитно, любая категория' },
+                    { icon: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></>, label: 'До 50 активных объявлений', sub: 'Вместо 10 на бесплатном' },
+                    { icon: <><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></>, label: 'Значок hw-pro в профиле', sub: 'Выделяйся среди других' },
+                    { icon: <><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></>, label: 'Приоритетная поддержка', sub: 'Ответ в течение 2 часов' },
+                    { icon: <><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></>, label: 'Ранний доступ к функциям', sub: 'Тестируй новое первым' },
+                  ].map((f, i, arr) => (
+                    <div key={i}>
+                      <div className="flex items-center gap-4 px-4 py-3.5">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                          {f.icon}
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[14px] font-sf-ui-medium text-white/90">{f.label}</div>
+                          <div className="text-[12px] text-white/35 font-sf-ui-light mt-0.5">{f.sub}</div>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                      </div>
+                      {i < arr.length - 1 && <div className="h-px bg-white/[0.05] mx-4" />}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Comparison */}
+                <div className="text-[13px] font-sf-ui-medium text-white/35 tracking-[0.12em] mb-3">Сравнение</div>
+                <div className="rounded-[18px] border border-white/[0.06] overflow-hidden mb-6">
+                  <div className="grid grid-cols-3 bg-white/[0.03] px-4 py-2.5">
+                    <div className="text-[12px] text-white/30 font-sf-ui-light">Функция</div>
+                    <div className="text-[12px] text-white/30 font-sf-ui-light text-center">Бесплатно</div>
+                    <div className="text-[12px] text-white/80 font-sf-ui-medium text-center">hw-pro</div>
+                  </div>
+                  {[
+                    ['Объявления', '10', '50'],
+                    ['AI описания', '—', '∞'],
+                    ['Поддержка', 'Стандарт', 'Приоритет'],
+                    ['Значок', '—', '✦'],
+                  ].map(([feat, free, pro], i) => (
+                    <div key={i} className={`grid grid-cols-3 px-4 py-3 ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
+                      <div className="text-[13px] text-white/60 font-sf-ui-light">{feat}</div>
+                      <div className="text-[13px] text-white/30 font-sf-ui-light text-center">{free}</div>
+                      <div className="text-[13px] text-white font-sf-ui-medium text-center">{pro}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTA */}
+                <button type="button"
+                  className="w-full h-[56px] rounded-full font-sf-ui-medium text-[16px] text-black active:scale-[0.97] transition-all mb-3"
+                  style={{ background: 'linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)' }}
+                  onClick={() => setShowProSheet(false)}
+                >
+                  Оформить hw-pro — 199 ₽/мес
+                </button>
+                <button type="button"
+                  className="w-full h-[48px] rounded-full text-[15px] text-white/40 font-sf-ui-light active:opacity-60 transition-all"
+                  onClick={() => setShowProSheet(false)}
+                >
+                  Отмена
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </>
   )
 }

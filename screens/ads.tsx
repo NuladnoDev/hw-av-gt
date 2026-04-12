@@ -28,6 +28,8 @@ interface AdCardProps {
   storeId?: string | null
   storeName?: string | null
   storeAvatarUrl?: string | null
+  isAdult?: boolean
+  onAdultClick?: () => void
   onOpenStore?: (id: string) => void
   userId?: string | null
 }
@@ -78,6 +80,7 @@ export type StoredAd = {
   specs?: AdSpecItem[]
   createdAt: number
   viewCount?: number
+  isAdult?: boolean
 }
 
 const toPrepositionalCity = (name: string): string => {
@@ -219,6 +222,7 @@ const mapRowToStoredAd = (row: AdsTableRow): StoredAd => {
     specs,
     createdAt: created,
     viewCount: row.view_count ?? 0,
+    isAdult: !!(row as any).is_adult,
   }
 }
 
@@ -334,6 +338,8 @@ export function AdCard({
   storeAvatarUrl,
   onOpenStore,
   userId,
+  isAdult,
+  onAdultClick,
 }: AdCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
@@ -424,15 +430,29 @@ export function AdCard({
           minHeight: `calc(200px + var(--ad-card-info-height, 110px))`,
           borderRadius: 21,
         }}
-        onClick={onClick}
+        onClick={isAdult ? onAdultClick : onClick}
       >
         {/* Image Container */}
         <div className="relative h-[200px] overflow-hidden bg-white/5 flex items-center justify-center">
           <img 
             src={imageUrl} 
             alt={title} 
-            className="relative z-10 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
+            className={`relative z-10 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${isAdult ? 'blur-xl scale-110' : ''}`}
           />
+          {/* 18+ overlay */}
+          {isAdult && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40">
+              <svg width="52" height="36" viewBox="0 0 52 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="26" cy="18" rx="24" ry="15" stroke="rgba(255, 255, 255, 0.9)" strokeWidth="2.2"/>
+                <ellipse cx="26" cy="18" rx="9" ry="9" stroke="rgba(255, 255, 255, 0.9)" strokeWidth="2.2"/>
+                <circle cx="26" cy="18" r="4" fill="rgba(255, 255, 255, 0.9)"/>
+                <line x1="4" y1="3" x2="48" y2="33" stroke="rgba(160,160,160,0.9)" strokeWidth="2.2" strokeLinecap="round"/>
+              </svg>
+              <div className="mt-2 px-2.5 py-0.5 rounded-full border border-white/30 bg-black/40">
+                <span className="text-[13px] font-ttc-medium text-white leading-none tracking-widest">Товар 18+</span>
+              </div>
+            </div>
+          )}
           
           {/* Top Overlays */}
           {!showEditLabel && (storeId || username) && (
@@ -911,6 +931,8 @@ export default function Ads({
     if (typeof window !== 'undefined') return localStorage.getItem('hw-verif-banner-dismissed') !== '1'
     return true
   })
+  const [ageGateOpen, setAgeGateOpen] = useState(false)
+  const [ageGatePendingAd, setAgeGatePendingAd] = useState<StoredAd | null>(null)
   const sortMenuRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -1637,6 +1659,8 @@ export default function Ads({
                   storeName={ad.storeName}
                   storeAvatarUrl={ad.storeAvatarUrl}
                   userId={ad.userId}
+                  isAdult={ad.isAdult}
+                  onAdultClick={() => { setAgeGatePendingAd(ad); setAgeGateOpen(true) }}
                   onClick={() => {
                     if (onOpenAd) {
                       onOpenAd(ad)
@@ -1650,6 +1674,63 @@ export default function Ads({
           </div>
         )}
       </div>
+      {/* Плашка подтверждения возраста 18+ */}
+      <AnimatePresence>
+        {ageGateOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setAgeGateOpen(false)}
+            />
+            <div className="fixed inset-0 z-[120] flex items-end justify-center pointer-events-none">
+              <motion.div
+                className="relative w-full rounded-t-[32px] bg-[#121212] border-t border-white/10 px-8 pt-8 pb-[calc(env(safe-area-inset-bottom,0px)+28px)] flex flex-col items-center text-center pointer-events-auto"
+                initial={{ translateY: '100%' }} animate={{ translateY: 0 }} exit={{ translateY: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+              >
+                <div className="w-12 h-1.5 rounded-full bg-white/15 mx-auto mb-6" />
+                {/* SVG иллюстрация */}
+                <div className="mb-5">
+                  <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="36" cy="36" r="35" stroke="rgba(255,255,255,0.08)" strokeWidth="2"/>
+                    <circle cx="36" cy="36" r="26" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5"/>
+                    {/* Глаз */}
+                    <ellipse cx="36" cy="36" rx="14" ry="9" stroke="rgba(255,255,255,0.7)" strokeWidth="2"/>
+                    <circle cx="36" cy="36" r="5" fill="rgba(255,255,255,0.7)"/>
+                    <circle cx="38" cy="34" r="1.5" fill="rgba(0,0,0,0.5)"/>
+                    {/* 18 */}
+                    <text x="36" y="58" textAnchor="middle" fontSize="10" fontWeight="700" fill="rgba(255,255,255,0.5)" fontFamily="sans-serif">18+</text>
+                  </svg>
+                </div>
+                <div className="text-[22px] font-ttc-bold text-white leading-tight mb-2">
+                  Контент для лиц старше 18 лет
+                </div>
+                <div className="text-[14px] text-white/40 font-sf-ui-light max-w-[260px] leading-relaxed mb-7">
+                  Это объявление содержит товары категории 18+. Подтвердите, что вам исполнилось 18 лет.
+                </div>
+                <button
+                  type="button"
+                  className="w-full h-[54px] rounded-full bg-white text-black font-sf-ui-medium text-[16px] active:scale-[0.97] transition-all mb-3"
+                  onClick={() => {
+                    setAgeGateOpen(false)
+                    if (ageGatePendingAd && onOpenAd) {
+                      onOpenAd(ageGatePendingAd)
+                      setAgeGatePendingAd(null)
+                    }
+                  }}
+                >
+                  Мне есть 18 лет — продолжить
+                </button>
+                <p className="text-[11px] text-white/20 font-sf-ui-light leading-relaxed max-w-[280px]">
+                  Нажимая «Продолжить», вы подтверждаете своё совершеннолетие и принимаете ответственность за просмотр материалов 18+ в соответствии с законодательством РФ.
+                </p>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
       {createOpen && (
         <AdsCreate
           onClose={() => {

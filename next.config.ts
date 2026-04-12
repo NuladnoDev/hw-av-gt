@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname, ".."),
   },
+  serverExternalPackages: [
+    '@mapbox/node-pre-gyp',
+    'nsfwjs',
+    'canvas',
+  ],
 };
 
 export default nextConfig;

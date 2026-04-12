@@ -40,6 +40,7 @@ import QualityBadge from '../components/QualityBadge'
 import FormattedText from '../components/FormattedText'
 import ModeratorBadge from '../components/ModeratorBadge'
 import NewcomerBadge from '../components/NewcomerBadge'
+import ProBadge from '../components/ProBadge'
 import dynamic from 'next/dynamic'
 const GridBackground3D = dynamic(() => import('../components/GridBackground3D'), { ssr: false })
 
@@ -246,6 +247,7 @@ export default function Profile({
   const [isQuality, setIsQuality] = useState(false)
   const [isModerator, setIsModerator] = useState(false)
   const [isNewcomer, setIsNewcomer] = useState(false)
+  const [isPro, setIsPro] = useState(false)
   const [userStores, setUserStores] = useState<{ id: string; name: string; avatar_url: string | null }[]>([])
   const [storesLoading, setStoresLoading] = useState(false)
   const [showCreateStore, setShowCreateStore] = useState(false)
@@ -624,7 +626,7 @@ export default function Profile({
       try {
         const { data: prof, error: err } = await client
           .from('profiles')
-          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts, is_verified, is_quality, is_moderator, decoration, is_newcomer')
+          .select('tag, avatar_url, description, age, gender, city, political, hobbies, contacts, is_verified, is_quality, is_moderator, decoration, is_newcomer, is_pro')
           .eq('id', idLocal)
           .maybeSingle()
         if (err || !prof) {
@@ -634,6 +636,7 @@ export default function Profile({
         setIsQuality(!!prof.is_quality)
         setIsModerator(!!prof.is_moderator)
         setIsNewcomer(prof.is_newcomer !== false)
+        setIsPro(!!prof.is_pro)
         if (prof.decoration) setDecoration(prof.decoration as DecorationId)
         const tagFromDb = (prof.tag as string | undefined) ?? undefined
         const avatarFromDb = (prof.avatar_url as string | undefined) ?? undefined
@@ -1379,6 +1382,7 @@ export default function Profile({
                       <span className="text-[var(--text-primary)] font-sf-ui-medium leading-tight truncate" style={{ fontSize: '17px' }}>
                         {tagText && tagText.trim().length > 0 ? tagText : 'user'}
                       </span>
+                      {isPro && <ProBadge size={20} />}
                       {editMode && (
                         <button type="button" className="opacity-60" onClick={() => setTagEditing(true)}>
                           <img src="/interface/krr.svg" alt="edit" className="h-[16px] w-[16px]"

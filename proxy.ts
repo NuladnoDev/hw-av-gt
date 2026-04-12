@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 // Боты которые читают OG теги
 const BOT_UA = /vkShare|facebookexternalhit|Twitterbot|TelegramBot|WhatsApp|LinkedInBot|Slackbot|Discordbot|bot|crawler|spider/i
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const ua = req.headers.get('user-agent') || ''
   if (!BOT_UA.test(ua)) return NextResponse.next()
 
