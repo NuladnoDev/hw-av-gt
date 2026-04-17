@@ -425,18 +425,14 @@ export default function ProfileDecorations({
             <div className="absolute right-0 top-0 bottom-0 w-32 pointer-events-none"
               style={{ background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.08))' }}
             />
-            <div className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(167,139,250,0.12)' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <path d="M16 10a4 4 0 01-8 0"/>
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(167,139,250,0.9)">
+                <path d="M12 2 L13.8 9.2 L21 12 L13.8 14.8 L12 22 L10.2 14.8 L3 12 L10.2 9.2 Z" />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[14px] font-sf-ui-medium text-white/90">Магазин украшений</div>
-              <div className="text-[12px] text-white/35 font-sf-ui-light mt-0.5">11 эксклюзивных эффектов для PRO</div>
+              <div className="text-[12px] text-white/35 font-sf-ui-light mt-0.5">Эксклюзивные эффекты для hw-pro</div>
             </div>
             <ChevronLeft size={18} className="text-white/20 rotate-180 flex-shrink-0" />
           </div>

@@ -23,7 +23,13 @@ import {
   Lock,
   Copy,
   Check,
-  X
+  X,
+  BarChart2,
+  Eye,
+  ShoppingBag,
+  MessageCircle,
+  Clock,
+  TrendingUp
 } from 'lucide-react'
 
 export default function ProfileEdit({
@@ -62,6 +68,11 @@ export default function ProfileEdit({
   const [selectorType, setSelectorType] = useState<'gender' | 'city' | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
+  const [showAccountStats, setShowAccountStats] = useState(false)
+  const [accountStats, setAccountStats] = useState<{
+    adsCount: number; totalViews: number; messagesCount: number; daysActive: number; adsPerDay: number[]
+  } | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
   const [showPasswordSettings, setShowPasswordSettings] = useState(false)
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -764,159 +775,262 @@ export default function ProfileEdit({
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="relative h-full w-full max-w-[430px] bg-[#0A0A0A] flex flex-col"
             >
-              {/* Account Settings Header */}
-              <div className="safe-top h-[64px] flex items-center px-6 bg-[#0A0A0A]/80 backdrop-blur-xl sticky top-0 z-20">
+              {/* Header */}
+              <div className="flex items-center px-4 flex-shrink-0 border-b border-white/[0.05]"
+                style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+              >
+                <button type="button"
+                  onClick={() => { setShowAccountSettings(false); setIdRevealed(false) }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 active:bg-white/10 transition-colors"
+                >
+                  <ChevronLeft size={22} className="text-white" />
+                </button>
+                <span className="ml-3 text-[17px] font-sf-ui-medium text-white flex-1">Настройки аккаунта</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4" style={{ scrollbarWidth: 'none' }}>
+
+                {/* User info */}
+                <div className="rounded-[20px] p-5" style={{ background: '#141414' }}>
+                  <div className="flex items-center gap-4 mb-5">
+                    <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                      style={{ background: avatarUrl ? '#0A0A0A' : gradient }}
+                    >
+                      {avatarUrl
+                        ? <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                        : <span className="text-white font-ttc-bold text-[20px]">{initialLetter}</span>
+                      }
+                    </div>
+                    <div>
+                      <div className="text-[17px] font-sf-ui-medium text-white">{tagText || 'user'}</div>
+                      <div className="text-[12px] text-white/35 font-sf-ui-light mt-0.5">Ваш профиль</div>
+                    </div>
+                  </div>
+
+                  {/* HW ID */}
+                  <div className="flex items-center justify-between px-4 py-3.5 rounded-[14px]" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    <div className="flex flex-col flex-1 cursor-pointer" onClick={() => setIdRevealed(true)}>
+                      <span className="text-[11px] text-white/30 uppercase tracking-wider mb-1">hw-id</span>
+                      <span className={`text-[13px] text-white font-mono break-all transition-all duration-500 ${!idRevealed ? 'blur-[5px] opacity-30 select-none' : ''}`}>
+                        {userId || 'ID не найден'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => { if (userId) { navigator.clipboard.writeText(userId); setIdRevealed(true) } }}
+                      className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-white/5 active:bg-white/10 transition-colors ml-3 flex-shrink-0"
+                    >
+                      <Copy size={16} className="text-white/50" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* hw-pro кнопка */}
                 <button
                   type="button"
                   onClick={() => {
                     setShowAccountSettings(false)
-                    setIdRevealed(false)
+                    window.dispatchEvent(new Event('open-pro-sheet'))
                   }}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 rounded-[26px] border border-[#2B2B2B] bg-[#111111] active:bg-white/5 transition-colors"
                 >
-                  <ChevronLeft className="h-6 w-6 text-white" />
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(167,139,250,0.8)">
+                    <path d="M12 2 L13.8 9.2 L21 12 L13.8 14.8 L12 22 L10.2 14.8 L3 12 L10.2 9.2 Z" />
+                  </svg>
+                  <span className="text-[15px] font-sf-ui-medium text-white/60">Оформить подписку hw-pro</span>
                 </button>
-                <div className="flex-1 text-center pr-10">
-                  <span className="text-[20px] font-ttc-bold text-white">Настройки аккаунта</span>
-                </div>
-              </div>
 
-              <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 scrollbar-hide">
-                {/* User Info Card */}
-                <div className="bg-[#0F0F0F] border border-white/5 rounded-[32px] p-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div
-                      className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center shadow-xl"
-                      style={{ background: avatarUrl ? '#0A0A0A' : gradient }}
-                    >
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-white font-ttc-bold text-[20px]">{initialLetter}</span>
-                      )}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[18px] font-sf-ui-medium text-white">{tagText || 'user'}</span>
-                      <span className="text-[13px] text-white/40 font-sf-ui-light">Ваш профиль</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/5">
-                      <div
-                        className="flex flex-col flex-1 cursor-pointer group/id"
-                        onClick={() => setIdRevealed(true)}
-                      >
-                        <span className="text-[12px] text-white/30 uppercase tracking-wider mb-1">hw-id</span>
-                        <div className="relative inline-block overflow-hidden rounded-md">
-                          <span
-                            className={`text-[14px] text-white font-mono break-all pr-2 transition-all duration-500 ease-out ${
-                              !idRevealed ? 'blur-[6px] select-none opacity-30 scale-95' : 'blur-0 opacity-100 scale-100'
-                            }`}
-                          >
-                            {userId || 'ID не найден'}
-                          </span>
-                          {!idRevealed && (
-                             <motion.div
-                               initial={{ opacity: 0 }}
-                               animate={{ 
-                                  opacity: 1,
-                                  backgroundPosition: ['0px 0px', '6px 6px']
-                                }}
-                                transition={{
-                                  backgroundPosition: {
-                                    duration: 0.2,
-                                    repeat: Infinity,
-                                    ease: "linear"
-                                  }
-                                }}
-                                className="absolute inset-0 flex items-center justify-start pointer-events-none"
-                              >
-                                <div className="w-full h-full bg-white/10 opacity-40" style={{
-                                  backgroundImage: `radial-gradient(circle, currentColor 1.1px, transparent 1.1px)`,
-                                  backgroundSize: '6px 6px'
-                                }} />
-                              </motion.div>
-                           )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (userId) {
-                            navigator.clipboard.writeText(userId)
-                            setIdRevealed(true)
-                            // Could add a toast here
-                          }
-                        }}
-                        className="w-10 h-10 aspect-square flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 active:scale-95 transition-all border border-white/5 ml-4"
-                      >
-                        <Copy size={18} className="text-white/60" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions Card */}
-                <div className="bg-[#0F0F0F] border border-white/5 rounded-[32px] overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordSettings(true)}
-                    className="w-full flex items-center justify-between p-5 hover:bg-white/[0.03] transition-colors group"
+                {/* Actions */}
+                <div className="rounded-[20px] overflow-hidden" style={{ background: '#141414' }}>
+                  <button type="button"
+                    onClick={async () => {
+                      setShowAccountStats(true)
+                      if (accountStats) return
+                      setStatsLoading(true)
+                      try {
+                        const client = getSupabase()
+                        if (!client || !userId) return
+                        const [adsRes, msgsRes] = await Promise.all([
+                          client.from('ads').select('id, view_count, created_at').eq('user_id', userId),
+                          client.from('chat_messages').select('id, created_at').eq('sender_id', userId).limit(500),
+                        ])
+                        const ads = adsRes.data ?? []
+                        const msgs = msgsRes.data ?? []
+                        const totalViews = ads.reduce((s: number, a: any) => s + (a.view_count ?? 0), 0)
+                        const now = Date.now()
+                        const adsPerDay = Array.from({ length: 7 }, (_, i) => {
+                          const dayStart = now - (6 - i) * 86400000
+                          return ads.filter((a: any) => {
+                            const t = new Date(a.created_at).getTime()
+                            return t >= dayStart && t < dayStart + 86400000
+                          }).length
+                        })
+                        const oldest = ads.reduce((min: number, a: any) => {
+                          const t = new Date(a.created_at).getTime()
+                          return t < min ? t : min
+                        }, now)
+                        const daysActive = Math.max(1, Math.floor((now - oldest) / 86400000))
+                        setAccountStats({ adsCount: ads.length, totalViews, messagesCount: msgs.length, daysActive, adsPerDay })
+                      } catch {}
+                      setStatsLoading(false)
+                    }}
+                    className="w-full flex items-center gap-4 px-5 py-4 active:bg-white/[0.03] transition-colors text-left"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                        <Lock size={20} className="text-blue-400" />
-                      </div>
-                      <span className="text-white font-sf-ui-medium">Изменить пароль</span>
-                    </div>
-                    <ChevronRight size={20} className="text-white/20 group-hover:translate-x-1 transition-transform" />
+                    <BarChart2 size={17} className="text-indigo-400 flex-shrink-0" />
+                    <span className="flex-1 text-[14px] font-sf-ui-medium text-white/90">Статистика аккаунта</span>
+                    <ChevronRight size={16} className="text-white/20" />
                   </button>
 
-                  <div className="h-[1px] bg-white/[0.03] mx-5" />
+                  <div className="h-px bg-white/[0.04] mx-5" />
+                  <button type="button"
+                    onClick={() => setShowPasswordSettings(true)}
+                    className="w-full flex items-center gap-4 px-5 py-4 active:bg-white/[0.03] transition-colors text-left"
+                  >
+                    <Lock size={17} className="text-blue-400 flex-shrink-0" />
+                    <span className="flex-1 text-[14px] font-sf-ui-medium text-white/90">Изменить пароль</span>
+                    <ChevronRight size={16} className="text-white/20" />
+                  </button>
 
-                  <button
-                    type="button"
+                  <div className="h-px bg-white/[0.04] mx-5" />
+
+                  <button type="button"
                     onClick={async () => {
                       const client = getSupabase()
                       if (client) await client.auth.signOut()
                       await clearLocalAuth()
                       window.dispatchEvent(new Event('local-auth-changed'))
                     }}
-                    className="w-full flex items-center justify-between p-5 hover:bg-orange-500/5 transition-colors group"
+                    className="w-full flex items-center gap-4 px-5 py-4 active:bg-orange-500/5 transition-colors text-left"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                        <LogOut size={20} className="text-orange-400" />
-                      </div>
-                      <span className="text-orange-400 font-sf-ui-medium">Выйти из аккаунта</span>
-                    </div>
-                    <ChevronRight size={20} className="text-orange-400/20 group-hover:translate-x-1 transition-transform" />
+                    <LogOut size={17} className="text-orange-400 flex-shrink-0" />
+                    <span className="flex-1 text-[14px] font-sf-ui-medium text-orange-400">Выйти из аккаунта</span>
+                    <ChevronRight size={16} className="text-orange-400/30" />
                   </button>
 
-                  <div className="h-[1px] bg-white/[0.03] mx-5" />
+                  <div className="h-px bg-white/[0.04] mx-5" />
 
-                  <button
-                    type="button"
+                  <button type="button"
                     onClick={() => {
                       setShowAccountSettings(false)
                       setShowConfirm(false)
                       setIdRevealed(false)
                       window.dispatchEvent(new Event('profile-delete-request'))
                     }}
-                    className="w-full flex items-center justify-between p-5 hover:bg-red-500/5 transition-colors group"
+                    className="w-full flex items-center gap-4 px-5 py-4 active:bg-red-500/5 transition-colors text-left"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
-                        <Trash2 size={20} className="text-red-500" />
-                      </div>
-                      <span className="text-red-500 font-sf-ui-medium">Удалить аккаунт</span>
-                    </div>
-                    <ChevronRight size={20} className="text-red-500/20 group-hover:translate-x-1 transition-transform" />
+                    <Trash2 size={17} className="text-red-400 flex-shrink-0" />
+                    <span className="flex-1 text-[14px] font-sf-ui-medium text-red-400">Удалить аккаунт</span>
+                    <ChevronRight size={16} className="text-red-400/30" />
                   </button>
                 </div>
+
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Account Stats */}
+      <AnimatePresence>
+        {showAccountStats && (
+          <motion.div
+            key="account-stats"
+            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[110] bg-[#0a0a0a] flex flex-col"
+          >
+            <div className="flex items-center px-4 flex-shrink-0 border-b border-white/[0.05]"
+              style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            >
+              <button type="button" onClick={() => setShowAccountStats(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 active:bg-white/10 transition-colors"
+              >
+                <ChevronLeft size={22} className="text-white" />
+              </button>
+              <span className="ml-3 text-[17px] font-sf-ui-medium text-white flex-1">Статистика аккаунта</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4" style={{ scrollbarWidth: 'none' }}>
+              {statsLoading || !accountStats ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-6 h-6 border-2 border-white/10 border-t-white/40 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <>
+                  {/* Главная метрика */}
+                  <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                    className="rounded-[20px] p-5 relative overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' }}
+                  >
+                    <div className="absolute top-0 right-0 w-40 h-40 pointer-events-none"
+                      style={{ background: 'radial-gradient(ellipse at 100% 0%, rgba(99,102,241,0.2) 0%, transparent 65%)' }}
+                    />
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Eye size={15} className="text-indigo-400" />
+                        <span className="text-[11px] text-white/40 font-sf-ui-medium uppercase tracking-widest">Всего просмотров</span>
+                      </div>
+                      <div className="text-[52px] font-ttc-bold text-white leading-none">
+                        {accountStats.totalViews.toLocaleString('ru-RU')}
+                      </div>
+                      <div className="text-[13px] text-white/30 mt-2 font-sf-ui-light">по всем объявлениям</div>
+                    </div>
+                  </motion.div>
+
+                  {/* Мини-метрики */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { icon: <ShoppingBag size={14} className="text-blue-400" />, label: 'Объявлений', value: accountStats.adsCount },
+                      { icon: <MessageCircle size={14} className="text-emerald-400" />, label: 'Сообщений', value: accountStats.messagesCount },
+                      { icon: <Clock size={14} className="text-amber-400" />, label: 'Дней', value: accountStats.daysActive },
+                    ].map((m, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 * i }}
+                        className="rounded-[16px] p-4" style={{ background: '#141414' }}
+                      >
+                        <div className="mb-2">{m.icon}</div>
+                        <div className="text-[24px] font-ttc-bold text-white leading-none">{m.value}</div>
+                        <div className="text-[11px] text-white/25 font-sf-ui-light mt-1">{m.label}</div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* График */}
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="rounded-[20px] p-5" style={{ background: '#141414' }}
+                  >
+                    <div className="flex items-center gap-2 mb-5">
+                      <TrendingUp size={14} className="text-white/30" />
+                      <span className="text-[11px] text-white/30 font-sf-ui-medium uppercase tracking-widest">Объявления за 7 дней</span>
+                    </div>
+                    <div className="flex items-end gap-1.5 h-[80px]">
+                      {accountStats.adsPerDay.map((v, i) => {
+                        const barMax = Math.max(...accountStats.adsPerDay, 1)
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                            <div className="w-full flex items-end justify-center" style={{ height: 64 }}>
+                              <motion.div
+                                initial={{ height: 0 }}
+                                animate={{ height: `${Math.max((v / barMax) * 100, v > 0 ? 8 : 3)}%` }}
+                                transition={{ delay: 0.2 + i * 0.05, duration: 0.5, ease: 'easeOut' }}
+                                className="w-full rounded-t-[4px]"
+                                style={{ background: v > 0 ? 'linear-gradient(to top, #4f46e5, #818cf8)' : 'rgba(255,255,255,0.06)', minHeight: 3 }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-white/20 font-sf-ui-light">
+                              {['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][(new Date().getDay() - 6 + i + 7) % 7]}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+
+                  <p className="text-[12px] text-white/20 font-sf-ui-light leading-relaxed px-1">
+                    Просмотры считаются по всем активным объявлениям. Данные обновляются в реальном времени.
+                  </p>
+                </>
+              )}
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
