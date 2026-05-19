@@ -24,6 +24,7 @@ const ModeratorPanel = dynamic(() => import('./ModeratorPanel'), { ssr: false })
 import Support from './Support'
 import Chat from './Chat'
 import Favorites from './Favorites'
+import GiftShop from './GiftShop'
 import { avatarGradients } from '@/lib/avatarGradients'
 
 export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
@@ -183,6 +184,10 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
   const [expandedNotifs, setExpandedNotifs] = useState<Set<string>>(new Set())
   const [navVisible, setNavVisible] = useState(true)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
+  const [giftShopOpen, setGiftShopOpen] = useState(false)
+  const [giftRecipientTag, setGiftRecipientTag] = useState('')
+  const [giftRecipientAvatar, setGiftRecipientAvatar] = useState<string | null>(null)
+  const [viewProfileTagCache, setViewProfileTagCache] = useState<string>('')
   const PATCH_NOTES_VERSION = '2026-04-02-2'
   const [patchNotesOpen, setPatchNotesOpen] = useState(false)
   const [storeCatalogOpen, setStoreCatalogOpen] = useState(false)
@@ -1320,7 +1325,13 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
             }}
           >
             <div className="relative h-[56px] w-full" style={{ marginTop: headerInnerMarginTop }}>
-              {viewProfileMode === 'own' ? (
+              {viewProfileMode === 'own' && !isAuthed ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span style={{ fontFamily: 'VKSansDisplayDemiBold, Arial, sans-serif', fontSize: 22, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.3px' }}>
+                    hw-project
+                  </span>
+                </div>
+              ) : viewProfileMode === 'own' ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -1356,6 +1367,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 </button>
               )}
               <div className="absolute right-6 top-0 flex h-full items-center gap-3">
+                {!(viewProfileMode === 'own' && !isAuthed) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1376,6 +1388,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                     style={{ filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'none' }}
                   />
                 </button>
+                )}
               </div>
               <div className="absolute left-1/2 top-0 -translate-x-1/2 flex h-full items-center">
                 <div 
@@ -1482,6 +1495,7 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 }}
                 onOpenChat={(uid, uTag, uAvatar) => {
                   setChatReceiver({ id: uid, name: uTag, avatar: uAvatar })
+                  if (viewProfileMode === 'foreign') setViewProfileTagCache(uTag)
                   setChatOpen(true)
                 }}
                 onForwardReview={(review) => {
@@ -1671,6 +1685,60 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                               background: 'var(--profile-menu-divider-color)',
                             }}
                           />
+                        </>
+                      )}
+                      {viewProfileMode === 'foreign' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeProfileMenu()
+                              // Загружаем тег получателя
+                              const resolveTag = async () => {
+                                let tag = viewProfileTagCache
+                                if (!tag && viewProfileUserId) {
+                                  try {
+                                    const { getSupabase } = await import('@/lib/supabaseClient')
+                                    const client = getSupabase()
+                                    if (client) {
+                                      const { data } = await client.from('profiles').select('tag, avatar_url').eq('id', viewProfileUserId).maybeSingle()
+                                      if (data?.tag) {
+                                        tag = data.tag
+                                        setViewProfileTagCache(data.tag)
+                                        setGiftRecipientAvatar(data.avatar_url ?? null)
+                                      }
+                                    }
+                                  } catch {}
+                                }
+                                setGiftRecipientTag(tag || viewProfileUserId || '')
+                                setGiftShopOpen(true)
+                              }
+                              resolveTag()
+                            }}
+                            className="flex w-full items-center"
+                            style={{
+                              height: 'var(--profile-menu-item-height)',
+                              paddingLeft: 'var(--profile-menu-item-padding-x)',
+                              paddingRight: 'var(--profile-menu-item-padding-x)',
+                              background: 'var(--profile-menu-item-bg)',
+                            }}
+                          >
+                            <div className="flex w-full items-center" style={{ columnGap: 'var(--profile-menu-item-gap)' }}>
+                              <span className="font-sf-ui-light" style={{ fontSize: 'var(--profile-menu-item-font-size)', color: 'var(--profile-menu-item-text-color)', whiteSpace: 'nowrap' }}>
+                                Отправить подарок
+                              </span>
+                              <div style={{ marginLeft: 'auto', width: 'var(--profile-menu-item-icon-size)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <rect x="3" y="10" width="18" height="11" rx="2" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                                  <path d="M3 13h18" stroke="white" strokeWidth="1.7" strokeLinecap="round"/>
+                                  <path d="M12 10V21" stroke="white" strokeWidth="1.7" strokeLinecap="round"/>
+                                  <path d="M12 10C12 10 9 10 7.5 8.5C6 7 6 5 7.5 4C9 3 11 4.5 12 7" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                                  <path d="M12 10C12 10 15 10 16.5 8.5C18 7 18 5 16.5 4C15 3 13 4.5 12 7" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </div>
+                            </div>
+                          </button>
+                          <div style={{ height: 'var(--profile-menu-divider-thickness)', background: 'var(--profile-menu-divider-color)' }} />
                         </>
                       )}
                       <button
@@ -2224,23 +2292,33 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 <div className="px-4 pt-3 pb-2">
                   <motion.div
                     className="w-full rounded-[20px] overflow-hidden"
-                    style={{ height: 88, boxShadow: '0 8px 20px rgba(0,0,0,0.25)' }}
+                    style={{ height: 100, boxShadow: '0 8px 24px rgba(14,165,233,0.15)' }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={() => window.open('/promote', '_blank')}
                   >
                     <div className="relative h-full w-full p-4">
-                      <div className="absolute inset-0 opacity-90" style={{ background: 'radial-gradient(circle at 15% 20%, rgba(86,86,86,0.28) 0%, transparent 45%), radial-gradient(circle at 85% 70%, rgba(70,70,70,0.24) 0%, transparent 50%), linear-gradient(135deg, #161616 0%, #111111 100%)' }} />
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0ea5e9 100%)' }} />
+                      {/* Shine sweep */}
+                      <motion.div
+                        className="absolute top-0 left-0 h-full w-[40%]"
+                        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+                        animate={{ x: ['-100%', '350%'] }}
+                        transition={{ duration: 3.5, repeat: Infinity, ease: 'linear', repeatDelay: 5 }}
+                      />
                       <div className="relative z-10 flex h-full items-center justify-between gap-4">
-                        <div className="max-w-[65%]">
-                          <div className="text-[11px] tracking-[0.04em] text-white/40">Рекламный слот</div>
-                          <div className="mt-0.5 text-[17px] leading-[1.15] font-ttc-bold text-white">Здесь могло быть ваше объявление</div>
+                        <div className="max-w-[70%]">
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-sf-ui-medium mb-1.5"
+                            style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}
+                          >Рекламный слот</div>
+                          <div className="text-[18px] leading-[1.15] font-sf-ui-medium text-white">Продвижение вашего Обьявления в топ</div>
                         </div>
                         <motion.svg width="72" height="52" viewBox="0 0 108 76" fill="none" className="shrink-0" animate={{ y: [0, -2, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}>
-                          <rect x="10" y="10" width="74" height="52" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.14)" />
-                          <rect x="22" y="22" width="42" height="6" rx="3" fill="rgba(255,255,255,0.25)" />
-                          <rect x="22" y="34" width="32" height="5" rx="2.5" fill="rgba(255,255,255,0.14)" />
-                          <rect x="22" y="43" width="24" height="5" rx="2.5" fill="rgba(255,255,255,0.1)" />
-                          <circle cx="88" cy="22" r="10" fill="rgba(255,255,255,0.12)" />
-                          <path d="M88 17V27M83 22H93" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" />
+                          <rect x="10" y="10" width="74" height="52" rx="12" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.25)" />
+                          <rect x="22" y="22" width="42" height="6" rx="3" fill="rgba(255,255,255,0.4)" />
+                          <rect x="22" y="34" width="32" height="5" rx="2.5" fill="rgba(255,255,255,0.25)" />
+                          <rect x="22" y="43" width="24" height="5" rx="2.5" fill="rgba(255,255,255,0.18)" />
+                          <circle cx="88" cy="22" r="10" fill="rgba(255,255,255,0.2)" />
+                          <path d="M88 17V27M83 22H93" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeLinecap="round" />
                         </motion.svg>
                       </div>
                     </div>
@@ -2248,67 +2326,58 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 </div>
 
                 {chatPreviews.length === 0 && messagesQuery.trim().length < 2 ? (
-                  <div className="flex flex-col items-center gap-4 px-4 text-center" style={{ marginTop: '20vh' }}>
-                    <motion.svg
-                      width="120"
-                      height="120"
-                      viewBox="0 0 120 120"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      {/* Пузырь большой */}
-                      <motion.rect
-                        x="8" y="20" width="72" height="52" rx="18"
-                        stroke="white" strokeOpacity="0.18" strokeWidth="2.5" fill="none"
-                        animate={{ opacity: [0.4, 1, 0.4] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                      {/* Хвостик большого */}
-                      <motion.path
-                        d="M20 72 L14 86 L34 76"
-                        stroke="white" strokeOpacity="0.18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"
-                        animate={{ opacity: [0.4, 1, 0.4] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                      {/* Точки в большом пузыре */}
-                      <motion.circle cx="30" cy="46" r="4" fill="white" fillOpacity="0.25"
-                        animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }}
-                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0 }}
-                      />
-                      <motion.circle cx="44" cy="46" r="4" fill="white" fillOpacity="0.25"
-                        animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }}
-                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
-                      />
-                      <motion.circle cx="58" cy="46" r="4" fill="white" fillOpacity="0.25"
-                        animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }}
-                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
-                      />
-                      {/* Пузырь маленький справа */}
-                      <motion.rect
-                        x="52" y="62" width="58" height="38" rx="14"
-                        stroke="white" strokeOpacity="0.1" strokeWidth="2" fill="none"
-                        animate={{ opacity: [0.2, 0.7, 0.2] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
-                      />
-                      {/* Хвостик маленького */}
-                      <motion.path
-                        d="M98 100 L106 112 L88 104"
-                        stroke="white" strokeOpacity="0.1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"
-                        animate={{ opacity: [0.2, 0.7, 0.2] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
-                      />
-                      {/* Линии текста в маленьком */}
-                      <motion.rect x="62" y="76" width="28" height="3" rx="1.5" fill="white" fillOpacity="0.15"
-                        animate={{ opacity: [0.15, 0.4, 0.15] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-                      />
-                      <motion.rect x="62" y="84" width="20" height="3" rx="1.5" fill="white" fillOpacity="0.1"
-                        animate={{ opacity: [0.1, 0.3, 0.1] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
-                      />
-                    </motion.svg>
-                    <div className="text-[16px] text-white/50 font-sf-ui-medium">Чатов пока нет</div>
-                    <div className="text-[13px] text-white/25">Найдите пользователя по тегу и начните диалог</div>
+                  <div className="flex flex-col items-center gap-4 px-4 text-center" style={{ marginTop: '8vh' }}>
+                    {!isAuthed ? (
+                      <>
+                        <motion.svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+                          <motion.rect x="8" y="20" width="72" height="52" rx="18" stroke="white" strokeOpacity="0.18" strokeWidth="2.5" fill="none" animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+                          <motion.path d="M20 72 L14 86 L34 76" stroke="white" strokeOpacity="0.18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+                          <motion.circle cx="30" cy="46" r="4" fill="white" fillOpacity="0.25" animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0 }} />
+                          <motion.circle cx="44" cy="46" r="4" fill="white" fillOpacity="0.25" animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }} />
+                          <motion.circle cx="58" cy="46" r="4" fill="white" fillOpacity="0.25" animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }} />
+                        </motion.svg>
+                        <div className="text-[16px] text-white/70 font-sf-ui-medium">Войдите, чтобы писать</div>
+                        <div className="text-[13px] text-white/30 font-sf-ui-light max-w-[220px]">Создайте аккаунт или войдите, чтобы общаться с продавцами</div>
+                        <div className="flex flex-col gap-2 w-full max-w-[260px] mt-2">
+                          <button
+                            type="button"
+                            className="h-[50px] w-full rounded-[18px] bg-white/10 text-white font-sf-ui-medium text-[15px] active:scale-[0.97] transition-all"
+                            onClick={() => window.dispatchEvent(new Event('trigger-auth'))}
+                          >
+                            Создать аккаунт
+                          </button>
+                          <button
+                            type="button"
+                            className="h-[44px] w-full text-white/40 font-sf-ui-light text-[14px] active:opacity-60 transition-all"
+                            onClick={() => window.dispatchEvent(new CustomEvent('trigger-auth', { detail: { screen: 'login' } }))}
+                          >
+                            Уже есть профиль? Войти
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <motion.svg
+                          width="120"
+                          height="120"
+                          viewBox="0 0 120 120"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <motion.rect x="8" y="20" width="72" height="52" rx="18" stroke="white" strokeOpacity="0.18" strokeWidth="2.5" fill="none" animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+                          <motion.path d="M20 72 L14 86 L34 76" stroke="white" strokeOpacity="0.18" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+                          <motion.circle cx="30" cy="46" r="4" fill="white" fillOpacity="0.25" animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0 }} />
+                          <motion.circle cx="44" cy="46" r="4" fill="white" fillOpacity="0.25" animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }} />
+                          <motion.circle cx="58" cy="46" r="4" fill="white" fillOpacity="0.25" animate={{ scale: [1, 1.3, 1], opacity: [0.25, 0.6, 0.25] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }} />
+                          <motion.rect x="52" y="62" width="58" height="38" rx="14" stroke="white" strokeOpacity="0.1" strokeWidth="2" fill="none" animate={{ opacity: [0.2, 0.7, 0.2] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }} />
+                          <motion.path d="M98 100 L106 112 L88 104" stroke="white" strokeOpacity="0.1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" animate={{ opacity: [0.2, 0.7, 0.2] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }} />
+                          <motion.rect x="62" y="76" width="28" height="3" rx="1.5" fill="white" fillOpacity="0.15" animate={{ opacity: [0.15, 0.4, 0.15] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1 }} />
+                          <motion.rect x="62" y="84" width="20" height="3" rx="1.5" fill="white" fillOpacity="0.1" animate={{ opacity: [0.1, 0.3, 0.1] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }} />
+                        </motion.svg>
+                        <div className="text-[16px] text-white/50 font-sf-ui-medium">Чатов пока нет</div>
+                        <div className="text-[13px] text-white/25">Найдите пользователя по тегу и начните диалог</div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   chatPreviews.map((chat, idx) => (
@@ -3440,6 +3509,15 @@ export default function HomeScreen({ isAuthed }: { isAuthed?: boolean }) {
                 setFavoritesOpen(false)
                 setSelectedAd(ad)
               }}
+            />
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {giftShopOpen && (
+            <GiftShop
+              recipientTag={giftRecipientTag}
+              recipientAvatar={giftRecipientAvatar}
+              onClose={() => setGiftShopOpen(false)}
             />
           )}
         </AnimatePresence>

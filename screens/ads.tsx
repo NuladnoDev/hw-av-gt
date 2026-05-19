@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart, X } from 'lucide-react'
+import { ChevronDown, ArrowUpDown, Clock, Tag, UserCheck, Heart, X, Search } from 'lucide-react'
 import { getSupabase, loadLocalAuth } from '@/lib/supabaseClient'
 import AdsCreate, { CONDITION_OPTIONS } from './Ads_Create'
 import AdsEdit from './Ads_Edit'
@@ -684,12 +684,12 @@ const FAKE_ADS: StoredAd[] = [
 ]
 
 const LEAF_SHAPES = [
-  "M10 1C10 1 14 5 13 10C12 15 7 16 5 13C3 10 5 5 10 1Z",
-  "M8 0C8 0 15 4 14 10C13 16 6 17 4 13C2 9 4 3 8 0Z",
+  "M8 0C5 4 2 8 4 13C6 17 11 17 13 13C15 9 12 4 8 0Z",
+  "M8 0C8 0 14 5 13 10C12 15 7 16 5 13C3 10 5 5 8 0Z",
   "M9 1C9 1 16 6 13 12C10 18 4 16 3 11C2 6 5 1 9 1Z",
-  "M7 0C7 0 13 3 12 9C11 15 5 15 3 11C1 7 3 2 7 0Z",
+  "M8 1C4 3 1 8 3 13C5 17 11 17 13 12C15 7 11 2 8 1Z",
 ]
-const LEAF_COLORS = ['#c2410c', '#b45309', '#a16207', '#92400e', '#854d0e', '#d97706']
+const LEAF_COLORS = ['#16a34a', '#15803d', '#22c55e', '#4ade80', '#86efac', '#166534']
 
 type Leaf = { id: number; x: number; size: number; duration: number; delay: number; shape: string; color: string; rotate: number; sway: number }
 
@@ -799,7 +799,9 @@ function BannerCarousel() {
             />
             <div className="relative z-20 flex h-full items-center gap-4">
               <div className="max-w-[62%]">
-                <div className="text-[12px] tracking-[0.04em] text-white/45">{b.label}</div>
+                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-sf-ui-medium tracking-[0.02em]"
+                  style={{ background: 'linear-gradient(135deg, #1d6fa4 0%, #1a8fe0 50%, #0ea5e9 100%)', color: '#fff' }}
+                >{b.label}</div>
                 <div className="mt-1 text-[20px] leading-[1.1] font-sf-ui-light text-white">{b.title}</div>
                 <div
                   className="mt-2 text-[13px] text-white/45 underline underline-offset-2 cursor-pointer"
@@ -916,6 +918,52 @@ export default function Ads({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [isSearchActive, setIsSearchActive] = useState(false)
+  const [isSearchFocused, setIsSearchFocused] = useState(false)
+
+  const SEARCH_SUGGESTIONS: Record<string, string[]> = {
+    'iphone': ['iPhone 16', 'iPhone 15', 'iPhone 14', 'iPhone 13', 'iPhone 12', 'iPhone SE'],
+    'samsung': ['Samsung Galaxy S24', 'Samsung Galaxy S23', 'Samsung Galaxy A55', 'Samsung Galaxy A35'],
+    'nike': ['Nike Air Max', 'Nike Air Force 1', 'Nike Dunk', 'Nike Jordan', 'Nike кроссовки'],
+    'adidas': ['Adidas Superstar', 'Adidas Stan Smith', 'Adidas Yeezy', 'Adidas кроссовки'],
+    'ноутбук': ['Ноутбук Apple MacBook', 'Ноутбук Lenovo', 'Ноутбук ASUS', 'Ноутбук HP', 'Ноутбук Dell'],
+    'macbook': ['MacBook Pro 14', 'MacBook Pro 16', 'MacBook Air M2', 'MacBook Air M3'],
+    'airpods': ['AirPods Pro 2', 'AirPods 4', 'AirPods 3', 'AirPods Max'],
+    'playstation': ['PlayStation 5', 'PlayStation 4', 'PlayStation 5 Pro', 'Геймпад PlayStation'],
+    'xbox': ['Xbox Series X', 'Xbox Series S', 'Геймпад Xbox'],
+    'велосипед': ['Велосипед горный', 'Велосипед городской', 'Велосипед детский', 'Велосипед BMX'],
+    'диван': ['Диван угловой', 'Диван прямой', 'Диван-кровать', 'Диван раскладной'],
+    'куртка': ['Куртка зимняя', 'Куртка осенняя', 'Куртка мужская', 'Куртка женская', 'Куртка пуховик'],
+    'телефон': ['Телефон iPhone', 'Телефон Samsung', 'Телефон Xiaomi', 'Телефон Huawei'],
+    'xiaomi': ['Xiaomi 14', 'Xiaomi 13', 'Xiaomi Redmi Note 13', 'Xiaomi Redmi 12'],
+    'наушники': ['Наушники Sony', 'Наушники Bose', 'Наушники беспроводные', 'Наушники AirPods'],
+    'часы': ['Часы Apple Watch', 'Часы Samsung Galaxy Watch', 'Часы механические', 'Часы Casio'],
+    'кроссовки': ['Кроссовки Nike', 'Кроссовки Adidas', 'Кроссовки New Balance', 'Кроссовки Puma'],
+    'стол': ['Стол компьютерный', 'Стол обеденный', 'Стол письменный', 'Стол журнальный'],
+    'кресло': ['Кресло игровое', 'Кресло офисное', 'Кресло компьютерное'],
+    'телевизор': ['Телевизор Samsung', 'Телевизор LG', 'Телевизор Sony', 'Телевизор 55 дюймов'],
+  }
+
+  const getSearchSuggestions = (query: string): string[] => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    // Прямое совпадение ключа
+    for (const [key, vals] of Object.entries(SEARCH_SUGGESTIONS)) {
+      if (key.startsWith(q) || q.startsWith(key)) return vals
+    }
+    // Частичное совпадение в значениях
+    const results: string[] = []
+    for (const vals of Object.values(SEARCH_SUGGESTIONS)) {
+      for (const v of vals) {
+        if (v.toLowerCase().includes(q) && !results.includes(v)) results.push(v)
+      }
+    }
+    // Если ничего — генерируем варианты из самого запроса
+    if (results.length === 0) {
+      const cap = query.trim().charAt(0).toUpperCase() + query.trim().slice(1)
+      return [`${cap} новый`, `${cap} б/у`, `${cap} купить`, `${cap} продам`]
+    }
+    return results.slice(0, 6)
+  }
   const [editingAd, setEditingAd] = useState<StoredAd | null>(null)
   const [analyticsAd, setAnalyticsAd] = useState<StoredAd | null>(null)
   const [contactWarningOpen, setContactWarningOpen] = useState(false)
@@ -934,6 +982,8 @@ export default function Ads({
   const [ageGateOpen, setAgeGateOpen] = useState(false)
   const [ageGatePendingAd, setAgeGatePendingAd] = useState<StoredAd | null>(null)
   const sortMenuRef = useRef<HTMLDivElement>(null)
+  const sortBtnRef = useRef<HTMLButtonElement>(null)
+  const [sortMenuPos, setSortMenuPos] = useState<{ top: number; left: number } | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -960,6 +1010,8 @@ export default function Ads({
 
   const [userCity, setUserCity] = useState<string | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [retryKey, setRetryKey] = useState(0)
+  const [retryCount, setRetryCount] = useState(0)
   const [loadError, setLoadError] = useState(false)
   const [showCategories, setShowCategories] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -1238,7 +1290,7 @@ export default function Ads({
         window.removeEventListener('ads-updated', handler as EventListener)
       }
     }
-  }, [])
+  }, [retryKey])
 
   const searchPlaceholder = userCity ? `Поиск в ${toPrepositionalCity(userCity)}` : 'Поиск в Кадуе'
 
@@ -1352,7 +1404,7 @@ export default function Ads({
               style={{ height: 56 }}
             >
               <motion.div
-                className="flex h-full items-center backdrop-blur-xl relative overflow-hidden group w-full"
+                className="flex h-full items-center backdrop-blur-xl relative group w-full"
                 style={{
                   borderRadius: 24,
                   background: theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.03)',
@@ -1382,16 +1434,16 @@ export default function Ads({
                   <img
                     src="/interface/search-02.svg"
                     alt=""
-                    style={{ width: 22, height: 22, marginRight: 8, filter: theme === 'dark' ? 'none' : 'invert(1) opacity(0.5)' }}
+                    style={{ width: 22, height: 22, marginRight: 8, filter: theme === 'dark' ? 'brightness(0) invert(1)' : 'invert(1) opacity(0.5)' }}
                   />
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={searchPlaceholder}
                     className="font-sf-ui-light flex-1 bg-transparent outline-none border-none"
-                    style={{ fontSize: 16, lineHeight: '18px', color: theme === 'dark' ? '#A8A8A8' : '#3C3C43' }}
-                    onFocus={() => { setIsSearchActive(true); setIsSortMenuOpen(false) }}
-                    onBlur={() => setIsSearchActive(false)}
+                    style={{ fontSize: 16, lineHeight: '18px', color: searchQuery.length > 0 ? '#fff' : (theme === 'dark' ? '#A8A8A8' : '#3C3C43') }}
+                    onFocus={() => { setIsSearchActive(true); setIsSearchFocused(true); setIsSortMenuOpen(false) }}
+                    onBlur={() => { setIsSearchActive(false); setTimeout(() => setIsSearchFocused(false), 150) }}
                   />
 
                   <div className="relative flex items-center" ref={sortMenuRef}>
@@ -1410,9 +1462,16 @@ export default function Ads({
                     <AnimatePresence>
                       {!isSearchActive && (
                         <motion.button
+                          ref={sortBtnRef}
                           initial={{ opacity: 0, scale: 0.9, x: 8 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.9, x: 8 }}
                           transition={{ duration: 0.16 }} whileTap={{ scale: 0.95 }}
-                          onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                          onClick={() => {
+                            if (!isSortMenuOpen && sortBtnRef.current) {
+                              const r = sortBtnRef.current.getBoundingClientRect()
+                              setSortMenuPos({ top: r.bottom + 8, left: r.right - 200 })
+                            }
+                            setIsSortMenuOpen(!isSortMenuOpen)
+                          }}
                           className="h-[36px] w-[36px] flex items-center justify-center"
                         >
                           <ArrowUpDown className={`w-4 h-4 ${sortType !== 'new' ? 'text-blue-400' : 'text-white/40'}`} />
@@ -1420,10 +1479,10 @@ export default function Ads({
                       )}
                     </AnimatePresence>
                     <AnimatePresence>
-                      {isSortMenuOpen && (
+                      {isSortMenuOpen && sortMenuPos && (
                         <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: 10, x: -20 }} animate={{ opacity: 1, scale: 1, y: 0, x: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10, x: -20 }}
-                          className="absolute top-[52px] right-0 w-[200px] z-[100] rounded-2xl bg-[#1C1C1E] border border-white/10 shadow-2xl overflow-hidden"
+                          initial={{ opacity: 0, scale: 0.95, y: -8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                          style={{ position: 'fixed', top: sortMenuPos.top, left: sortMenuPos.left, width: 200, zIndex: 9999, background: '#1C1C1E', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.8)', overflow: 'hidden' }}
                         >
                           <button onClick={() => { setSortType('new'); setIsSortMenuOpen(false) }} className={`w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-white/5 ${sortType === 'new' ? 'text-white' : 'text-white/40'}`}>
                             <span className="text-[14px] font-sf-ui-medium">Новинки</span>
@@ -1454,6 +1513,45 @@ export default function Ads({
               <img src="/interface/filter.svg" alt="" className="w-6 h-6 opacity-40" />
             </motion.button>
           </div>
+
+          {/* Search suggestions */}
+          <AnimatePresence>
+            {isSearchFocused && searchQuery.trim().length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div className="px-1 pb-2 pt-1">
+                  <div
+                    className="rounded-[20px] overflow-hidden"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    {getSearchSuggestions(searchQuery).map((suggestion, i) => (
+                        <motion.button
+                          key={suggestion}
+                          type="button"
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          onMouseDown={() => {
+                            setSearchQuery(suggestion)
+                            setIsSearchFocused(false)
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 active:bg-white/[0.04] text-left"
+                        >
+                          <Search className="w-4 h-4 text-white/50 flex-shrink-0" />
+                          <span className="text-[15px] text-white/80 font-sf-ui-light">{suggestion}</span>
+                        </motion.button>
+                      ))
+                    }
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Category Carousel */}
           <AnimatePresence>
@@ -1592,34 +1690,35 @@ export default function Ads({
             ))}
           </div>
         ) : loadError ? (
-          <div className="w-full min-h-[360px] rounded-[20px] bg-white/[0.028] border border-white/[0.05] px-6 py-10 flex flex-col items-center justify-center text-center">
-            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Глобус */}
-              <circle cx="60" cy="60" r="36" stroke="rgba(255,255,255,0.12)" strokeWidth="2.5" fill="none"/>
-              <ellipse cx="60" cy="60" rx="16" ry="36" stroke="rgba(255,255,255,0.10)" strokeWidth="2" fill="none"/>
-              <line x1="24" y1="60" x2="96" y2="60" stroke="rgba(255,255,255,0.10)" strokeWidth="2"/>
-              <line x1="30" y1="42" x2="90" y2="42" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
-              <line x1="30" y1="78" x2="90" y2="78" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5"/>
-              {/* Перечёркивающая линия */}
-              <line x1="28" y1="28" x2="92" y2="92" stroke="rgba(255,80,80,0.55)" strokeWidth="3" strokeLinecap="round"/>
-              {/* Замок снизу справа */}
-              <rect x="72" y="82" width="22" height="16" rx="4" fill="#1a1a1a" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
-              <path d="M76 82v-4a7 7 0 0 1 14 0v4" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" fill="none"/>
-              <circle cx="83" cy="90" r="2" fill="rgba(255,255,255,0.35)"/>
+          <div className="w-full px-2 py-6 flex flex-row items-center gap-4">
+            <svg width="72" height="72" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+              <circle cx="60" cy="60" r="36" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" fill="none"/>
+              <ellipse cx="60" cy="60" rx="16" ry="36" stroke="rgba(255,255,255,0.4)" strokeWidth="2" fill="none"/>
+              <line x1="24" y1="60" x2="96" y2="60" stroke="rgba(255,255,255,0.4)" strokeWidth="2"/>
+              <line x1="30" y1="42" x2="90" y2="42" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
+              <line x1="30" y1="78" x2="90" y2="78" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
+              <line x1="28" y1="28" x2="92" y2="92" stroke="rgba(255,80,80,0.85)" strokeWidth="3" strokeLinecap="round"/>
+              <rect x="72" y="82" width="22" height="16" rx="4" fill="#1a1a1a" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
+              <path d="M76 82v-4a7 7 0 0 1 14 0v4" stroke="rgba(255,255,255,0.55)" strokeWidth="2" strokeLinecap="round" fill="none"/>
+              <circle cx="83" cy="90" r="2" fill="rgba(255,255,255,0.7)"/>
             </svg>
-            <div className="mt-5 text-[18px] font-sf-ui-medium text-white/80 leading-snug">
-              Проблема на стороне провайдера
+            <div className="flex flex-col gap-1 flex-1 min-w-0">
+              <div className="text-[16px] font-sf-ui-medium text-white/80 leading-snug">Проблема на стороне провайдера</div>
+              <div className="text-[12px] text-white/35 font-sf-ui-light leading-relaxed">
+                {retryCount >= 2
+                  ? 'Возможно, возникла проблема на серверах hw-project, сообщите администратору.'
+                  : 'Попробуйте зайти позже или включить средство подмены трафика (VPN)'
+                }
+              </div>
+              <button
+                type="button"
+                onClick={() => { setLoadError(false); setInitialLoading(true); setRetryCount(c => c + 1); setRetryKey(k => k + 1) }}
+                className="mt-1 self-start px-4 py-1.5 rounded-full border border-white/10 text-[13px] text-white/50 font-sf-ui-light active:opacity-70 transition-opacity"
+                style={{ background: 'rgba(255,255,255,0.05)' }}
+              >
+                Попробовать снова
+              </button>
             </div>
-            <div className="mt-2 text-[13px] text-white/35 font-sf-ui-light leading-relaxed max-w-[260px]">
-              Попробуйте зайти позже или включить средство подмены трафика (VPN)
-            </div>
-            <button
-              type="button"
-              onClick={() => { setLoadError(false); setInitialLoading(true); loadAdsFromStorage().then(all => { const sorted = [...all].sort((a,b) => b.createdAt - a.createdAt); setItems(sorted); persistAdsCache(sorted); setInitialLoading(false) }).catch(() => { setLoadError(true); setInitialLoading(false) }) }}
-              className="mt-6 px-6 py-2.5 rounded-full bg-white/8 border border-white/10 text-[14px] text-white/60 font-sf-ui-light active:opacity-70 transition-opacity"
-            >
-              Попробовать снова
-            </button>
           </div>
         ) : visibleItems.length === 0 ? (
           <div className="w-full min-h-[300px] rounded-[20px] bg-white/[0.028] border border-white/[0.05] px-5 py-8 flex flex-col items-center justify-center text-center">

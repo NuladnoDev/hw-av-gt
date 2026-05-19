@@ -34,6 +34,8 @@ import { AdCard, AdCardSkeleton, loadAdsFromStorage, deleteAdById, StoredAd } fr
 import AdsEdit from './Ads_Edit'
 import UserAdsScreen from './UserAdsScreen'
 import ProfileDecorations, { AvatarDecoration, type DecorationId } from './ProfileDecorations'
+import { GIFTS, RARITY_COLOR, RARITY_LABEL } from './GiftShop'
+import { CrystalVisual, RoseVisual, StarVisual, HeartVisual, MoonVisual, DiamondVisual, TrophyVisual, RocketVisual, FireVisual, ThunderVisual, GhostVisual, DragonVisual, UnicornVisual, GalaxyVisual, AngelVisual } from './GiftVisuals'
 import Reviews from './Reviews'
 import VerifiedBadge from '../components/VerifiedBadge'
 import QualityBadge from '../components/QualityBadge'
@@ -119,6 +121,24 @@ const defaultRussianCities = [
   'Хабаровск',
   'Челябинск',
 ]
+
+function ProfileGiftVisual({ giftId, size }: { giftId: string; size: number }) {
+  if (giftId === 'rose')    return <RoseVisual size={size} />
+  if (giftId === 'star')    return <StarVisual size={size} />
+  if (giftId === 'heart')   return <HeartVisual size={size} />
+  if (giftId === 'moon')    return <MoonVisual size={size} />
+  if (giftId === 'diamond') return <DiamondVisual size={size} />
+  if (giftId === 'trophy')  return <TrophyVisual size={size} />
+  if (giftId === 'rocket')  return <RocketVisual size={size} />
+  if (giftId === 'fire')    return <FireVisual size={size} />
+  if (giftId === 'thunder') return <ThunderVisual size={size} />
+  if (giftId === 'ghost')   return <GhostVisual size={size} />
+  if (giftId === 'dragon')  return <DragonVisual size={size} />
+  if (giftId === 'unicorn') return <UnicornVisual size={size} />
+  if (giftId === 'galaxy')  return <GalaxyVisual size={size} />
+  if (giftId === 'angel')   return <AngelVisual size={size} />
+  return <CrystalVisual size={size} />
+}
 
 export default function Profile({
   profileTab,
@@ -250,6 +270,15 @@ export default function Profile({
   const [isPro, setIsPro] = useState(false)
   const [userStores, setUserStores] = useState<{ id: string; name: string; avatar_url: string | null }[]>([])
   const [storesLoading, setStoresLoading] = useState(false)
+  const [profileGifts, setProfileGifts] = useState<{ id: string; gift_id: string; sender_tag: string | null; created_at: string; message?: string }[]>([
+    { id: 'fake-1', gift_id: 'crystal',  sender_tag: 'alex',   created_at: new Date().toISOString(), message: 'С днём рождения! 🎉' },
+    { id: 'fake-2', gift_id: 'crown',    sender_tag: 'maria',  created_at: new Date().toISOString(), message: 'Ты лучший!' },
+    { id: 'fake-3', gift_id: 'heart',    sender_tag: 'ivan',   created_at: new Date().toISOString(), message: 'Спасибо за всё ❤️' },
+    { id: 'fake-4', gift_id: 'rocket',   sender_tag: null,     created_at: new Date().toISOString(), message: 'Анонимный подарок для тебя' },
+    { id: 'fake-5', gift_id: 'unicorn',  sender_tag: 'kate',   created_at: new Date().toISOString() },
+  ])
+  const [selectedProfileGift, setSelectedProfileGift] = useState<{ id: string; gift_id: string; sender_tag: string | null; created_at: string; message?: string } | null>(null)
+  const [giftsHidden, setGiftsHidden] = useState(false)
   const [showCreateStore, setShowCreateStore] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: '', visible: false })
@@ -671,6 +700,23 @@ export default function Profile({
       }
     })()
   }, [userTag, viewUserId, refreshKey])
+
+  // Загружаем подарки профиля
+  useEffect(() => {
+    const targetId = viewUserId ?? userId
+    if (!targetId) return
+    const client = getSupabase()
+    if (!client) return
+    ;(async () => {
+      const { data } = await client
+        .from('gifts')
+        .select('id, gift_id, sender_tag, message, created_at')
+        .eq('recipient_id', targetId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      if (data) setProfileGifts(data)
+    })()
+  }, [userId, viewUserId, refreshKey])
 
   // Загружаем presence для чужого профиля
   useEffect(() => {
@@ -1169,61 +1215,55 @@ export default function Profile({
 
   if (isOwnProfile && !isAuthed) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center bg-[var(--bg-primary)]">
+      <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center bg-[var(--bg-primary)]" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
         <div className="mb-10 w-full flex justify-center">
           <svg width="280" height="240" viewBox="0 0 280 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Background Glow */}
-            <circle cx="140" cy="120" r="100" fill="url(#profile_guest_glow)" fillOpacity="0.15"/>
-            
-            {/* Market Stand / Interaction Concept */}
-            <motion.g
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            >
-              {/* Abstract App Interface Elements */}
-              <rect x="60" y="40" width="160" height="160" rx="24" fill="white" fillOpacity="0.03" stroke="white" strokeOpacity="0.1" strokeWidth="2"/>
-              
-              {/* Colorful Product Cards */}
-              <motion.rect 
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                x="80" y="60" width="50" height="60" rx="12" fill="#3B82F6" fillOpacity="0.8" 
-              />
-              <motion.rect 
-                animate={{ y: [0, -12, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                x="150" y="80" width="50" height="60" rx="12" fill="#10B981" fillOpacity="0.8" 
-              />
-              <motion.rect 
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                x="80" y="130" width="50" height="40" rx="12" fill="#F59E0B" fillOpacity="0.8" 
-              />
-              
-              {/* Interaction Indicators (Hand/Click) */}
-              <motion.circle 
-                animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0.6, 0.3] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                cx="140" cy="120" r="15" fill="white" fillOpacity="0.2" 
-              />
-              <path d="M140 110V130M130 120H150" stroke="white" strokeWidth="3" strokeLinecap="round" />
-            </motion.g>
-
-            {/* Decorative Floating Elements */}
-            <motion.circle animate={{ x: [0, 10, 0] }} transition={{ duration: 5, repeat: Infinity }} cx="40" cy="60" r="6" fill="#6366F1" />
-            <motion.rect animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }} x="230" y="140" width="12" height="12" rx="3" fill="#EC4899" />
-            
             <defs>
-              <radialGradient id="profile_guest_glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(140 120) rotate(90) scale(100)">
-                <stop stopColor="#3B82F6"/>
-                <stop offset="1" stopColor="#3B82F6" stopOpacity="0"/>
-              </radialGradient>
+              <linearGradient id="field_g" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.07)"/>
+                <stop offset="100%" stopColor="rgba(255,255,255,0.03)"/>
+              </linearGradient>
+              <clipPath id="avatar_clip">
+                <circle cx="140" cy="72" r="37"/>
+              </clipPath>
             </defs>
+
+            {/* Avatar circle */}
+            <circle cx="140" cy="72" r="38" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5"/>
+            {/* Head + shoulders clipped inside circle */}
+            <g clipPath="url(#avatar_clip)">
+              <circle cx="140" cy="64" r="13" fill="rgba(255,255,255,0.15)"/>
+              <path d="M108 110 C108 92 122 82 140 82 C158 82 172 92 172 110" fill="rgba(255,255,255,0.15)"/>
+            </g>
+
+            {/* Username field */}
+            <rect x="60" y="130" width="160" height="36" rx="12" fill="url(#field_g)" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
+            {/* @ icon */}
+            <circle cx="82" cy="148" r="7" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" fill="none"/>
+            <circle cx="82" cy="148" r="3" fill="rgba(255,255,255,0.2)"/>
+            <line x1="89" y1="141" x2="89" y2="155" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeLinecap="round"/>
+            {/* Username text lines */}
+            <rect x="100" y="143" width="52" height="4" rx="2" fill="rgba(255,255,255,0.2)"/>
+            <rect x="100" y="151" width="32" height="3" rx="1.5" fill="rgba(255,255,255,0.08)"/>
+
+            {/* Password field */}
+            <rect x="60" y="178" width="160" height="36" rx="12" fill="url(#field_g)" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+            {/* Lock icon */}
+            <rect x="75" y="192" width="14" height="11" rx="3" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"/>
+            <path d="M78 192 L78 188 C78 185 86 185 86 188 L86 192" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+            <circle cx="82" cy="197" r="2" fill="rgba(255,255,255,0.18)"/>
+            {/* Password dots */}
+            {[0,1,2,3,4].map(i => (
+              <motion.circle key={i} cx={104 + i * 14} cy={196} r="3.5" fill="rgba(255,255,255,0.18)"
+                animate={{ opacity: [0.18, 0.5, 0.18] }}
+                transition={{ duration: 2, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+              />
+            ))}
           </svg>
         </div>
         
         <div className="space-y-3 mb-10">
-          <h2 className="text-[24px] leading-[1.2] font-ttc-bold text-[var(--text-primary)]">
+          <h2 className="text-[24px] leading-[1.2] font-vk-demi text-[var(--text-primary)]">
             Зарегистрируйтесь и пользуйтесь<br/>полным функционалом сайта!
           </h2>
           <p className="text-[15px] text-[var(--text-secondary)] font-sf-ui-light max-w-[280px] mx-auto">
@@ -1573,6 +1613,104 @@ export default function Profile({
           </div>
         )}
 
+        {/* Попап инфо о подарке */}
+        <AnimatePresence>
+          {selectedProfileGift && (() => {
+            const giftDef = GIFTS.find(g => g.id === selectedProfileGift.gift_id)
+            if (!giftDef) return null
+            return (
+              <>
+                <motion.div
+                  key="gift-info-overlay"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[400]"
+                  style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+                  onClick={() => setSelectedProfileGift(null)}
+                />
+                <div className="fixed inset-0 z-[410] flex items-end justify-center pointer-events-none">
+                  <motion.div
+                    initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 32, stiffness: 380 }}
+                    className="w-full pointer-events-auto"
+                    style={{
+                      background: 'rgba(18,18,22,0.97)',
+                      backdropFilter: 'blur(40px)',
+                      borderRadius: '24px 24px 0 0',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderBottom: 'none',
+                      padding: '0 0 calc(24px + env(safe-area-inset-bottom))',
+                    }}
+                  >
+                    {/* Handle */}
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px' }}>
+                      <div style={{ width: 36, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.2)' }} />
+                    </div>
+
+                    <div style={{ padding: '8px 24px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                      {/* Big gift preview */}
+                      <motion.div
+                        initial={{ scale: 0.6, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', damping: 18, stiffness: 300, delay: 0.1 }}
+                      >
+                        <ProfileGiftVisual giftId={giftDef.id} size={140} />
+                      </motion.div>
+
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{giftDef.name}</div>
+                        <div style={{ fontSize: 13, color: RARITY_COLOR[giftDef.rarity] }}>{RARITY_LABEL[giftDef.rarity]}</div>
+                      </div>
+
+                      {selectedProfileGift.message && (
+                        <div style={{
+                          width: '100%', padding: '12px 16px', borderRadius: 14,
+                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+                          fontSize: 14, color: 'rgba(255,255,255,0.8)', textAlign: 'center', lineHeight: 1.5,
+                        }}>
+                          "{selectedProfileGift.message}"
+                        </div>
+                      )}
+
+                      <div style={{
+                        width: '100%', padding: '14px 16px', borderRadius: 16,
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+                        display: 'flex', flexDirection: 'column', gap: 10,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>От кого</span>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                            {selectedProfileGift.sender_tag ? `@${selectedProfileGift.sender_tag}` : 'Аноним'}
+                          </span>
+                        </div>
+                        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>Стоимость</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>₽ {giftDef.price}</span>
+                        </div>
+                        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>Дата</span>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+                            {new Date(selectedProfileGift.created_at).toLocaleDateString('ru', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProfileGift(null)}
+                        style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginTop: 4 }}
+                      >
+                        Закрыть
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              </>
+            )
+          })()}
+        </AnimatePresence>
+
         {/* Табы — стиль как в магазине */}
         <div className="flex overflow-x-auto scrollbar-hidden gap-1 mt-6 border-b border-white/[0.06]"
           style={{ marginLeft: 'calc(-1 * var(--profile-switch-negative-margin, 12px))', marginRight: 'calc(-1 * var(--profile-switch-negative-margin, 12px))' }}
@@ -1819,6 +1957,39 @@ export default function Profile({
                 )}
               </div>
             ) : profileTab === 'about' ? (
+              <>
+                {/* Подарки профиля */}
+                {profileGifts.length > 0 && !giftsHidden && (
+                  <div className="mb-4">
+                    <div className="flex overflow-x-auto scrollbar-hidden gap-3 pb-1"
+                      style={{ marginLeft: 'calc(-1 * var(--profile-switch-negative-margin, 12px))', marginRight: 'calc(-1 * var(--profile-switch-negative-margin, 12px))', paddingLeft: 'var(--profile-switch-negative-margin, 12px)', paddingRight: 'var(--profile-switch-negative-margin, 12px)' }}
+                    >
+                      {profileGifts.map(pg => {
+                        const giftDef = GIFTS.find(g => g.id === pg.gift_id)
+                        if (!giftDef) return null
+                        return (
+                          <button
+                            key={pg.id}
+                            type="button"
+                            onClick={() => setSelectedProfileGift(pg)}
+                            className="flex-shrink-0 flex items-center justify-center active:scale-95 transition-transform"
+                            style={{ width: 72, height: 72, background: 'none', border: 'none', padding: 0 }}
+                          >
+                            <ProfileGiftVisual giftId={pg.gift_id} size={72} />
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setGiftsHidden(true)}
+                      className="text-[12px] text-white/35 font-sf-ui-light mt-2 active:opacity-60"
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                    >
+                      Скрыть раздел
+                    </button>
+                  </div>
+                )}
               <div
                 className="mx-auto w-full border border-[#2B2B2B] bg-[#111111]/80 p-4"
                 style={{ 
@@ -2098,6 +2269,7 @@ export default function Profile({
                   </motion.div>
                 </div>
               </div>
+              </>
             ) : profileTab === 'friends' ? (
               <div
                 className="w-full overflow-hidden"
